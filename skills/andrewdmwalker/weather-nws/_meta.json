@@ -1,0 +1,11 @@
+{
+  "owner": "andrewdmwalker",
+  "slug": "weather-nws",
+  "displayName": "Weather Nws",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1769788267742,
+    "commit": null
+  },
+  "history": []
+}
