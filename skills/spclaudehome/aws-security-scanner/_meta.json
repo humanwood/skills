@@ -1,0 +1,11 @@
+{
+  "owner": "spclaudehome",
+  "slug": "aws-security-scanner",
+  "displayName": "AWS Security Scanner",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1769800795751,
+    "commit": null
+  },
+  "history": []
+}
