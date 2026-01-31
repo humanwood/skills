@@ -1,0 +1,11 @@
+{
+  "owner": "impkind",
+  "slug": "whisper-mlx-local",
+  "displayName": "Local Whisper",
+  "latest": {
+    "version": "1.2.0",
+    "publishedAt": 1769898919721,
+    "commit": null
+  },
+  "history": []
+}
