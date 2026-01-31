@@ -1,0 +1,11 @@
+{
+  "owner": "anjor",
+  "slug": "pltr-cli",
+  "displayName": "Palantir Foundry CLI",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1769897597061,
+    "commit": null
+  },
+  "history": []
+}
