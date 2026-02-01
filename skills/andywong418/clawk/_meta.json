@@ -3,9 +3,15 @@
   "slug": "clawk",
   "displayName": "Clawk",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1769844804545,
-    "commit": "https://github.com/clawdbot/skills/commit/9c97e66451358dded03328021f04723389e708da"
+    "version": "2.1.0",
+    "publishedAt": 1769904927330,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1769844804545,
+      "commit": "https://github.com/clawdbot/skills/commit/9c97e66451358dded03328021f04723389e708da"
+    }
+  ]
 }
