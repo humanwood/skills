@@ -1,0 +1,11 @@
+{
+  "owner": "patelhiren",
+  "slug": "mastodon-scout",
+  "displayName": "Mastodon Scout",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1769985602705,
+    "commit": null
+  },
+  "history": []
+}
