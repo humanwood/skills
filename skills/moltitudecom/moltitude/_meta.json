@@ -3,11 +3,16 @@
   "slug": "moltitude",
   "displayName": "Moltitude",
   "latest": {
-    "version": "1.2.0",
-    "publishedAt": 1769973618312,
-    "commit": "https://github.com/clawdbot/skills/commit/91ec70b8124bab3f14e243404cb5f06b28f8e49a"
+    "version": "2.4.0",
+    "publishedAt": 1770017968887,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.2.0",
+      "publishedAt": 1769973618312,
+      "commit": "https://github.com/clawdbot/skills/commit/91ec70b8124bab3f14e243404cb5f06b28f8e49a"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1769918412571,
