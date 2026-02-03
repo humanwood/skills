@@ -3,9 +3,15 @@
   "slug": "journey",
   "displayName": "Journey",
   "latest": {
-    "version": "0.1.1",
-    "publishedAt": 1769878072120,
-    "commit": "https://github.com/clawdbot/skills/commit/4ddad486a2fbc6ebac27684ce9753f36cd08b569"
+    "version": "0.1.2",
+    "publishedAt": 1770131695159,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.1",
+      "publishedAt": 1769878072120,
+      "commit": "https://github.com/clawdbot/skills/commit/4ddad486a2fbc6ebac27684ce9753f36cd08b569"
+    }
+  ]
 }
