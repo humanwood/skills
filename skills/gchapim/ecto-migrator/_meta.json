@@ -1,0 +1,11 @@
+{
+  "owner": "gchapim",
+  "slug": "ecto-migrator",
+  "displayName": "Ecto Migrator",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770104996437,
+    "commit": null
+  },
+  "history": []
+}
