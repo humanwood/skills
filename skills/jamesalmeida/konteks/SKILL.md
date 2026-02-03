@@ -1,11 +1,28 @@
 ---
 name: konteks
-description: Connect your Clawdbot/Moltbot/Openclaw to your Konteks account (konteks.app) for persistent memory, task management, and context sharing. Use when you need to store agent memories, create or read tasks/notes, check projects and folders, read daily plans, or sync context between conversations. Requires a Konteks API key from konteks.app/dashboard/settings.
+version: 1.0.1
+author: jamesalmeida
+description: Connect your OpenClaw agent to your Konteks account (konteks.app) for persistent memory, task management, and context sharing. Use when you need to store agent memories, create or read tasks/notes, check projects and folders, read daily plans, or sync context between conversations. Requires a Konteks API key from konteks.app/dashboard/settings.
+when: User asks to create/manage tasks, store memories, check projects, read daily plans, or manage notes in Konteks
+examples:
+  - Create a task to review the PR
+  - What's on my agenda today
+  - Remember that I prefer dark mode
+  - Check my inbox for new items
+  - What projects do I have
+tags:
+  - memory
+  - tasks
+  - notes
+  - projects
+  - context
+  - productivity
+metadata: { "openclaw": { "emoji": "🧠", "requires": { "env": ["KONTEKS_API_KEY"] }, "primaryEnv": "KONTEKS_API_KEY" } }
 ---
 
 # Konteks — Agent Context Layer
 
-**Source:** https://github.com/jamesalmeida/konteks-skill
+**Source:** https://github.com/jamesalmeida/openclaw-konteks-skill
 
 Connect to your human's Konteks account for persistent memory, tasks, notes, and projects.
 
@@ -14,7 +31,7 @@ Connect to your human's Konteks account for persistent memory, tasks, notes, and
 Your human needs to:
 1. Sign up at https://konteks.app
 2. Go to Settings → Generate API Key
-3. Add to Clawdbot config:
+3. Add to OpenClaw config:
 
 ```yaml
 skills:
@@ -180,7 +197,7 @@ curl -X POST "{url}/api/agent/items" \
 ```
 
 Required: `title`, `item_type` (task|note|hybrid)
-Optional: `body`, `folder_id`, `smart_list` (inbox|anytime|someday — defaults to inbox if no folder), `priority` (high|normal|someday), `due_date`, `scheduled_date`, `tags` (string array)
+Optional: `body`, `folder_id`, `smart_list` (inbox|anytime|someday — defaults to inbox if no folder), `priority` (high|normal|low), `due_date`, `scheduled_date`, `tags` (string array)
 
 Items created by agent have `source: "ai"`.
 
