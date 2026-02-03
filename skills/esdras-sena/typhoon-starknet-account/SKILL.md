@@ -5,6 +5,20 @@ description: Create a Starknet account to your agent through Typhoon anonymous d
 
 # typhoon-starknet-account
 
+> Path note (per OpenClaw docs): Skills may be installed in different directories (`<workspace>/skills`, `~/.openclaw/skills`, or bundled). To keep this skill portable, commands below are written **relative to the skill folder**.
+>
+> Run from the skill directory:
+> - `cd <skill>/` then `node scripts/<script>.js ...`
+>
+> After Clawhub install, a typical location is:
+> - `~/.openclaw/workspace/skills/typhoon-starknet-account/`
+
+## Prerequisites
+
+```bash
+npm install starknet@^9.2.1 typhoon-sdk@^1.1.12
+```
+
 This skill provides **agent-facing scripts** for:
 - Creating/loading a Starknet account (Typhoon flow)
 - Discovering ABI / functions
@@ -19,7 +33,7 @@ When the user asks to create a Starknet account (in any form like "create an acc
 ### Step 1: Check if account already exists
 
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/check-account.js
+node scripts/check-account.js
 ```
 
 **If `hasAccount: false`:**
@@ -47,7 +61,7 @@ Then **wait for the user to paste the note content**.
 Once the user pastes the note JSON, run:
 
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/create-account.js '<paste the note JSON here>'
+node scripts/create-account.js '<paste the note JSON here>'
 ```
 
 The note format is:
@@ -75,12 +89,12 @@ After successful creation, show the user:
 When user asks "what's my address", "show my wallet", "my account address", etc.:
 
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/show-address.js
+node scripts/show-address.js
 ```
 
 If multiple accounts exist, it returns all. Pass index to get specific one:
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/show-address.js 0
+node scripts/show-address.js 0
 ```
 
 ---
@@ -120,53 +134,53 @@ This skill does **not** do web search by itself; it provides the onchain tooling
 
 ### 2) Load account
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/load-account.js
+node scripts/load-account.js
 ```
 
 ### 3) ABI discovery (+ optional ranking)
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/get-abi.js '{"contractAddress":"0x..."}'
+node scripts/get-abi.js '{"contractAddress":"0x..."}'
 ```
 
 If you want the script to return **ranked candidates** (to help the agent decide), pass a `query`:
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/get-abi.js '{"contractAddress":"0x...","query":"swap exact tokens for tokens"}'
+node scripts/get-abi.js '{"contractAddress":"0x...","query":"swap exact tokens for tokens"}'
 ```
 
 ### 4) Read
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/call-contract.js '{"contractAddress":"0x...","method":"<view_fn>","args":[...]}'
+node scripts/call-contract.js '{"contractAddress":"0x...","method":"<view_fn>","args":[...]}'
 ```
 
 Optional: decode felt short strings:
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/call-contract.js '{"contractAddress":"0x...","method":"symbol","args":[],"decodeShortStrings":true}'
+node scripts/call-contract.js '{"contractAddress":"0x...","method":"symbol","args":[],"decodeShortStrings":true}'
 ```
 
 ### 5) Allowance check (raw or human)
 Raw base units:
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/check-allowance.js '{"tokenAddress":"0x...","ownerAddress":"0x...","spenderAddress":"0x...","requiredAmount":"20000000000000000000"}'
+node scripts/check-allowance.js '{"tokenAddress":"0x...","ownerAddress":"0x...","spenderAddress":"0x...","requiredAmount":"20000000000000000000"}'
 ```
 Human amount (script fetches decimals):
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/check-allowance.js '{"tokenAddress":"0x...","ownerAddress":"0x...","spenderAddress":"0x...","requiredAmountHuman":"20"}'
+node scripts/check-allowance.js '{"tokenAddress":"0x...","ownerAddress":"0x...","spenderAddress":"0x...","requiredAmountHuman":"20"}'
 ```
 
 ### 6) Preflight (recommended)
 Fee estimate:
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/estimate-fee.js '{"privateKeyPath":"...","accountAddress":"0x...","calls":[{"contractAddress":"0x...","method":"...","args":[...]}]}'
+node scripts/estimate-fee.js '{"privateKeyPath":"...","accountAddress":"0x...","calls":[{"contractAddress":"0x...","method":"...","args":[...]}]}'
 ```
 Simulation:
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/simulate.js '{"privateKeyPath":"...","accountAddress":"0x...","calls":[{"contractAddress":"0x...","method":"...","args":[...]}]}'
+node scripts/simulate.js '{"privateKeyPath":"...","accountAddress":"0x...","calls":[{"contractAddress":"0x...","method":"...","args":[...]}]}'
 ```
 
 ### 7) Execute
 Single write:
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/invoke-contract.js '{"privateKeyPath":"...","accountAddress":"0x...","contractAddress":"0x...","method":"...","args":[...]}'
+node scripts/invoke-contract.js '{"privateKeyPath":"...","accountAddress":"0x...","contractAddress":"0x...","method":"...","args":[...]}'
 ```
 
 ---
@@ -176,7 +190,7 @@ node ~/Documents/typhoon-starknet-account/scripts/invoke-contract.js '{"privateK
 When you need a Starknet account to sign a SIWS challenge (typedData) **without ever exposing the private key**, use:
 
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/sign-typed-data.js '{
+node scripts/sign-typed-data.js '{
   "accountAddress":"0x...",
   "typedData": { "domain": { }, "types": { }, "primaryType": "Message", "message": { } }
 }'
@@ -185,7 +199,7 @@ node ~/Documents/typhoon-starknet-account/scripts/sign-typed-data.js '{
 Or if you saved the typedData to a file:
 
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/sign-typed-data.js '{
+node scripts/sign-typed-data.js '{
   "accountAddress":"0x...",
   "typedDataPath":"/tmp/typedData.json"
 }'
@@ -200,7 +214,7 @@ Output is a signature array (hex strings) that can be submitted to verification 
 To sign a transaction **without sending it**, use:
 
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/sign-invoke-tx.js '{
+node scripts/sign-invoke-tx.js '{
   "accountAddress":"0x...",
   "calls":[
     {"contractAddress":"0xTOKEN","entrypoint":"transfer","calldata":["0xTO","<uint256_low>","<uint256_high>"]}
@@ -211,7 +225,7 @@ node ~/Documents/typhoon-starknet-account/scripts/sign-invoke-tx.js '{
 Or with ABI args (the script will fetch ABI and compile calldata for you):
 
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/sign-invoke-tx.js '{
+node scripts/sign-invoke-tx.js '{
   "accountAddress":"0x...",
   "calls":[
     {"contractAddress":"0xTOKEN","method":"transfer","args":["0xTO","123"]}
@@ -227,7 +241,7 @@ This returns an `invokeTransaction` payload suitable for RPC `starknet_addInvoke
 If you want a single command that does challenge → sign locally → verify → (optional) post **without Starkbook ever touching a private key**:
 
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/starkbook-client.js '{
+node scripts/starkbook-client.js '{
   "base":"http://localhost:3000",
   "accountAddress":"0x...",
   "action":"post",
@@ -238,10 +252,6 @@ node ~/Documents/typhoon-starknet-account/scripts/starkbook-client.js '{
 
 Approve + action in one tx:
 ```bash
-node ~/Documents/typhoon-starknet-account/scripts/multicall.js '{"privateKeyPath":"...","accountAddress":"0x...","calls":[{"contractAddress":"0x...","method":"approve","args":["0xspender","123"]},{"contractAddress":"0x...","method":"...","args":[...]}]}'
+node scripts/multicall.js '{"privateKeyPath":"...","accountAddress":"0x...","calls":[{"contractAddress":"0x...","method":"approve","args":["0xspender","123"]},{"contractAddress":"0x...","method":"...","args":[...]}]}'
 ```
 
-## Setup
-```bash
-cd ~/Documents/typhoon-starknet-account/scripts && npm install
-```
