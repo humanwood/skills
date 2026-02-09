@@ -1,0 +1,11 @@
+{
+  "owner": "datadrivenconstruction",
+  "slug": "resource-pool-optimizer",
+  "displayName": "Resource Pool Optimizer",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770476421391,
+    "commit": null
+  },
+  "history": []
+}
