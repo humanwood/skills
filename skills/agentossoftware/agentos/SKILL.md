@@ -1,6 +1,6 @@
 # AgentOS SDK for Clawdbot
 
-**Version:** 1.4.1
+**Version:** 1.4.2
 
 The complete AgentOS integration for Clawdbot. One install, full access to everything.
 
