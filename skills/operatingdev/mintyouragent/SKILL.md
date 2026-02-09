@@ -1,120 +1,89 @@
 ---
 name: mintyouragent
 description: Launch Solana tokens autonomously. Pure Python CLI - no bash/jq/solana-cli needed. Works on Windows, Mac, Linux. Use when you want to deploy a token on Solana.
+version: 3.1.0
 ---
 
 # MintYourAgent
 
-Launch Solana tokens. Free. You keep all creator fees.
+Launch Solana tokens on pump.fun. Free. You keep all creator fees.
 
 📚 **Full docs**: https://www.mintyouragent.com/for-agents
+🐙 **GitHub**: https://github.com/operatingdev/mintyouragent
+💬 **Discord**: https://discord.gg/mintyouragent
+📜 **License**: MIT
 
 ---
 
-## Quick Commands (Copy-Paste Ready)
+## Quick Start
 
-### First Time Setup
 ```bash
+# Install dependencies
 pip install solders requests
+
+# Create wallet
 python mya.py setup
-```
 
-### Before Your First Launch
-```bash
-# Show helpful pre-launch tips
-python mya.py launch --tips
-
-# Check your balance
+# Check balance
 python mya.py wallet balance
 
-# Check your daily launch limit
-python mya.py wallet check
-
-# Test a launch (no SOL spent)
-python mya.py launch --dry-run --name "Test" --symbol "TST" --description "Test" --image "https://..."
-```
-
-### "What's my wallet address?"
-```bash
-python mya.py wallet address
-```
-
-### "What's my private key?"
-```bash
-python mya.py wallet export
-```
-⚠️ Never share this with anyone!
-
-### "How much SOL do I have?"
-```bash
-python mya.py wallet balance
-```
-
-### "How do I fund my wallet?"
-```bash
-python mya.py wallet fund
-```
-
-### "Launch a token"
-```bash
+# Launch a token
 python mya.py launch \
-  --name "Token Name" \
-  --symbol "TICKER" \
-  --description "Description here" \
+  --name "My Token" \
+  --symbol "MYT" \
+  --description "The best token" \
   --image "https://example.com/image.png"
 ```
 
-### "Test a launch without spending SOL"
-```bash
-python mya.py launch --dry-run \
-  --name "Test" \
-  --symbol "TEST" \
-  --description "Test token" \
-  --image "https://example.com/img.png"
-```
+---
 
-### "How many launches do I have left today?"
-```bash
-python mya.py wallet check
-```
+## All Commands
 
-### "Delete my wallet and start fresh"
-```bash
-python mya.py uninstall --yes
-python mya.py setup
-```
+| Command | Alias | Description |
+|---------|-------|-------------|
+| `setup` | `s` | Create a new wallet |
+| `wallet` | `w` | Wallet management |
+| `launch` | `l` | Launch a token |
+| `tokens` | `t` | List tokens in wallet |
+| `history` | `h` | Show command history |
+| `backup` | `b` | Backup/restore wallet |
+| `verify` | - | Verify wallet integrity |
+| `status` | `st` | Check API/RPC status |
+| `trending` | `tr` | Show trending tokens |
+| `leaderboard` | `lb` | Show launch leaderboard |
+| `stats` | - | Show your stats |
+| `airdrop` | - | Request devnet airdrop |
+| `transfer` | - | Transfer SOL |
+| `sign` | - | Sign a message |
+| `config` | `c` | Manage configuration |
+| `uninstall` | - | Remove all data |
 
 ---
 
-## ⚠️ Auto-Launch Mode (RISKY)
+## Wallet Commands
 
-Allows the AI to launch tokens WITHOUT asking permission each time.
-
-### Enable (User must explicitly request this)
 ```bash
-python mya.py config autonomous true
+# Show address
+python mya.py wallet address
+
+# Check balance
+python mya.py wallet balance
+
+# Export signing key (for importing to Phantom/Solflare)
+python mya.py wallet export
+
+# Get funding instructions
+python mya.py wallet fund
+
+# Check launch limits
+python mya.py wallet check
+
+# Import existing wallet (secure - via stdin)
+python mya.py wallet import < keyfile.txt
+
+# Import wallet (less secure - via CLI)
+python mya.py wallet import --key YOUR_BASE58_KEY
 ```
-
-### Check if enabled
-```bash
-python mya.py config autonomous
-```
-
-### Disable
-```bash
-python mya.py config autonomous false
-```
-
-**RISKS:**
-- AI may misinterpret context and launch unwanted tokens
-- Each launch costs ~0.02 SOL in fees
-- Tokens are permanent and public
-- Could drain wallet if left unchecked
-
-**Only enable if the user explicitly says:**
-- "You can launch tokens on your own"
-- "I trust you to launch autonomously"
-- "Go ahead and mint whenever you see an opportunity"
 
 ---
 
@@ -123,22 +92,34 @@ python mya.py config autonomous false
 | Param | Required | Description |
 |-------|----------|-------------|
 | `--name` | ✅ | Token name (max 32 chars) |
-| `--symbol` | ✅ | Ticker (max 10 chars, ASCII letters/numbers only) |
-| `--description` | ✅ | What the token is about (max 1000 chars) |
-| `--image` | ✅ | Image URL (HTTPS only) |
+| `--symbol` | ✅ | Ticker (max 10 chars, ASCII only) |
+| `--description` | ✅ | Token description (max 1000 chars) |
+| `--image` | ✅ | Image URL (HTTPS) |
 | `--image-file` | alt | Local image path (max 5MB) |
 | `--banner` | ❌ | Banner image URL (HTTPS) |
 | `--banner-file` | alt | Local banner path (max 5MB) |
 | `--twitter` | ❌ | Twitter/X link (HTTPS) |
 | `--telegram` | ❌ | Telegram link (HTTPS) |
 | `--website` | ❌ | Website link (HTTPS) |
-| `--initial-buy` | ❌ | Initial buy amount in SOL (default: 0) |
-| `--slippage` | ❌ | Slippage in basis points (100 = 1%, default: 100) |
+| `--initial-buy` | ❌ | Initial buy in SOL (default: 0) |
+| `--ai-initial-buy` | ❌ | Let AI decide buy amount |
+| `--slippage` | ❌ | Slippage in bps (default: 100 = 1%) |
 | `--dry-run` | ❌ | Test without launching |
+| `--preview` | ❌ | Preview parameters |
+| `--tips` | ❌ | Show first-launch tips |
+| `-y, --yes` | ❌ | Skip confirmation prompts |
 
-### Example with Initial Buy
+### Launch Examples
 
 ```bash
+# Basic launch
+python mya.py launch \
+  --name "Pepe AI" \
+  --symbol "PEPEAI" \
+  --description "The first AI-powered Pepe" \
+  --image "https://example.com/pepe.png"
+
+# With initial buy
 python mya.py launch \
   --name "My Token" \
   --symbol "MYT" \
@@ -146,136 +127,303 @@ python mya.py launch \
   --image "https://example.com/image.png" \
   --initial-buy 0.5 \
   --slippage 200
-```
-This launches the token AND buys 0.5 SOL worth with 2% slippage tolerance.
 
-### Let AI Decide Initial Buy
-
-```bash
+# AI decides initial buy
 python mya.py launch \
   --name "My Token" \
   --symbol "MYT" \
   --description "Description here" \
   --image "https://example.com/image.png" \
   --ai-initial-buy
+
+# With all socials
+python mya.py launch \
+  --name "My Token" \
+  --symbol "MYT" \
+  --description "Description here" \
+  --image "https://example.com/image.png" \
+  --twitter "https://twitter.com/mytoken" \
+  --telegram "https://t.me/mytoken" \
+  --website "https://mytoken.com"
+
+# Dry run (test without spending)
+python mya.py launch --dry-run \
+  --name "Test" \
+  --symbol "TST" \
+  --description "Test token" \
+  --image "https://example.com/test.png"
 ```
-AI calculates initial buy based on wallet balance:
-- Reserves 0.05 SOL for fees/future launches
-- Uses ~15% of available balance
-- Caps at 1 SOL max to limit risk
-- Minimum 0.01 SOL if buying
+
+---
+
+## Global Flags
+
+**Output Control:**
+| Flag | Description |
+|------|-------------|
+| `--json` | Output as JSON |
+| `--format` | Output format: text/json/csv/table |
+| `-o, --output-file` | Write output to file |
+| `--no-color` | Disable colors |
+| `--no-emoji` | Disable emoji |
+| `--timestamps` | Show timestamps |
+| `-q, --quiet` | Quiet mode (errors only) |
+| `-v, --verbose` | Verbose logging |
+| `--debug` | Debug mode (show stack traces) |
+
+**Path Overrides:**
+| Flag | Description |
+|------|-------------|
+| `--config-file` | Custom config file path |
+| `--wallet-file` | Custom wallet file path |
+| `--log-file` | Custom log file path |
+
+**Network Options:**
+| Flag | Description |
+|------|-------------|
+| `--network` | mainnet/devnet/testnet |
+| `--api-url` | Override API endpoint |
+| `--rpc-url` | Override RPC endpoint |
+| `--proxy` | HTTP proxy URL |
+| `--user-agent` | Custom user agent |
+
+**Behavior:**
+| Flag | Description |
+|------|-------------|
+| `--timeout` | Request timeout (seconds) |
+| `--retry-count` | Number of retries |
+| `--priority-fee` | Priority fee (microlamports) |
+| `--skip-balance-check` | Skip balance verification |
+| `-y, --yes` | Skip confirmation prompts |
+
+---
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `MYA_API_URL` | Override API endpoint |
+| `MYA_API_KEY` | API key for signed requests |
+| `MYA_SSL_VERIFY` | Set to `false` to disable SSL |
+| `HELIUS_RPC` | Custom Solana RPC endpoint |
+| `SOLANA_RPC_URL` | Alternative RPC env var |
+
+### .env File Support
+
+Create a `.env` file in your project or `~/.mintyouragent/.env`:
+
+```bash
+# .env
+MYA_API_KEY=your_api_key
+HELIUS_RPC=https://your-rpc.helius.xyz
+```
+
+The CLI loads `.env` from:
+1. Current directory
+2. `~/.mintyouragent/.env`
+
+---
+
+## Backup & Restore
+
+```bash
+# Create backup
+python mya.py backup create
+python mya.py backup create --name my_backup
+
+# List backups
+python mya.py backup list
+
+# Restore from backup
+python mya.py backup restore --file ~/.mintyouragent/backups/wallet_20240101_120000.json
+```
+
+---
+
+## Network Selection
+
+```bash
+# Use devnet (for testing)
+python mya.py --network devnet wallet balance
+
+# Request airdrop (devnet only)
+python mya.py --network devnet airdrop --amount 2
+
+# Use custom RPC
+python mya.py --rpc-url https://my-rpc.com wallet balance
+```
+
+---
+
+## Security Best Practices
+
+1. **Never share your signing key or RECOVERY_KEY.txt**
+2. **Use a dedicated wallet** - Don't use your main wallet
+3. **Only fund with what you need** - ~0.05 SOL per launch
+4. **Back up regularly** - `python mya.py backup create`
+5. **Import keys via stdin** - Not CLI args (visible in `ps aux`)
+6. **Verify before real launches** - Use `--dry-run` first
+
+### Secure Key Import
+
+```bash
+# GOOD: Read key from file (not visible in process list)
+python mya.py wallet import < keyfile.txt
+
+# GOOD: Pipe from password manager
+pass show solana/key | python mya.py wallet import
+
+# AVOID: CLI argument (visible in process list)
+python mya.py wallet import --key ABC123...
+```
+
+### Data Location
+
+All data stored in `~/.mintyouragent/` (LOCAL only - never transmitted):
+- `wallet.json` - Wallet with checksum verification
+- `config.json` - Configuration
+- `RECOVERY_KEY.txt` - Backup signing key (600 permissions)
+- `audit.log` - Action log
+- `history.json` - Command history
+- `backups/` - Wallet backups
+
+---
+
+## API Rate Limits
+
+| Tier | Daily Launches |
+|------|---------------|
+| Free | 3 |
+| With $SOUL token | More based on holdings |
+
+Check your limit: `python mya.py wallet check`
+
+---
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Missing dependencies |
+| 3 | No wallet found |
+| 4 | Invalid input |
+| 5 | Network error |
+| 6 | API error |
+| 7 | Security error |
+| 8 | User cancelled |
+| 9 | Timeout |
+
+---
+
+## Troubleshooting
+
+| Error | Solution |
+|-------|----------|
+| "Missing dependencies" | `pip install solders requests` |
+| "No wallet found" | `python mya.py setup` |
+| "Insufficient balance" | Send SOL to your wallet |
+| "Symbol must be ASCII" | Use only A-Z, 0-9 |
+| "SSL verification failed" | Set `MYA_SSL_VERIFY=false` (not recommended) |
+| "Wallet integrity failed" | Restore from backup |
+| "Network error" | Check internet connection |
+| "Rate limit exceeded" | Wait or hold $SOUL token |
 
 ---
 
 ## 🤖 AI Agent Guidelines
 
 ### Before First Launch - Ask the Human:
-1. "Would you like me to show you some useful commands first?" → `python mya.py launch --tips`
-2. "Should I check your wallet balance?" → `python mya.py wallet balance`
-3. "Would you like to do a dry run first?" → `python mya.py launch --dry-run ...`
+1. "Show useful commands?" → `python mya.py launch --tips`
+2. "Check wallet balance?" → `python mya.py wallet balance`
+3. "Do a dry run first?" → `python mya.py launch --dry-run ...`
 
 ### Initial Buy Decision
-When launching a token, ask the human:
+When launching, ask:
 
-> "Would you like to set an initial buy amount, or should I decide based on your balance?"
-> 
-> Options:
-> - **You decide:** "Buy 0.5 SOL worth" → `--initial-buy 0.5`
-> - **AI decides:** "You decide" → `--ai-initial-buy`
-> - **No initial buy:** "Just launch, no buy" → (no flag)
+> "Set initial buy yourself, or should I decide based on balance?"
+> - **You set:** `--initial-buy 0.5`
+> - **AI decides:** `--ai-initial-buy`
+> - **No buy:** (no flag)
 
 ### AI Decision Logic (--ai-initial-buy)
-- Reserve 0.05 SOL for network fees + future launches
+- Reserve 0.05 SOL for fees
 - Use 15% of remaining balance
-- Maximum 1 SOL (risk management)
-- Minimum 0.01 SOL if buying at all
-- If balance < 0.06 SOL, no initial buy
+- Maximum 1 SOL (risk limit)
+- Minimum 0.01 SOL if buying
+- If balance < 0.06 SOL, no buy
 
-### Risk Warnings to Share
+### Safety Warnings
 - Initial buys are irreversible
-- Token price can drop immediately after launch
-- Only buy what you're willing to lose
-- Consider doing a dry run first
+- Token price can drop after launch
+- Only buy what you can lose
+- Use dry run first
 
 ---
 
-## Economics
+## What is pump.fun?
 
-- **Platform fee:** FREE
-- **Network fee:** ~0.02 SOL per launch
-- **Creator fees:** You keep 100%
-- **Daily limit:** 100 launches
+pump.fun is a Solana token launchpad that:
+- Creates tokens instantly with no coding
+- Provides automatic liquidity
+- Has a bonding curve price mechanism
+- Migrates to Raydium at $69k market cap
 
----
-
-## Troubleshooting
-
-| Error | Fix |
-|-------|-----|
-| "Missing dependencies" | `pip install solders requests` |
-| "No wallet found" | `python mya.py setup` |
-| "Insufficient balance" | Send SOL to your wallet address |
-| "Symbol must be alphanumeric" | Use only A-Z, 0-9 in symbol |
-| "Network error" | Check internet connection |
+MintYourAgent uses pump.fun's infrastructure to launch tokens.
 
 ---
 
-## Security Notes
+## Comparison
 
-- **Data directory:** `~/.mintyouragent/` (not the skill folder)
-- **wallet.json:** Stored with 600 permissions, verified on every load, checksum verified
-- **SEED_PHRASE.txt:** Backup in ~/.mintyouragent/, never in public skill dir
-- **SSL verification:** Enabled by default for all API calls
-- **Local signing:** Private keys NEVER leave your machine ✅
-- **Audit logging:** All operations logged to `~/.mintyouragent/audit.log`
+| Feature | MintYourAgent | Raw pump.fun | Other CLIs |
+|---------|--------------|--------------|------------|
+| AI Integration | ✅ | ❌ | ❌ |
+| Local Signing | ✅ | ✅ | ❌ |
+| CLI | ✅ | ❌ | ✅ |
+| Free | ✅ | ✅ | ❌ |
+| Open Source | ✅ | ❌ | Varies |
 
-### Environment Variables
+---
 
-| Variable | Description |
-|----------|-------------|
-| `MYA_API_URL` | Override API endpoint |
-| `MYA_API_KEY` | API key for signed requests |
-| `MYA_SSL_VERIFY` | Set to `false` to disable SSL (not recommended) |
-| `HELIUS_RPC` | Custom Solana RPC endpoint |
+## Changelog
 
-### New Flags (v2.2.0)
+See [CHANGELOG.md](./CHANGELOG.md) for full history.
 
-| Flag | Description |
-|------|-------------|
-| `--json` | Output as JSON (for scripting) |
-| `-v, --verbose` | Verbose logging |
-| `-y, --yes` | Skip confirmation prompts |
+### v3.0.0
+- All 200 issues fixed
+- New commands: tokens, history, backup, verify, status, trending, leaderboard, stats, airdrop, transfer, sign
+- Command aliases (l, w, s, etc.)
+- .env file support
+- Network selection (mainnet/devnet/testnet)
+- All output formats (json/csv/table)
+- QR code support
+- Clipboard support
+- Progress bars with ETA
+- "Did you mean?" suggestions
 
-### Secure Key Import
+### v2.3.0
+- All CLI flags
+- Input sanitization
+- Path safety
 
-```bash
-# GOOD: Read key from file (not visible in ps aux)
-python mya.py wallet import < keyfile.txt
+### v2.2.0
+- Security hardening
+- Retry logic
+- Audit logging
 
-# AVOID: Passing key as argument (visible in process list)
-python mya.py wallet import --key ABC123...
-```
+### v2.1.0
+- Secure local signing
+- AI initial buy
 
-### Security Architecture
+---
 
-**Secure Local Signing Flow:**
-1. CLI sends token metadata + your PUBLIC address to API
-2. Server builds unsigned transaction, returns it
-3. CLI verifies transaction (blockhash, signer)
-4. CLI signs transaction LOCALLY with your private key
-5. CLI submits signed transaction to server
-6. Server broadcasts to Solana network
+## Contributing
 
-✅ **Your private key NEVER leaves your machine**
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
-**Additional protections:**
-- Transaction verification before signing (blockhash, expected signer)
-- Replay attack protection via timestamps
-- All URLs validated (HTTPS only, no SSRF)
-- File size limits (5MB max for images)
-- ASCII-only symbols (no Unicode lookalikes)
-- File locking to prevent race conditions
-- Secure deletion (overwrite before unlink)
-- Memory clearing after key use
-- Retry logic with exponential backoff
-- Wallet integrity checksums
+---
+
+## License
+
+MIT License - see [LICENSE](./LICENSE)
