@@ -18,11 +18,19 @@ def ai_picture_book_task_query(api_key: str, task_id: str):
     response = requests.post(url, headers=headers, json=params)
     response.raise_for_status()
     result = response.json()
+    datas = []
     if "code" in result:
         raise RuntimeError(result["detail"])
     if "errno" in result and result["errno"] != 0:
         raise RuntimeError(result["errmsg"])
-    return result["data"]
+    if "data" in result and len(result["data"]) > 0:
+        for item in result["data"]:
+            if item["result"]:
+                bosUrl = item["result"].get("video_bos_url", "")
+                del item["result"]
+                item["video_bos_url"] = bosUrl
+            datas.append(item)
+    return datas
 
 
 if __name__ == "__main__":
