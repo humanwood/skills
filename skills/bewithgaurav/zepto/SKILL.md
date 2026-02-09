@@ -1,12 +1,66 @@
 ---
 name: zepto
-description: Complete Zepto automation - authentication, address setup, shopping, personalized recommendations based on order history, and payment link generation. Triggers on zepto, grocery, quick commerce, add to cart, milk, bread, butter, vegetables.
+description: Order groceries from Zepto in seconds. Just say what you need, get a payment link on WhatsApp, pay on your phone, done. Remembers your usual items. Works across India where Zepto delivers.
 metadata: {"openclaw":{"emoji":"🛒","requires":{"config":["browser.enabled"]}}}
 ---
 
-# Zepto India Grocery Skill
+# zepto
 
-Complete end-to-end Zepto automation: authenticate user, confirm delivery address, shop for groceries with personalized recommendations, and generate Juspay payment links.
+**Order groceries from Zepto in 30 seconds. From chat to checkout.**
+
+Tell your AI what you need. It shops, generates a payment link, sends it to WhatsApp. You pay on your phone. Groceries arrive in 10 minutes.
+
+## 💬 Examples
+
+**Quick orders:**
+```
+"Order milk and bread from Zepto"
+"Add vegetables - tomatoes, onions, potatoes"  
+"Get me Amul butter and cheese"
+```
+
+**Your usuals:**
+```
+"Add my usual milk" → AI picks the brand you always order
+"Order the usual groceries" → AI suggests your frequent items
+```
+
+**Full shopping list:**
+```
+"Add milk, bread, eggs, coriander, ginger, and tea bags"
+→ AI adds everything, shows total: ₹X
+→ Sends payment link to WhatsApp
+→ You pay, groceries arrive
+```
+
+---
+
+## 🔒 Security & Privacy
+
+**What this skill does:**
+- ✅ Browser automation on zepto.com (your local browser, your session)
+- ✅ Stores order history locally in `~/.openclaw/skills/zepto/order-history.json` (local file, not shared)
+- ✅ Sends payment links via WhatsApp (requires your consent for each order)
+- ✅ All authentication happens through Zepto's official flow (Phone + OTP)
+
+**What this skill does NOT do:**
+- ❌ No automatic payments (you must click the link and pay manually)
+- ❌ No data sent to external servers (except Zepto.com and WhatsApp via your channels)
+- ❌ No persistent background jobs (optional one-time order status check only if you approve)
+- ❌ No storage of payment info or OTPs
+- ❌ No access to your banking/UPI apps
+
+**Data Storage:**
+- Order history: `~/.openclaw/skills/zepto/order-history.json` (local only, helps with "usuals" feature)
+- Browser session: Managed by OpenClaw's browser (standard Chrome/Chromium profile)
+
+**User Control:**
+- You control when to order
+- You approve each payment link
+- You can delete order history file anytime
+- All browser actions happen in your profile with your visibility
+
+---
 
 ## Complete Flow
 1. **Authentication** - Phone + OTP verification
@@ -167,20 +221,43 @@ browser act profile=openclaw request='{"kind":"type","ref":"{otp_input_ref}","te
 
 ## Step 2: Address Confirmation
 
-**Open location selector:**
+**🚨 CRITICAL: ALWAYS CHECK ADDRESS BEFORE PROCEEDING WITH ANY SHOPPING!**
+
+### Address Selection Rules
+
+**Default behavior:**
+1. Most users have a "Home" address (or variant: "Home 1", "Office", etc.) - this is typically the main address
+2. **ALWAYS show current address and ASK for confirmation** - never assume
+3. Check what was used in the last order (if order history exists)
+4. Wait for explicit user confirmation before proceeding
+
+**On homepage, address is visible in the header:**
 ```bash
-# Click "Select Location" button
-browser act profile=openclaw request='{"kind":"click","ref":"{select_location_button_ref}"}'
-browser screenshot profile=openclaw  # Show user their saved addresses
+browser snapshot --interactive profile=openclaw
+# Look for button with heading level=3 containing the address
+# Example ref: e16 with text like "Home - [Address Details]..."
+# Delivery time shown nearby (e.g., "10 minutes")
 ```
 
-**Ask user to confirm:**
+**ALWAYS ask user to confirm before shopping:**
 ```
-Your saved addresses:
-1. Home - 123 Main Street, Mumbai
-2. Office - 456 Park Avenue, Delhi
+📍 I see your delivery address is set to:
+{Address Name} - {Full Address}
+⏱️ Delivery in ~{X} minutes
 
-Which address for delivery? (Reply with number or name)
+Is this correct? Should I proceed with this address?
+```
+
+**If address is wrong:**
+1. Open address selector and show ALL saved addresses
+2. Let user choose - DO NOT assume
+3. Wait for explicit instruction
+
+**To open address selector:**
+```bash
+# Click the address button (ref e16 or similar)
+browser act profile=openclaw request='{"kind":"click","ref":"e16"}'
+# This opens address selection modal with all saved addresses
 ```
 
 **Select address (CRITICAL TECHNIQUE):**
@@ -192,21 +269,16 @@ browser act profile=openclaw request='{"fn":"() => { const headings = document.q
 
 **KEY INSIGHT:** The address name (e.g., "Home", "Office") shows a hand cursor on hover and is directly clickable. Don't try to click containers or buttons around it - click the text element itself.
 
-**Confirm serviceability:**
-```bash
-browser navigate url=https://www.zepto.com profile=openclaw
-# Check for "Store closed" or "Not serviceable" warnings
+**After address confirmed by user:**
 ```
-
-**Report to user:**
-```
-✅ Delivery address: {address_name}
+✅ Delivery address confirmed: {address_name}
 📍 {full_address}
 ⏱️ ETA: {eta} mins
-🏪 Store: {store_name}
 
 Ready to shop! What would you like to add to cart?
 ```
+
+**⚠️ Address is CRITICAL - never skip this step!**
 
 ---
 
@@ -284,15 +356,36 @@ After showing options, user can:
 
 ### 3B: Direct Search (Specific Items)
 
-When user names a specific item:
+**Multi-Item Shopping Flow:**
+When user gives a list (e.g., "add milk, butter, bread"):
+1. **Add ALL items first** (search, pick best, add to cart)
+2. **Then show final cart summary** with all items and total
 
+**Item Selection Logic:**
+- Check order-history.json first
+- If item ordered 2+ times → auto-select that variant
+- If item ordered 0-1 times or multiple unclear variants → **show options and ASK**
+- Pick closest match to user's request (e.g., "Yakult Light" when they said "light")
+- Use highest review count as tiebreaker
+
+**When UNCLEAR about variant:**
+```
+🥛 Found multiple milk options:
+1. Amul Taaza (500ml) - ₹29 ⭐ 4.8 (100k)
+2. Amul Gold (1L) - ₹68 ⭐ 4.9 (80k)
+3. Mother Dairy (500ml) - ₹30 ⭐ 4.7 (60k)
+
+Which one? (or tell me a number)
+```
+
+**Search Process:**
 ```bash
 browser navigate url=https://www.zepto.com/search?query={item} profile=openclaw
 browser snapshot --interactive profile=openclaw
 ```
 
 ### Select Best Product
-**Rule:** Pick product with highest review count.
+**Rule:** Pick product with highest review count (unless order history says otherwise).
 
 Format: `{rating} ({count})` where k=thousand, M=million.
 
@@ -303,12 +396,23 @@ Example: "4.8 (694.4k)" = 694,400 reviews = most popular.
 browser act profile=openclaw request='{"kind":"click","ref":"{ADD_button_ref}"}'
 ```
 
-### Multi-Item Flow
-For "add milk, butter, bread":
-1. Search milk → pick best → ADD
-2. Search butter → pick best → ADD
-3. Search bread → pick best → ADD
-4. View cart summary
+### View Cart Summary (ALWAYS show after adding all items)
+```bash
+browser navigate url=https://www.zepto.com/?cart=open profile=openclaw
+browser snapshot profile=openclaw  # Get cart summary
+```
+
+**Cart Summary Format:**
+```
+🛒 Added to cart:
+1. Item 1 - ₹XX
+2. Item 2 - ₹YY
+3. Item 3 - ₹ZZ
+
+💰 Total: ₹{total}
+
+Ready to checkout? (say "yes" or "checkout" or "lessgo")
+```
 
 **CRITICAL - Quantity Mapping:**
 When user provides a shopping list with quantities (e.g., "3x jeera, 2x saffola oats"):
@@ -332,25 +436,47 @@ Example mapping:
 - Verify quantities match the original request
 - If unsure, ASK the user before making changes
 
-### View Cart
-```bash
-browser navigate url=https://www.zepto.com/?cart=open profile=openclaw
-browser snapshot profile=openclaw  # Get cart summary
+### Error Handling - Out of Stock
+
+**If item not found or out of stock:**
 ```
+❌ {item} is currently unavailable.
+
+🔍 Suggestions:
+- {similar_item_1}
+- {similar_item_2}
+
+What would you like instead?
+```
+
+**Don't auto-add alternatives** - wait for user's next item or choice.
 
 ---
 
 ## Step 4: Generate Payment Link
 
-After all items added to cart:
+After all items added to cart and user confirms checkout:
 
-### 4.1: Proceed to Payment
+### 4.1: Open Cart and Proceed to Payment
 ```bash
-browser act profile=openclaw request='{"kind":"click","ref":"{proceed_to_payment_button_ref}"}'
-# Wait for redirect to Juspay
+# Open cart modal
+browser act profile=openclaw request='{"kind":"click","ref":"{cart_button_ref}"}'
+# Example ref from homepage: e44
+
+# Wait for cart to open, take snapshot
+browser snapshot --interactive profile=openclaw
+
+# Click "Click to Pay ₹{amount}" button
+browser act profile=openclaw request='{"kind":"click","ref":"{click_to_pay_button_ref}"}'
+# Example ref: e3579
 ```
 
 ### 4.2: Extract Juspay Link
+```bash
+# Wait 2 seconds for navigation to complete
+browser act profile=openclaw request='{"fn":"async () => { await new Promise(r => setTimeout(r, 2000)); return window.location.href; }","kind":"evaluate"}'
+```
+
 **URL Format:**
 ```
 https://payments.juspay.in/payment-page/signature/zeptomarketplace-{order_id}
@@ -358,46 +484,250 @@ https://payments.juspay.in/payment-page/signature/zeptomarketplace-{order_id}
 
 Example:
 ```
-https://payments.juspay.in/payment-page/signature/zeptomarketplace-019c2a455a630000000000009e6f261c
+https://payments.juspay.in/payment-page/signature/zeptomarketplace-{ORDER_ID_EXAMPLE}
 ```
 
 ### 4.3: Send Link via WhatsApp
 ```bash
-message action=send channel=whatsapp target={user_phone} message="🛒 Your Zepto order is ready!
+message action=send channel=whatsapp target={user_phone} message="🛒 *Your Zepto order is ready!*
 
-{cart_summary}
+*Cart Summary ({item_count} items):*
+1. {item1} - ₹{price1}
+2. {item2} - ₹{price2}
+3. {item3} - ₹{price3}
 
-💰 Total: ₹{total}
+*💰 Total: ₹{total}*
 
-🔗 Click here to pay:
+📍 Delivering to: {address_name} - {address}
+⏱️ ETA: {eta} minutes
+
+*🔗 Click here to pay:*
 {juspay_payment_link}
 
-After payment, your order will be confirmed automatically! 🚀"
+⚠️ *IMPORTANT: After payment, message me \"DONE\" to confirm your order!*
+(Don't rely on the payment page - just tell me when you've paid and I'll verify it) 🚀"
 ```
 
-**Payment Link Features:**
-- ✅ Shareable across devices
-- ✅ Works on mobile browser
-- ✅ Redirects to Zepto after payment
-- ✅ Order confirmed automatically
-- ✅ Secure (Juspay gateway)
+### 4.4: Wait for User "Done" Message & Verify Order
+
+**After user says "done" or "paid":**
+
+**Step 1: Navigate to Zepto homepage to check order status**
+```bash
+browser navigate url=https://www.zepto.com profile=openclaw
+browser snapshot --interactive profile=openclaw
+```
+
+**Step 2: Look for order confirmation**
+Check for text like:
+- "Your order is on the way"
+- "Order confirmed"
+- "Preparing your order"
+- "Arriving in X mins"
+- Track order button/link
+
+**Step 3: Auto-clear cart (Post-Payment Behavior)**
+
+🚨 **CRITICAL: After payment, cart items persist because Zepto hasn't synced yet!**
+
+**Automatically clear cart without asking (user expects cart to be empty after payment):**
+
+```bash
+# Open cart
+browser act profile=openclaw request='{"kind":"click","ref":"{cart_button_ref}"}'
+browser snapshot --interactive profile=openclaw
+
+# Click Remove button for each item
+browser act profile=openclaw request='{"kind":"click","ref":"{remove_button_ref_1}"}'
+browser act profile=openclaw request='{"kind":"click","ref":"{remove_button_ref_2}"}'
+browser act profile=openclaw request='{"kind":"click","ref":"{remove_button_ref_3}"}'
+# ... repeat for all items
+```
+
+**Step 4: Confirm to user**
+
+**If order confirmed:**
+```
+✅ *Payment confirmed!*
+🚚 Your order is on the way! Arriving in ~{X} mins.
+
+Order details:
+- {item_count} items, ₹{total}
+- Delivery to: {address}
+
+✅ Cart cleared ({item_count} items removed from previous order)
+🛒 Ready for your next order! 🐺
+```
+
+**If order NOT showing yet:**
+```
+⏳ Payment processed, but order confirmation is still loading on Zepto's end.
+
+Let me check again in 30 seconds...
+```
+
+**Then set up a background check to try again.**
+
+
+**Step 1: Navigate back to Zepto homepage**
+```bash
+browser navigate url=https://www.zepto.com profile=openclaw
+```
+
+**Step 2: Check order status on homepage**
+```bash
+browser snapshot --interactive profile=openclaw
+# Look for "Your order is on the way" or order tracking
+```
+
+**Step 3: Open cart and check items**
+```bash
+browser act profile=openclaw request='{"kind":"click","ref":"{cart_button_ref}"}'
+browser snapshot --interactive profile=openclaw
+```
+
+**🚨 CRITICAL: Cart items may still be there because Zepto hasn't synced order confirmation yet!**
+
+**Step 4: Ask user about clearing cart**
+```
+✅ Payment confirmed! Your order is on the way.
+
+⚠️ I can see {X} items still in the cart (from the previous order that just went through).
+
+Should I:
+1. Clear the cart (recommended for fresh start)
+2. Keep the items (if you want to reorder them)
+
+*Default: I'll clear the cart unless you say "keep it"*
+```
+
+**Step 5: Clear cart if user approves (or by default)**
+```bash
+# For each item in cart, click Remove button
+browser act profile=openclaw request='{"kind":"click","ref":"{remove_button_ref_1}"}'
+browser act profile=openclaw request='{"kind":"click","ref":"{remove_button_ref_2}"}'
+# ... repeat for all items
+
+# Or use JavaScript to clear all at once:
+browser act profile=openclaw request='{"fn":"() => { const removeButtons = document.querySelectorAll(\"button\"); let count = 0; for (let btn of removeButtons) { if (btn.textContent.trim() === \"Remove\") { btn.click(); count++; } } return `Removed ${count} items`; }","kind":"evaluate"}'
+```
+
+**Confirmation message:**
+```
+✅ Cart cleared! ({X} items removed)
+🛒 Ready for your next order!
+
+Your current order ({item_count} items, ₹{total}) will arrive in ~{eta} mins.
+```
+
+**If user says "keep it":**
+```
+✅ Got it! Keeping {X} items in cart.
+🛒 Ready to add more items or proceed with these?
+```
 
 ---
 
-## Response Format
-
-**After successful cart + payment link generation:**
+2. Going to cart manually and clicking "Pay"
+3. Let me know if you need me to try again
 ```
-🛒 Added to Zepto cart:
-- Amul Gold Milk (1L) - ₹68 (4.8★, 100k reviews)
-- Amul Butter (100g) - ₹58 (4.9★, 50k reviews)
-- Britannia Bread (400g) - ₹42 (4.7★, 80k reviews)
 
-💰 Total: ₹168
-
-🔗 Payment link sent to your WhatsApp!
-Click the link to pay and confirm your order. Delivery in ~15 mins! 🚀
+**If delivery address becomes unserviceable:**
 ```
+⚠️ Your delivery address is currently unserviceable.
+Should I order it to a different address?
+
+(I can show you all your saved addresses)
+```
+
+---
+
+## 🎯 Complete Order Flow Summary
+
+### Before Starting ANY New Order (Normal Flow - No Recent Payment):
+
+**1. Check Address (ALWAYS)**
+```
+📍 Current address: {address}
+Is this correct?
+```
+
+**2. Check Cart (if items exist)**
+```bash
+# Open cart
+browser act profile=openclaw request='{"kind":"click","ref":"{cart_button_ref}"}'
+browser snapshot --interactive profile=openclaw
+```
+
+**If items in cart from NORMAL browsing (not post-payment):**
+```
+⚠️ I see {X} items in your cart:
+1. {item1} - ₹{price1}
+2. {item2} - ₹{price2}
+
+Should I:
+1. Clear the cart
+2. Keep these items
+
+What would you like?
+```
+
+**Wait for user response before proceeding.**
+
+---
+
+### Post-Payment Behavior (After User Says "Done" or "Paid"):
+
+**This is DIFFERENT from normal flow - auto-clear expected!**
+
+**1. Navigate to zepto.com and check order status**
+```bash
+browser navigate url=https://www.zepto.com profile=openclaw
+browser snapshot --interactive profile=openclaw
+```
+
+**2. Look for "Your order is on the way" or "Arriving in X mins"**
+
+**3. Open cart and AUTO-CLEAR without asking**
+```bash
+# Open cart
+browser act profile=openclaw request='{"kind":"click","ref":"{cart_button_ref}"}'
+
+# Remove all items (they're from the order that just went through)
+browser act profile=openclaw request='{"kind":"click","ref":"{remove_ref_1}"}'
+browser act profile=openclaw request='{"kind":"click","ref":"{remove_ref_2}"}'
+browser act profile=openclaw request='{"kind":"click","ref":"{remove_ref_3}"}'
+```
+
+**4. Confirm to user**
+```
+✅ Payment confirmed! Your order is on the way! Arriving in ~{X} mins.
+
+✅ Cart cleared ({item_count} items removed from previous order)
+🛒 Ready for your next order!
+```
+
+**Why auto-clear in post-payment?**
+- User expects cart to be empty after successful order
+- Cart items are from the order they just paid for
+- Zepto hasn't synced yet, so items persist temporarily
+- Clearing prevents confusion and duplicate orders
+
+---
+
+### Start Fresh Shopping (After Cart Cleared)
+```
+✅ Cart cleared!
+✅ Address confirmed: {address}
+
+What would you like to order? 🛒
+```
+
+---
+
+**Key Difference:**
+- **Normal flow**: ASK before clearing cart (user might want those items)
+- **Post-payment flow**: AUTO-CLEAR cart (user knows those items are ordered)
 
 ---
 

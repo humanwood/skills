@@ -1,0 +1,8 @@
+{
+  "last_updated": "ISO-8601-TIMESTAMP",
+  "total_orders_scraped": 0,
+  "item_frequencies": {},
+  "category_totals": {},
+  "top_items": [],
+  "notes": "This file stores your order history to help with personalized recommendations. Run 'update my zepto history' to populate it."
+}
