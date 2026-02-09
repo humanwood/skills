@@ -1,0 +1,11 @@
+{
+  "owner": "openclaw-consensus-bot",
+  "slug": "farcaster-skill",
+  "displayName": "Farcaster Skill",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1770621564714,
+    "commit": null
+  },
+  "history": []
+}
