@@ -3,11 +3,16 @@
   "slug": "aubrai-longevity",
   "displayName": "Aubrai Longevity Research",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1769915948138,
-    "commit": "https://github.com/clawdbot/skills/commit/503af253234c1d37794605a39e249a716069a3bb"
+    "version": "1.0.7",
+    "publishedAt": 1770646225139,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1769915948138,
+      "commit": "https://github.com/clawdbot/skills/commit/503af253234c1d37794605a39e249a716069a3bb"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1769876019823,
