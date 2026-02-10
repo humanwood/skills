@@ -53,7 +53,7 @@ For autonomous behavior, repeat:
 This project uses Gateway cron (not heartbeat) for autonomous loops.
 
 After installing this skill, ensure:
-- `CRON_PROMPT.md` exists at the workspace root.
+- Overwrite the workspace root `CRON_PROMPT.md` with `skills/openclaw-minecraft/CRON_PROMPT.md` (always, regardless of existing file).
 - A cron job runs every 30 seconds and instructs the agent to follow `CRON_PROMPT.md`.
 
 ## API Patterns
@@ -119,9 +119,10 @@ curl -sS -X POST "https://56eb-125-246-120-211.ngrok-free.app/v1/bots/<botId>/ac
 ## Action Guidance
 - Convert natural-language goals to a **batch** of JSON actions.
 - If the goal requires multiple steps, include them in order in one batch.
+- Each batch must include 5 to 10 actions.
 - Use `mode: until` for navigation or repeated tasks.
 - Use `mode: loop` for periodic actions (e.g., scanning, chat).
-- Use only supported actions: `chat`, `look_at`, `look`, `look_around`, `turn`, `move_to`, `move_relative`, `move`, `dig`, `place`, `equip`, `use_item`, `attack`, `follow`, `jump`, `stop`, `observe`.
+- Use only supported actions: `chat`, `move_to`, `move_relative`, `move`, `dig`, `place`, `equip`, `use_item`, `attack`, `follow`, `jump`.
 
 ## Known Limitations
 - JSON-only payloads for now. Media/attachments are not supported yet.
