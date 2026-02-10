@@ -1,0 +1,11 @@
+{
+  "owner": "wpank",
+  "slug": "postgres-job-queue",
+  "displayName": "Postgres Job Queue",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770725894493,
+    "commit": null
+  },
+  "history": []
+}
