@@ -1,23 +1,38 @@
 ---
 name: pubmed-edirect
 description: Search and retrieve literature from PubMed using NCBI's EDirect command-line tools.
+requires:
+  bins:
+    - esearch
+    - efetch
+    - elink
+    - xtract
+    - einfo
+    - efilter
+install:
+  - id: edirect
+    kind: script
+    label: Install NCBI EDirect from official source
+    source: https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh
+    docs: https://www.ncbi.nlm.nih.gov/books/NBK179288/
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "🔬",
-        "requires": { "anyBins": ["esearch", "efetch", "elink", "xtract"] },
-        "install":
-          [
-            {
-              "id": "edirect",
-              "kind": "script",
-              "bins": ["esearch", "efetch", "elink", "xtract", "einfo", "efilter"],
-              "label": "Install EDirect (see INSTALL.md for details)",
-            },
-          ],
-      },
-  }
+  openclaw:
+    emoji: 🔬
+    requires:
+      bins:
+        - esearch
+        - efetch
+        - elink
+        - xtract
+        - einfo
+        - efilter
+    env:
+      - name: NCBI_API_KEY
+        optional: true
+        description: NCBI API key for increased rate limits (10 requests/sec vs 3 requests/sec)
+      - name: NCBI_EMAIL
+        optional: true
+        description: Email address to identify yourself to NCBI (recommended)
 ---
 
 # PubMed EDirect Skill
@@ -65,6 +80,7 @@ The skill provides access to EDirect tools through OpenClaw's `exec` capability:
 ## Databases Supported
 
 EDirect supports numerous NCBI databases including:
+
 - `pubmed` - Biomedical literature
 - `pmc` - PubMed Central full-text articles
 - `gene` - Gene information
@@ -92,23 +108,31 @@ EDirect supports numerous NCBI databases including:
 The `scripts/` directory contains ready-to-use bash scripts:
 
 ### `batch_fetch_abstracts.sh`
+
 Fetch abstracts for a list of PMIDs with error handling and rate limiting.
+
 ```bash
 ./scripts/batch_fetch_abstracts.sh pmids.txt abstracts/ 0.5
 ```
 
 ### `search_export_csv.sh`
+
 Search PubMed and export results to CSV with metadata.
+
 ```bash
 ./scripts/search_export_csv.sh "CRISPR [TIAB]" 100 results.csv
 ```
 
 ### `publication_trends.sh`
+
 Analyze publication trends over time with visualization.
+
 ```bash
 ./scripts/publication_trends.sh "machine learning" 2010 2023 trends.csv
 ```
 
 ## Notes
 
-This skill requires EDirect to be installed and configured on your system. It provides command templates and examples that can be executed through OpenClaw's `exec` tool. For complex workflows, consider creating reusable shell scripts or using the included scripts.
+This skill requires EDirect to be installed and configured on your system. It provides command templates and examples that can be executed through OpenClaw's `exec` tool.
+
+For complex workflows, consider creating reusable shell scripts or using the included scripts.
