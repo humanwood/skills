@@ -1,7 +1,7 @@
 {
   "name": "elite-longterm-memory",
-  "version": "1.2.2",
-  "description": "Ultimate AI agent memory system. Combines bulletproof WAL protocol, vector search, git-based knowledge graphs, cloud backup, and maintenance hygiene. Never lose context again.",
+  "version": "1.2.3",
+  "description": "Ultimate AI agent memory system for Cursor, Claude, ChatGPT & Copilot. WAL protocol, vector search, git-based knowledge graphs, cloud backup. Never lose context again.",
   "keywords": [
     "memory",
     "ai-agent",
@@ -13,18 +13,24 @@
     "persistent-context",
     "claude",
     "gpt",
+    "chatgpt",
     "openclaw",
     "moltbot",
-    "openclaw",
     "cursor",
     "copilot",
+    "github-copilot",
     "ai",
     "llm",
     "automation",
     "context-management",
     "mem0",
     "auto-extraction",
-    "fact-extraction"
+    "fact-extraction",
+    "vibe-coding",
+    "ai-tools",
+    "developer-tools",
+    "devtools",
+    "typescript"
   ],
   "optionalDependencies": {
     "mem0ai": "^1.0.0"
