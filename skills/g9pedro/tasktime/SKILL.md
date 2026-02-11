@@ -54,14 +54,23 @@ tasktime chart --type line          # Line chart
 ```
 
 ### ClawVault Integration
-```bash
-# Sync to ClawVault (https://clawvault.dev)
-tasktime sync                       # Sync last 7 days
-tasktime sync --days 30             # Sync last 30 days
 
-# Export as markdown
-tasktime export                     # Print to stdout
-tasktime export > report.md         # Save to file
+**Auto-save on stop (v1.2.0+):** Every completed task is automatically saved to [ClawVault](https://clawvault.dev):
+
+```bash
+tasktime start "Build API" -c coding
+# ... do the work ...
+tasktime stop --notes "Finished in record time"
+# ✅ Completed: Build API
+# 🐘 Saved to ClawVault              ← automatic!
+```
+
+**Manual sync and export:**
+```bash
+tasktime sync                       # Sync full report to ClawVault
+tasktime sync --days 30             # Sync last 30 days
+tasktime export                     # Export as markdown
+tasktime stop --no-vault            # Skip auto-save for one task
 ```
 
 ### Demo Data
