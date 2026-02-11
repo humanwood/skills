@@ -65,8 +65,11 @@ def call_gemini_tts(
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     prompt = (
-        "Generate natural Korean podcast conversation audio. "
-        "Keep pacing conversational, warm, and realistic. "
+        "You are voicing a Korean web drama scene (realistic K-drama style). "
+        "Act naturalistic and restrained: no announcer tone, no exaggerated acting, no forced cuteness. "
+        "Keep pauses subtle and human. "
+        "IMPORTANT: Ignore and DO NOT speak any stage directions in parentheses/brackets (e.g., '(...)', '[...]'). "
+        "Speak ONLY the dialogue content after each 'Speaker:' label. "
         "Do not read markdown symbols.\n\n"
         + dialogue_text
     )

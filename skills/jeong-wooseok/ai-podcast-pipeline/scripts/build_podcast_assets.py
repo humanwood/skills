@@ -38,7 +38,10 @@ TG_MAX_BYTES = 20 * 1024 * 1024
 
 
 def resolve_source(src: str) -> Path:
-    if src.startswith('http://') or src.startswith('https://'):
+    # Only allow HTTPS URLs (block http://)
+    if src.startswith('http://'):
+        raise ValueError(f"Insecure HTTP not allowed. Use HTTPS: {src}")
+    if src.startswith('https://'):
         u = urlparse(src)
         slug = unquote(u.path).strip('/')
         p = QUARTZ_ROOT / f"{slug}.md"

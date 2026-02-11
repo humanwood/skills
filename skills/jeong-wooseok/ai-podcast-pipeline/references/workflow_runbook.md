@@ -21,8 +21,10 @@
 
 ### 권장: chunked 빌더 (타임아웃 방지)
 ```bash
-export GEMINI_API_KEY=$(grep '^NANO_BANANA_KEY=' /home/tw2/.openclaw/.env | cut -d= -f2-)
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_dualvoice_audio.py \
+# API 키를 환경변수로 설정 (NANO_BANANA_KEY 또는 GEMINI_API_KEY)
+export GEMINI_API_KEY="$NANO_BANANA_KEY"
+
+python3 scripts/build_dualvoice_audio.py \
   --input <script.txt> \
   --outdir <outdir> \
   --basename podcast_full_dualvoice \
@@ -31,7 +33,7 @@ python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_d
 
 ### 짧은 입력일 때 단일 호출
 ```bash
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/gemini_multispeaker_tts.py \
+python3 scripts/gemini_multispeaker_tts.py \
   --input-file <dialogue.txt> \
   --outdir <outdir> \
   --basename podcast_dualvoice \
@@ -45,7 +47,7 @@ python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/gemini_
 
 ## 4) 자막 생성 (전체 문장 보존)
 ```bash
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_korean_srt.py \
+python3 scripts/build_korean_srt.py \
   --script <script.txt> \
   --audio <final.mp3> \
   --output <outdir>/podcast.srt \
@@ -54,7 +56,7 @@ python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_k
 
 ## 5) 자막 MP4 렌더
 ```bash
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/render_subtitled_video.py \
+python3 scripts/render_subtitled_video.py \
   --image <thumbnail.png> \
   --audio <final.mp3> \
   --srt <outdir>/podcast.srt \
@@ -71,9 +73,10 @@ python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/render_
 
 ## 6) 썸네일 + 메타 생성
 ```bash
-KEY=$(grep '^NANO_BANANA_KEY=' /home/tw2/.openclaw/.env | cut -d= -f2-)
-export NANO_BANANA_KEY="$KEY"
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_podcast_assets.py \
+# API 키를 환경변수로 설정
+export GEMINI_API_KEY="$NANO_BANANA_KEY"
+
+python3 scripts/build_podcast_assets.py \
   --source "<QuickView path or URL>"
 ```
 

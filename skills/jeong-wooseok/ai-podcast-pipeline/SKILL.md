@@ -1,5 +1,6 @@
 ---
 name: ai-podcast-pipeline
+version: 0.1.4
 description: Create Korean AI podcast packages from QuickView trend notes. Use for dual-host script writing (Callie × Nick), Gemini multi-speaker TTS audio generation, subtitle timing/render fixes, thumbnail+MP4 packaging, and YouTube title/description output. Supports both full (15~20 min) and compressed (5~7 min) editions.
 ---
 
@@ -19,10 +20,9 @@ Build end-to-end podcast assets from `Trend/QuickView-*` content.
 
 ## Step 1) Select Source
 
-Prefer weekly file:
-- `/home/tw2/Documents/n8n/data/shared/syn/8.quartz/Trend/QuickView-YYMM-주차주.md`
+Prefer weekly QuickView file from your configured Quartz root.
 
-If user gives `wk.aiee.app` URL, map to local 8.quartz markdown first.
+If user gives `wk.aiee.app` URL, map to local Quartz markdown first.
 
 ## Step 2) Generate Script
 
@@ -43,9 +43,11 @@ Rules:
 
 ### Preferred: chunked builder (timeout-safe)
 ```bash
-# set once per shell (do not print/share your key)
-export GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_dualvoice_audio.py \
+# Set API key via environment (required)
+export GEMINI_API_KEY="<YOUR_KEY>"
+
+# Run from skills/ai-podcast-pipeline/
+python3 scripts/build_dualvoice_audio.py \
   --input <script.txt> \
   --outdir <outdir> \
   --basename podcast_full_dualvoice \
@@ -54,7 +56,7 @@ python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_d
 
 ### Single-pass (short scripts)
 ```bash
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/gemini_multispeaker_tts.py \
+python3 scripts/gemini_multispeaker_tts.py \
   --input-file <dialogue.txt> \
   --outdir <outdir> \
   --basename podcast_dualvoice \
@@ -72,7 +74,7 @@ Output: MP3 (default delivery format)
 
 Use full-text subtitle builder (no `...` truncation):
 ```bash
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_korean_srt.py \
+python3 scripts/build_korean_srt.py \
   --script <script.txt> \
   --audio <final.mp3> \
   --output <outdir>/podcast.srt \
@@ -83,7 +85,7 @@ python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_k
 
 Use renderer with adjustable font and timing shift:
 ```bash
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/render_subtitled_video.py \
+python3 scripts/render_subtitled_video.py \
   --image <thumbnail.png> \
   --audio <final.mp3> \
   --srt <podcast.srt> \
@@ -101,9 +103,10 @@ Notes:
 ## Step 6) Build Thumbnail + YouTube Metadata
 
 ```bash
-# set once per shell (do not print/share your key)
-export GEMINI_API_KEY="<YOUR_GEMINI_API_KEY>"
-python3 /home/tw2/.openclaw/workspace/skills/ai-podcast-pipeline/scripts/build_podcast_assets.py \
+# Set API key via environment (required)
+export GEMINI_API_KEY="<YOUR_KEY>"
+
+python3 scripts/build_podcast_assets.py \
   --source "<QuickView path or URL>"
 ```
 

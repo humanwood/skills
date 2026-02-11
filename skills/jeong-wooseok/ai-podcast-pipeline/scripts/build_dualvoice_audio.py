@@ -29,6 +29,11 @@ def main():
     ap.add_argument("--chunk-lines", type=int, default=6)
     ap.add_argument("--timeout-seconds", type=int, default=120)
     ap.add_argument("--retries", type=int, default=3)
+    # voice controls (explicit for gender clarity)
+    ap.add_argument("--female-name", default="Callie")
+    ap.add_argument("--female-voice", default="Kore")
+    ap.add_argument("--male-name", default="Nick")
+    ap.add_argument("--male-voice", default="Puck")
     args = ap.parse_args()
 
     inp = Path(args.input)
@@ -64,6 +69,14 @@ def main():
             str(args.timeout_seconds),
             "--retries",
             str(args.retries),
+            "--female-name",
+            str(args.female_name),
+            "--female-voice",
+            str(args.female_voice),
+            "--male-name",
+            str(args.male_name),
+            "--male-voice",
+            str(args.male_voice),
         ]
         run_cmd(cmd)
         generated_mp3s.append(outdir / f"{chunk_name}.mp3")
