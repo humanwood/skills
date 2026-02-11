@@ -1,0 +1,11 @@
+{
+  "owner": "cinience",
+  "slug": "alicloud-security-content-moderation-green",
+  "displayName": "Alicloud Security Content Moderation Green",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1770768576487,
+    "commit": null
+  },
+  "history": []
+}
