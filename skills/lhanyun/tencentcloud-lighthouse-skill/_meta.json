@@ -1,0 +1,11 @@
+{
+  "owner": "lhanyun",
+  "slug": "tencentcloud-lighthouse-skill",
+  "displayName": "Tencent Cloud Lighthouse",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1770787740068,
+    "commit": null
+  },
+  "history": []
+}
