@@ -8,6 +8,11 @@ description: |
 metadata:
   author: maton
   version: "1.0"
+  clawdbot:
+    emoji: 🧠
+    requires:
+      env:
+        - MATON_API_KEY
 ---
 
 # Gumroad
@@ -437,27 +442,6 @@ Parameters:
 }
 ```
 
-#### Create Resource Subscription
-
-```bash
-PUT /gumroad/v2/resource_subscriptions
-Content-Type: application/x-www-form-urlencoded
-
-resource_name=sale&post_url=https://example.com/webhook
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "resource_subscription": {
-    "id": "wX43hzi-s7W4JfYFkxyeiQ==",
-    "resource_name": "sale",
-    "post_url": "https://example.com/webhook"
-  }
-}
-```
-
 #### Delete Resource Subscription
 
 ```bash
@@ -654,9 +638,7 @@ Gumroad errors typically return HTTP 404 with a JSON body:
 }
 ```
 
-### Troubleshooting: Invalid API Key
-
-**When you receive a "Invalid API key" error, ALWAYS follow these steps before concluding there is an issue:**
+### Troubleshooting: API Key Issues
 
 1. Check that the `MATON_API_KEY` environment variable is set:
 
@@ -675,8 +657,17 @@ print(json.dumps(json.load(urllib.request.urlopen(req)), indent=2))
 EOF
 ```
 
+### Troubleshooting: Invalid App Name
+
+1. Ensure your URL path starts with `gumroad`. For example:
+
+- Correct: `https://gateway.maton.ai/gumroad/v2/user`
+- Incorrect: `https://gateway.maton.ai/v2/user`
+
 ## Resources
 
 - [Gumroad API Overview](https://gumroad.com/api)
 - [Create API Application](https://help.gumroad.com/article/280-create-application-api)
 - [License Keys Help](https://help.gumroad.com/article/76-license-keys)
+- [Maton Community](https://discord.com/invite/dBfFAcefs2)
+- [Maton Support](mailto:support@maton.ai)
