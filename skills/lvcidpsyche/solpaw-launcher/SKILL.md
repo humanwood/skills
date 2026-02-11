@@ -2,24 +2,25 @@
 name: solpaw
 description: Launch Solana tokens on Pump.fun via the SolPaw platform. 0.1 SOL one-time fee. Your wallet is the onchain creator.
 homepage: https://solpaw.fun
-clawhub: https://clawhub.ai/LvcidPsyche/solpaw-skill-final
 user-invocable: true
-disable-model-invocation: false
+disable-model-invocation: true
 command-dispatch: tool
 command-tool: exec
 command-arg-mode: raw
-metadata: {"openclaw": {"emoji": "🐾", "requires": {"bins": ["curl"], "env": ["SOLPAW_API_KEY", "SOLPAW_CREATOR_WALLET", "SOLANA_PRIVATE_KEY"], "config": []}, "primaryEnv": "SOLPAW_API_KEY", "install": []}}
+metadata: {"openclaw": {"emoji": "🐾", "requires": {"bins": ["curl"], "env": ["SOLPAW_API_KEY", "SOLPAW_CREATOR_WALLET", "SOLANA_PRIVATE_KEY", "SOLPAW_API_URL"], "config": []}, "primaryEnv": "SOLPAW_API_KEY", "install": []}}
 ---
 
 # SolPaw — Launch Tokens on Solana via Pump.fun
 
 ## When to use
 
-Use this skill when the agent needs to:
+Use this skill when the user explicitly asks to:
 
 - Launch a new memecoin / token on Solana via Pump.fun
 - Deploy a token with a name, symbol, description, and image
 - Create a Pump.fun token listing for a community, project, or meme
+
+**This skill MUST only be invoked by the user.** Do not autonomously launch tokens.
 
 ## Overview
 
@@ -31,6 +32,16 @@ SolPaw is the first Solana token-launch platform for autonomous agents. It handl
 - **Platform wallet**: `GosroTTvsbgc8FdqSdNtrmWxGbZp2ShH5NP5pK1yAR4K`
 - **Docs**: https://solpaw.fun
 
+## Security
+
+- **Ephemeral wallets recommended**: Use a dedicated launch wallet with only the SOL needed (~0.15 SOL). Never use your main wallet's private key.
+- **SOLANA_PRIVATE_KEY** is used exclusively for local transaction signing. It is never transmitted to the SolPaw API server — signing happens client-side.
+- **API key** (`SOLPAW_API_KEY`) authenticates requests but cannot sign transactions or move funds.
+- **CSRF tokens** are single-use and expire after 30 minutes, preventing replay attacks.
+- **Fee signatures** are verified onchain and cannot be reused for multiple launches.
+- **Daily limit**: 1 launch per agent per 24 hours, enforced server-side.
+- **All secrets** (`SOLPAW_API_KEY`, `SOLANA_PRIVATE_KEY`) must be stored in environment variables, never in code or chat.
+
 ## Prerequisites
 
 1. A Solana wallet with at least 0.15 SOL (0.1 platform fee + ~0.02 Pump.fun fee + gas)
@@ -38,7 +49,8 @@ SolPaw is the first Solana token-launch platform for autonomous agents. It handl
 3. Environment variables set:
    - `SOLPAW_API_KEY` — your SolPaw API key
    - `SOLPAW_CREATOR_WALLET` — your Solana wallet public key
-   - `SOLANA_PRIVATE_KEY` — your wallet private key (base58 encoded, for signing)
+   - `SOLANA_PRIVATE_KEY` — your wallet private key (base58 encoded, for local signing only — never sent to server)
+   - `SOLPAW_API_URL` — API base URL (default: `https://api.solpaw.fun/api/v1`)
 
 ## Steps
 
@@ -131,7 +143,7 @@ console.log(result.pumpfun_url); // https://pump.fun/coin/...
 
 ## Constraints
 
-- DO NOT launch tokens without user approval — always confirm name, symbol, and description first
+- **DO NOT launch tokens without explicit user approval** — always confirm name, symbol, and description first
 - DO NOT launch more than 1 token per 24 hours (enforced server-side)
 - DO NOT include offensive or misleading token names/descriptions
 - ALWAYS include a token image — tokens without images perform poorly on Pump.fun
@@ -139,6 +151,7 @@ console.log(result.pumpfun_url); // https://pump.fun/coin/...
 - The 0.1 SOL platform fee is non-refundable once the launch succeeds
 - CSRF tokens expire after 30 minutes and are single-use
 - Image uploads expire after 30 minutes
+- NEVER log, display, or transmit `SOLANA_PRIVATE_KEY` — it is used for local signing only
 
 ## Examples
 
