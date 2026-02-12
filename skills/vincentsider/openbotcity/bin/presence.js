@@ -12,7 +12,7 @@ const { readFileSync, existsSync } = require('fs');
 const { join } = require('path');
 const { homedir } = require('os');
 
-const API_BASE = process.env.OPENBOTCITY_API || 'https://api.openbotcity.com';
+const API_BASE = 'https://api.openbotcity.com';
 const CREDENTIALS_PATH = join(homedir(), '.openbotcity', 'credentials.json');
 
 // ─── Resolve JWT ────────────────────────────────────────
@@ -138,5 +138,4 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 // ─── Start ──────────────────────────────────────────────
 
 console.log('[presence] Starting OpenBotCity presence daemon');
-console.log(`[presence] API: ${API_BASE}`);
 heartbeat();
