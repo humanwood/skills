@@ -17,9 +17,30 @@ gh auth status 2>/dev/null && echo "✓ GitHub authenticated" || echo "✗ GitHu
 npx sv add sveltekit-adapter  # choose: vercel
 ```
 
-### Deploy
+### GitHub Integration (Recommended)
+
+**One-time setup:**
+1. Create Vercel project: `vercel link` or via [dashboard](https://vercel.com/new)
+2. Connect GitHub repo in Vercel: **Settings → Git → Connect Git Repository**
+3. Set production branch to `main`
+
+**Benefits:**
+- Push to deploy (no CLI needed after setup)
+- Automatic preview URLs for branches
+- Persistent branch URLs: `[project]-git-dev-[team].vercel.app`
+- Preview URLs don't change with each commit
+
+**Deploy:**
+```bash
+git push origin main  # Triggers production deployment
+git push origin dev   # Triggers preview deployment at persistent URL
+```
+
+### CLI Deploy (Alternative)
+If you prefer CLI deploys over GitHub integration:
 ```bash
 vercel link        # Link to Vercel project
+vercel             # Deploy to preview
 vercel --prod      # Deploy to production
 ```
 
@@ -206,8 +227,13 @@ The `build/` directory can be deployed to any static host:
 
 ## CI/CD with GitHub Actions
 
-### Vercel (via GitHub integration)
-No action needed—Vercel auto-deploys on push when connected.
+### Vercel (via GitHub integration) — Recommended
+No GitHub Action needed—Vercel auto-deploys on push when connected:
+- **Push to `main`** → Production deployment
+- **Push to `dev`** → Preview at `[project]-git-dev-[team].vercel.app`
+- **Push to any branch** → Preview at `[project]-git-[branch]-[team].vercel.app`
+
+This is the recommended approach. GitHub Actions are only needed for custom CI steps (tests, linting, etc.).
 
 ### Manual Deployment Action
 

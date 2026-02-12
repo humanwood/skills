@@ -1,12 +1,13 @@
 ---
 name: sveltekit-webapp
+version: 1.0.1
 description: |
   Scaffold and configure a production-ready SvelteKit PWA with opinionated defaults.
   Use when: creating a new web application, setting up a SvelteKit project, building a PWA,
-  or when user asks to "build me an app/site/webapp". Handles full setup including TypeScript,
-  Tailwind, Skeleton + Bits UI components, testing, linting, GitHub repo creation, and Vercel deployment.
-  Generates a PRD with user stories, then upon approval, executes via parallel sub-agents
-  through development, staging, and production—fully autonomous.
+  or when a user asks to "build me an app/site/webapp". Handles full setup including TypeScript,
+  Tailwind, Skeleton + Bits UI components, testing, linting, and Vercel deployment.
+  Generates a PRD with user stories for review, then upon user approval, builds and deploys
+  through development, staging, and production environments with coordinated sub-agents.
 ---
 
 # SvelteKit Webapp Skill
@@ -528,21 +529,44 @@ Before proceeding, ensure all staging credentials are set:
 
 If missing, pause and request from user.
 
-#### Deploy to Preview
+#### Deploy via GitHub-Vercel Integration
+
+**One-time setup (recommended over CLI deploys):**
 
 ```bash
 # Create GitHub repo and push
 gh repo create [project-name] --private --source=. --push
 
+# Create Vercel project
+vercel link  # or create via dashboard
+
+# Connect GitHub in Vercel dashboard:
+# Settings → Git → Connect Git Repository → Select repo
+# Set production branch to: main
+```
+
+**Benefits of GitHub integration:**
+- Push to deploy (no CLI needed after setup)
+- Automatic preview URLs for all branches
+- Persistent branch URLs: `[project]-git-dev-[team].vercel.app`
+- Better CI/CD visibility in both dashboards
+
+**Deploy to staging:**
+
+```bash
 # Merge dev to main
 git checkout -b main
 git merge dev
-git push -u origin main
-
-# Deploy to Vercel preview
-vercel link
-vercel  # deploys to preview URL
+git push -u origin main  # Triggers automatic Vercel deployment
 ```
+
+The push triggers Vercel to build and deploy. No `vercel` CLI command needed.
+
+**Dev branch preview URL:**
+After connecting GitHub, the `dev` branch gets a persistent preview URL:
+`https://[project]-git-dev-[team].vercel.app`
+
+This URL stays the same across commits—great for sharing with stakeholders.
 
 #### Fix Environment Issues
 
@@ -577,10 +601,17 @@ Deploy to production URL and hand off to user.
 
 #### Deploy Production
 
-```bash
-vercel --prod
+With GitHub-Vercel integration, production deploys automatically when you push to `main`:
 
-# If custom domain:
+```bash
+git push origin main  # Triggers production deployment
+```
+
+**Custom domain (via Vercel dashboard):**
+Settings → Domains → Add domain
+
+Or via CLI:
+```bash
 vercel domains add [domain]
 ```
 
