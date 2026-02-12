@@ -1,13 +1,18 @@
 {
   "owner": "mvanhorn",
   "slug": "parallel",
-  "displayName": "Clawdbot Skill Parallel",
+  "displayName": "OpenClaw Parallel",
   "latest": {
-    "version": "1.0.4",
-    "publishedAt": 1770779474481,
-    "commit": "https://github.com/openclaw/skills/commit/5f2016c82ab7e98236197b7a59731b3eaf7c31ad"
+    "version": "1.0.7",
+    "publishedAt": 1770827728985,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.4",
+      "publishedAt": 1770779474481,
+      "commit": "https://github.com/openclaw/skills/commit/5f2016c82ab7e98236197b7a59731b3eaf7c31ad"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1769355659028,
