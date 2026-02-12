@@ -1,6 +1,5 @@
 ---
 name: openclaw-sentinel
-description: "Supply chain security for agent skills. Pre-install inspection, post-install scanning, obfuscation detection, and known-bad signature matching. Verify skills are safe before they touch your workspace. Free alert layer — upgrade to openclaw-sentinel-pro for quarantine, blocking, and community threat feeds."
 user-invocable: true
 metadata: {"openclaw":{"emoji":"🏰","requires":{"bins":["python3"]},"os":["darwin","linux","win32"]}}
 ---
@@ -13,7 +12,6 @@ Supply chain security scanner for agent skills. Detects obfuscated code, known-b
 
 You install skills from the community. Any skill can contain obfuscated payloads, post-install hooks that execute arbitrary code, or supply chain attacks that modify other skills in your workspace. Existing tools verify file integrity after the fact — nothing inspects skills for supply chain risks before they run.
 
-**Need automated countermeasures?** Upgrade to [openclaw-sentinel-pro](https://github.com/AtlasPA/openclaw-sentinel-pro) for quarantine, blocking, community threat feeds, SBOM generation, and continuous monitoring.
 
 ## Commands
 

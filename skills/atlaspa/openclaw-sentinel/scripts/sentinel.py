@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""OpenClaw Sentinel — Supply chain security for agent skills.
+"""OpenClaw Sentinel— Full supply chain security suite for agent skills.
 
-Pre-install inspection, post-install scanning, obfuscation detection,
-known-bad signature matching, and risk scoring for installed skills.
+Everything in openclaw-sentinel (free) plus automated countermeasures:
+quarantine, reject, SBOM generation, continuous monitoring, and full
+automated protection sweeps.
 
-Free version: Alert (detect + report).
-Pro version: Quarantine, block, community threat feeds, SBOM, continuous monitoring.
+Scanning: Alert (detect + report).
+Full version:  Subvert + quarantine + defend.
 """
 
-import argparse, hashlib, io, json, math, os, re, sys
+import argparse, hashlib, io, json, math, os, re, shutil, sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,8 +24,9 @@ if sys.platform == "win32" and hasattr(sys.stdout, "buffer"):
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv",
              ".integrity", ".quarantine", ".snapshots", ".ledger",
              ".signet", ".sentinel"}
-SELF_SKILL_DIRS = {"openclaw-sentinel", "openclaw-sentinel-pro"}
+SELF_SKILL_DIRS = {"openclaw-sentinel", "openclaw-sentinel"}
 SENTINEL_DIR, THREAT_DB_FILE, HISTORY_FILE = ".sentinel", "threats.json", "history.json"
+QUARANTINE_PREFIX = ".quarantined-"
 STANDARD_DOTFILES = {".gitignore", ".gitattributes", ".gitmodules", ".gitkeep",
     ".editorconfig", ".eslintrc", ".eslintrc.json", ".eslintrc.js",
     ".prettierrc", ".prettierrc.json", ".prettierignore", ".npmrc", ".npmignore",
@@ -95,6 +97,12 @@ def resolve_workspace(ws_arg):
 def sentinel_dir(workspace):
     d = workspace / SENTINEL_DIR; d.mkdir(parents=True, exist_ok=True); return d
 
+def scans_dir(workspace):
+    d = sentinel_dir(workspace) / "scans"; d.mkdir(parents=True, exist_ok=True); return d
+
+def quarantine_evidence_dir(workspace):
+    d = workspace / ".quarantine" / "sentinel"; d.mkdir(parents=True, exist_ok=True); return d
+
 def is_binary(path):
     try:
         with open(path, "rb") as f: return b"\x00" in f.read(8192)
@@ -121,7 +129,14 @@ def collect_skill_dirs(workspace):
     sd = workspace / "skills"
     if not sd.exists(): return []
     return [e for e in sorted(sd.iterdir())
-            if e.is_dir() and e.name not in SKIP_DIRS and e.name not in SELF_SKILL_DIRS]
+            if e.is_dir() and e.name not in SKIP_DIRS and e.name not in SELF_SKILL_DIRS
+            and not e.name.startswith(QUARANTINE_PREFIX)]
+
+def collect_quarantined_dirs(workspace):
+    sd = workspace / "skills"
+    if not sd.exists(): return []
+    return [e for e in sorted(sd.iterdir())
+            if e.is_dir() and e.name.startswith(QUARANTINE_PREFIX)]
 
 def collect_files(directory):
     files = []
@@ -139,6 +154,7 @@ def load_json(path, default):
     return default
 
 def save_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 def load_threat_db(ws):
@@ -152,6 +168,36 @@ def save_threat_db(ws, db):
 
 def load_history(ws): return load_json(sentinel_dir(ws) / HISTORY_FILE, {"scans": []})
 def save_history(ws, h): save_json(sentinel_dir(ws) / HISTORY_FILE, h)
+def now_iso(): return datetime.now(timezone.utc).isoformat()
+def now_file(): return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+def file_inventory(skill_dir):
+    inv = []
+    for root, dirs, fnames in os.walk(skill_dir):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        for fn in fnames:
+            fp = Path(root) / fn
+            try: sz = fp.stat().st_size
+            except OSError: sz = 0
+            inv.append({"path": str(fp.relative_to(skill_dir)),
+                        "sha256": sha256_file(fp), "size": sz, "binary": is_binary(fp)})
+    return inv
+
+def parse_skill_meta(skill_dir):
+    """Parse metadata from SKILL.md frontmatter. Returns (frontmatter_dict, oc_meta_dict)."""
+    skill_md = skill_dir / "SKILL.md"
+    if not skill_md.exists(): return {}, {}
+    content = read_safe(skill_md)
+    if not content or not content.startswith("---"): return {}, {}
+    fm = {}
+    parts = content.split("---", 2)
+    if len(parts) >= 3:
+        for line in parts[1].strip().split("\n"):
+            if ":" in line:
+                k, _, v = line.partition(":"); fm[k.strip()] = v.strip().strip('"').strip("'")
+    try: meta = json.loads(fm.get("metadata", "{}"))
+    except (json.JSONDecodeError, TypeError): meta = {}
+    return fm, meta.get("openclaw", {})
 
 # ---------------------------------------------------------------------------
 # Scanning engine
@@ -243,14 +289,7 @@ def check_metadata(skill_dir):
                  "file": str(skill_dir), "detail": "No SKILL.md — cannot verify declared behavior"}]
     content = read_safe(skill_md)
     if content is None: return findings
-    # Parse YAML frontmatter
-    fm = {}
-    if content.startswith("---"):
-        parts = content.split("---", 2)
-        if len(parts) >= 3:
-            for line in parts[1].strip().split("\n"):
-                if ":" in line:
-                    k, _, v = line.partition(":"); fm[k.strip()] = v.strip().strip('"').strip("'")
+    fm, oc = parse_skill_meta(skill_dir)
     # user-invocable mismatch
     ui = fm.get("user-invocable", "true").lower()
     has_scripts = any(f.suffix in (".py", ".sh", ".bash", ".js", ".ts")
@@ -260,10 +299,7 @@ def check_metadata(skill_dir):
             "file": str(skill_md),
             "detail": "Declares user-invocable: false but contains executable scripts"})
     # Undeclared binaries
-    try:
-        meta = json.loads(fm.get("metadata", "{}"))
-        declared = set(meta.get("openclaw", {}).get("requires", {}).get("bins", []))
-    except (json.JSONDecodeError, TypeError, AttributeError): declared = set()
+    declared = set(oc.get("requires", {}).get("bins", []))
     actual = set()
     bin_checks = [("node", r"\bnode\b"), ("bash", r"\bbash\b"), ("curl", r"\bcurl\b"),
                   ("git", r"\bgit\b"), ("docker", r"\bdocker\b")]
@@ -332,12 +368,34 @@ def risk_label(score):
     return "HIGH" if score < 75 else "CRITICAL"
 
 # ---------------------------------------------------------------------------
-# Commands
+# Print helpers
+# ---------------------------------------------------------------------------
+def print_findings_by_sev(findings, limit=5):
+    by_sev = {}
+    for f in findings: by_sev.setdefault(f.get("severity", "LOW"), []).append(f)
+    for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
+        items = by_sev.get(sev, [])
+        if items:
+            print(f"    [{sev}] {len(items)} finding(s):")
+            for it in items[:limit]:
+                loc = f" (line {it['line']})" if "line" in it else ""
+                print(f"      - {it['detail']}{loc}")
+            if len(items) > limit: print(f"      ... and {len(items)-limit} more")
+
+def print_scan_results(results):
+    for name in sorted(results):
+        r = results[name]; sc = r["score"]; fl = r["findings"]
+        print(f"  {name}\n    Risk Score: {sc}/100 [{risk_label(sc)}]")
+        if fl: print_findings_by_sev(fl)
+        else: print("    No issues detected.")
+        print()
+
+# ---------------------------------------------------------------------------
+# Commands — Free (scan, inspect, threats, status)
 # ---------------------------------------------------------------------------
 def cmd_scan(workspace, target_skill=None):
-    print("=" * 62); print("OPENCLAW SENTINEL — SUPPLY CHAIN SCAN"); print("=" * 62)
-    print(f"Workspace: {workspace}")
-    print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}\n")
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — SUPPLY CHAIN SCAN"); print("=" * 62)
+    print(f"Workspace: {workspace}\nTimestamp: {now_iso()}\n")
     tdb = load_threat_db(workspace)
     skill_dirs = collect_skill_dirs(workspace)
     all_names = [d.name for d in skill_dirs]
@@ -352,54 +410,35 @@ def cmd_scan(workspace, target_skill=None):
         f, s = scan_skill(sd, workspace, tdb, all_names)
         results[sd.name] = {"findings": f, "score": s}
     print("-" * 62); print("SCAN RESULTS"); print("-" * 62 + "\n")
-    for name in sorted(results):
-        r = results[name]; sc = r["score"]; fl = r["findings"]
-        print(f"  {name}\n    Risk Score: {sc}/100 [{risk_label(sc)}]")
-        if fl:
-            by_sev = {}
-            for f in fl: by_sev.setdefault(f.get("severity", "LOW"), []).append(f)
-            for sev in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
-                items = by_sev.get(sev, [])
-                if items:
-                    print(f"    [{sev}] {len(items)} finding(s):")
-                    for it in items[:5]:
-                        loc = f" (line {it['line']})" if "line" in it else ""
-                        print(f"      - {it['detail']}{loc}")
-                    if len(items) > 5: print(f"      ... and {len(items)-5} more")
-        else: print("    No issues detected.")
-        print()
-        if sc >= 50: max_exit = max(max_exit, 2)
-        elif sc > 0: max_exit = max(max_exit, 1)
+    print_scan_results(results)
+    for r in results.values():
+        if r["score"] >= 50: max_exit = max(max_exit, 2)
+        elif r["score"] > 0: max_exit = max(max_exit, 1)
     clean = sum(1 for r in results.values() if r["score"] == 0)
     risky = sum(1 for r in results.values() if r["score"] >= 50)
     print("-" * 62); print("SUMMARY"); print("-" * 62)
-    print(f"  Skills scanned: {len(results)}")
-    print(f"  Clean:          {clean}")
-    print(f"  Needs review:   {len(results) - clean - risky}")
-    print(f"  High risk:      {risky}\n")
+    print(f"  Skills scanned: {len(results)}\n  Clean:          {clean}")
+    print(f"  Needs review:   {len(results) - clean - risky}\n  High risk:      {risky}\n")
     if risky > 0:
-        print("ACTION REQUIRED: High-risk skills detected. Review findings above.\n")
-        print("Upgrade to openclaw-sentinel-pro for automated countermeasures:")
-        print("  quarantine, blocking, community threat feeds, SBOM generation")
-    elif max_exit == 1: print("REVIEW NEEDED: Some skills have minor findings worth examining.")
-    else: print("All skills appear clean.")
-    print()
+        print("ACTION REQUIRED: High-risk skills detected.")
+        print("  Use 'quarantine <skill>' to disable risky skills.")
+        print("  Use 'protect' for automated sweep + auto-quarantine.\n")
+    elif max_exit == 1: print("REVIEW NEEDED: Some skills have minor findings worth examining.\n")
+    else: print("All skills appear clean.\n")
     hist = load_history(workspace)
-    hist["scans"].append({"timestamp": datetime.now(timezone.utc).isoformat(),
-        "skills_scanned": len(results), "clean": clean, "risky": risky,
+    hist["scans"].append({"timestamp": now_iso(), "skills_scanned": len(results),
+        "clean": clean, "risky": risky,
         "results": {k: {"score": v["score"], "findings_count": len(v["findings"])}
                     for k, v in results.items()}})
-    hist["scans"] = hist["scans"][-50:]
-    save_history(workspace, hist)
+    hist["scans"] = hist["scans"][-50:]; save_history(workspace, hist)
     return max_exit
 
 def cmd_inspect(path_arg):
     target = Path(path_arg).resolve()
     if not target.exists(): print(f"Path not found: {target}"); return 1
     if not target.is_dir(): print(f"Not a directory: {target}"); return 1
-    print("=" * 62); print("OPENCLAW SENTINEL — PRE-INSTALL INSPECTION"); print("=" * 62)
-    print(f"Target:    {target}")
-    print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}\n")
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — PRE-INSTALL INSPECTION"); print("=" * 62)
+    print(f"Target:    {target}\nTimestamp: {now_iso()}\n")
     tdb = {"hashes": {}, "patterns": []}
     findings, score = scan_skill(target, target.parent, tdb, [])
     files = collect_files(target)
@@ -460,8 +499,7 @@ def cmd_threats(workspace, update_from=None):
         except (json.JSONDecodeError, OSError) as e: print(f"Parse failed: {e}"); return 1
         if not isinstance(new, dict):
             print("Invalid format: expected JSON with 'hashes' and/or 'patterns'"); return 1
-        nh = new.get("hashes", {})
-        bh = len(tdb.get("hashes", {}))
+        nh = new.get("hashes", {}); bh = len(tdb.get("hashes", {}))
         if isinstance(nh, dict): tdb.setdefault("hashes", {}).update(nh)
         ah = len(tdb.get("hashes", {})) - bh
         np_list, existing = new.get("patterns", []), {p.get("name") for p in tdb.get("patterns",[])}
@@ -475,7 +513,7 @@ def cmd_threats(workspace, update_from=None):
         print(f"  Hashes added:  {ah} (total: {len(tdb.get('hashes', {}))})")
         print(f"  Patterns added: {ap} (total: {len(tdb.get('patterns', []))})")
         print(f"  Source: {ip}\n"); return 0
-    print("=" * 62); print("OPENCLAW SENTINEL — THREAT DATABASE"); print("=" * 62 + "\n")
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — THREAT DATABASE"); print("=" * 62 + "\n")
     hashes, patterns = tdb.get("hashes", {}), tdb.get("patterns", [])
     meta = tdb.get("meta", {})
     print(f"  Known-bad hashes:  {len(hashes)}")
@@ -503,13 +541,20 @@ def cmd_threats(workspace, update_from=None):
 
 def cmd_status(workspace):
     skill_dirs = collect_skill_dirs(workspace)
+    quarantined = collect_quarantined_dirs(workspace)
     hist = load_history(workspace); tdb = load_threat_db(workspace)
     db_n = len(tdb.get("hashes", {})) + len(tdb.get("patterns", []))
     scans = hist.get("scans", []); last = scans[-1] if scans else None
-    print("=" * 62); print("OPENCLAW SENTINEL — STATUS"); print("=" * 62 + "\n")
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — STATUS"); print("=" * 62 + "\n")
     print(f"  Installed skills:   {len(skill_dirs)}")
+    print(f"  Quarantined skills: {len(quarantined)}")
     print(f"  Threat DB entries:  {db_n} custom + {len(BUILTIN_PATTERNS)} built-in")
     print(f"  Total scans:        {len(scans)}\n")
+    if quarantined:
+        print("  Quarantined:")
+        for q in quarantined:
+            print(f"    - {q.name[len(QUARANTINE_PREFIX):]} (dir: {q.name})")
+        print()
     if last:
         print(f"  Last scan:          {last['timestamp']}")
         print(f"  Skills scanned:     {last.get('skills_scanned','?')}")
@@ -523,6 +568,10 @@ def cmd_status(workspace):
                 print(f"    {n}: {sc}/100 [{risk_label(sc)}] ({r.get('findings_count',0)} finding(s))")
             print()
     else: print("  No scans yet. Run: sentinel.py scan\n")
+    sbom_files = sorted(sentinel_dir(workspace).glob("sbom-*.json"))
+    if sbom_files: print(f"  Last SBOM: {sbom_files[-1].name}\n")
+    scan_files = sorted(scans_dir(workspace).glob("scan-*.json"))
+    if scan_files: print(f"  Monitor scan files: {len(scan_files)} (latest: {scan_files[-1].name})\n")
     if last:
         if last.get("risky", 0) > 0:
             print(f"[WARNING] {last['risky']} high-risk skill(s) in last scan."); return 1
@@ -530,24 +579,379 @@ def cmd_status(workspace):
     print("[INFO] Run a scan to assess your workspace."); return 0
 
 # ---------------------------------------------------------------------------
+# Commands — Pro (quarantine, unquarantine, reject, sbom, monitor, protect)
+# ---------------------------------------------------------------------------
+def cmd_quarantine(workspace, skill_name):
+    skills_dir = workspace / "skills"
+    skill_path = skills_dir / skill_name
+    quarantined_path = skills_dir / f"{QUARANTINE_PREFIX}{skill_name}"
+    if not skill_path.exists():
+        if quarantined_path.exists(): print(f"Skill already quarantined: {skill_name}"); return 0
+        print(f"Skill not found: {skill_name}"); return 1
+    if not skill_path.is_dir(): print(f"Not a skill directory: {skill_path}"); return 1
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — QUARANTINE"); print("=" * 62)
+    print(f"Skill:     {skill_name}\nTimestamp: {now_iso()}\n")
+    tdb = load_threat_db(workspace)
+    all_names = [d.name for d in collect_skill_dirs(workspace)]
+    findings, score = scan_skill(skill_path, workspace, tdb, all_names)
+    evidence = {"skill": skill_name, "quarantined_at": now_iso(),
+        "risk_score": score, "risk_label": risk_label(score),
+        "findings_count": len(findings), "findings": findings[:50],
+        "original_path": str(skill_path), "quarantined_path": str(quarantined_path),
+        "file_inventory": file_inventory(skill_path)}
+    ev_path = quarantine_evidence_dir(workspace) / f"{skill_name}-evidence.json"
+    save_json(ev_path, evidence)
+    try: skill_path.rename(quarantined_path)
+    except OSError as e: print(f"Failed to quarantine: {e}"); return 1
+    print(f"  Risk Score: {score}/100 [{risk_label(score)}]")
+    print(f"  Findings:   {len(findings)}")
+    print(f"  Renamed:    {skill_name} -> {QUARANTINE_PREFIX}{skill_name}")
+    print(f"  Evidence:   {ev_path}\n")
+    print(f"[QUARANTINED] {skill_name} has been disabled.")
+    print(f"  To restore: sentinel.py unquarantine {skill_name}\n")
+    return 0
+
+def cmd_unquarantine(workspace, skill_name):
+    skills_dir = workspace / "skills"
+    quarantined_path = skills_dir / f"{QUARANTINE_PREFIX}{skill_name}"
+    skill_path = skills_dir / skill_name
+    if not quarantined_path.exists():
+        if skill_path.exists(): print(f"Skill is not quarantined: {skill_name}"); return 0
+        print(f"Quarantined skill not found: {skill_name}"); return 1
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — UNQUARANTINE"); print("=" * 62)
+    print(f"Skill:     {skill_name}\nTimestamp: {now_iso()}\n")
+    ev_path = quarantine_evidence_dir(workspace) / f"{skill_name}-evidence.json"
+    if ev_path.exists():
+        ev = load_json(ev_path, {})
+        print(f"  Original quarantine: {ev.get('quarantined_at', 'unknown')}")
+        print(f"  Risk at quarantine:  {ev.get('risk_score', '?')}/100 [{ev.get('risk_label', '?')}]")
+        print(f"  Findings at time:    {ev.get('findings_count', '?')}\n")
+    if skill_path.exists():
+        print(f"Cannot restore: {skill_name} already exists at {skill_path}"); return 1
+    try: quarantined_path.rename(skill_path)
+    except OSError as e: print(f"Failed to unquarantine: {e}"); return 1
+    print(f"  Restored: {QUARANTINE_PREFIX}{skill_name} -> {skill_name}\n")
+    print(f"[RESTORED] {skill_name} has been re-enabled.")
+    print(f"  Recommend running a fresh scan: sentinel.py scan {skill_name}\n")
+    return 0
+
+def cmd_reject(workspace, skill_name):
+    skills_dir = workspace / "skills"
+    skill_path = skills_dir / skill_name
+    if not skill_path.exists():
+        qp = skills_dir / f"{QUARANTINE_PREFIX}{skill_name}"
+        if qp.exists(): skill_path = qp
+        else: print(f"Skill not found: {skill_name}"); return 1
+    if not skill_path.is_dir(): print(f"Not a skill directory: {skill_path}"); return 1
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — REJECT SKILL"); print("=" * 62)
+    print(f"Skill:     {skill_name}\nTimestamp: {now_iso()}\n")
+    tdb = load_threat_db(workspace)
+    all_names = [d.name for d in collect_skill_dirs(workspace)]
+    findings, score = scan_skill(skill_path, workspace, tdb, all_names)
+    print(f"  Risk Score: {score}/100 [{risk_label(score)}]\n  Findings:   {len(findings)}\n")
+    if score < 50:
+        print(f"[BLOCKED] Risk score {score} is below HIGH threshold (50).")
+        print(f"  Use 'quarantine {skill_name}' to disable without removal.")
+        print(f"  Reject is reserved for HIGH+ risk skills.\n"); return 1
+    evidence = {"skill": skill_name, "rejected_at": now_iso(),
+        "risk_score": score, "risk_label": risk_label(score),
+        "findings_count": len(findings), "findings": findings[:50],
+        "original_path": str(skill_path), "file_inventory": file_inventory(skill_path)}
+    ev_dir = quarantine_evidence_dir(workspace)
+    save_json(ev_dir / f"{skill_name}-evidence.json", evidence)
+    reject_dest = ev_dir / skill_name
+    if reject_dest.exists(): shutil.rmtree(reject_dest)
+    try: shutil.move(str(skill_path), str(reject_dest))
+    except OSError as e: print(f"Failed to move skill: {e}"); return 1
+    print(f"  Archived to: {reject_dest}")
+    print(f"  Evidence:    {ev_dir / f'{skill_name}-evidence.json'}\n")
+    print(f"[REJECTED] {skill_name} has been removed from the workspace.")
+    print(f"  The skill files are preserved in {ev_dir} for forensic review.\n")
+    return 0
+
+def cmd_sbom(workspace):
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — SBOM GENERATION"); print("=" * 62)
+    print(f"Workspace: {workspace}\nTimestamp: {now_iso()}\n")
+    tdb = load_threat_db(workspace)
+    skill_dirs = collect_skill_dirs(workspace)
+    all_names = [d.name for d in skill_dirs]
+    print(f"Processing {len(skill_dirs)} skill(s)...\n")
+    skills_data = []
+    for sd in skill_dirs:
+        inv = file_inventory(sd)
+        _, oc = parse_skill_meta(sd)
+        declared_deps = oc.get("requires", {}).get("bins", [])
+        # Detect actual deps
+        detected = set()
+        dep_checks = [("python3", r"\bpython3?\b"), ("node", r"\bnode\b"), ("bash", r"\bbash\b"),
+                      ("curl", r"\bcurl\b"), ("git", r"\bgit\b"), ("docker", r"\bdocker\b")]
+        for fp in sd.rglob("*"):
+            if fp.is_file() and fp.suffix in (".py", ".sh", ".js", ".ts"):
+                fc = read_safe(fp)
+                if not fc: continue
+                for bname, brx in dep_checks:
+                    if re.search(brx, fc): detected.add(bname)
+        findings, score = scan_skill(sd, workspace, tdb, all_names)
+        skills_data.append({"name": sd.name, "path": str(sd),
+            "risk_score": score, "risk_label": risk_label(score),
+            "findings_count": len(findings), "file_count": len(inv),
+            "total_size": sum(f["size"] for f in inv),
+            "declared_dependencies": declared_deps,
+            "detected_dependencies": sorted(detected), "files": inv})
+    ts = datetime.now(timezone.utc)
+    sbom = {"sbom_version": "1.0", "generator": "openclaw-sentinel",
+        "generated_at": ts.isoformat(), "workspace": str(workspace),
+        "summary": {"total_skills": len(skills_data),
+            "total_files": sum(s["file_count"] for s in skills_data),
+            "total_size": sum(s["total_size"] for s in skills_data),
+            "clean": sum(1 for s in skills_data if s["risk_score"] == 0),
+            "low_risk": sum(1 for s in skills_data if 0 < s["risk_score"] < 20),
+            "moderate_risk": sum(1 for s in skills_data if 20 <= s["risk_score"] < 50),
+            "high_risk": sum(1 for s in skills_data if 50 <= s["risk_score"] < 75),
+            "critical_risk": sum(1 for s in skills_data if s["risk_score"] >= 75)},
+        "skills": skills_data}
+    filename = f"sbom-{ts.strftime('%Y%m%dT%H%M%SZ')}.json"
+    sbom_path = sentinel_dir(workspace) / filename
+    save_json(sbom_path, sbom)
+    summ = sbom["summary"]
+    print("-" * 62); print("SBOM SUMMARY"); print("-" * 62 + "\n")
+    print(f"  Skills:        {summ['total_skills']}")
+    print(f"  Total files:   {summ['total_files']}")
+    print(f"  Total size:    {summ['total_size']:,} bytes\n")
+    print(f"  Clean:         {summ['clean']}\n  Low risk:      {summ['low_risk']}")
+    print(f"  Moderate risk: {summ['moderate_risk']}\n  High risk:     {summ['high_risk']}")
+    print(f"  Critical risk: {summ['critical_risk']}\n")
+    print("  Per-skill breakdown:")
+    for s in skills_data:
+        dep_str = ", ".join(s["declared_dependencies"]) if s["declared_dependencies"] else "none"
+        print(f"    {s['name']}: {s['risk_score']}/100 [{s['risk_label']}] "
+              f"| {s['file_count']} files | deps: {dep_str}")
+    print(f"\nSBOM saved: {sbom_path}\n")
+    return 0
+
+def cmd_monitor(workspace):
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — MONITOR"); print("=" * 62)
+    print(f"Workspace: {workspace}\nTimestamp: {now_iso()}\n")
+    tdb = load_threat_db(workspace)
+    skill_dirs = collect_skill_dirs(workspace)
+    all_names = [d.name for d in skill_dirs]
+    current = {}
+    for sd in skill_dirs:
+        findings, score = scan_skill(sd, workspace, tdb, all_names)
+        current[sd.name] = {"score": score, "label": risk_label(score),
+            "findings_count": len(findings),
+            "findings": [{"type": f.get("type"), "severity": f.get("severity"),
+                          "detail": f.get("detail"), "file": f.get("file")} for f in findings]}
+    ts = datetime.now(timezone.utc)
+    scan_file = scans_dir(workspace) / f"scan-{ts.strftime('%Y%m%dT%H%M%SZ')}.json"
+    save_json(scan_file, {"timestamp": ts.isoformat(),
+        "skills_scanned": len(current), "results": current})
+    # Load previous for comparison
+    scan_files = sorted(scans_dir(workspace).glob("scan-*.json"))
+    previous = load_json(scan_files[-2], None) if len(scan_files) >= 2 else None
+    print(f"Skills scanned: {len(current)}\nScan saved:     {scan_file}\n")
+    if previous is None:
+        print("No previous scan found — this is the baseline.\n")
+        print("-" * 62); print("CURRENT STATE"); print("-" * 62 + "\n")
+        for name in sorted(current):
+            r = current[name]
+            print(f"  {name}: {r['score']}/100 [{r['label']}] ({r['findings_count']} finding(s))")
+        print("\n[INFO] Run monitor again later to detect changes.\n"); return 0
+    prev_results = previous.get("results", {})
+    print(f"Comparing against: {previous.get('timestamp', 'unknown')}\n")
+    new_skills = set(current.keys()) - set(prev_results.keys())
+    removed_skills = set(prev_results.keys()) - set(current.keys())
+    common = set(current.keys()) & set(prev_results.keys())
+    changed, new_threats, resolved = [], [], []
+    for name in common:
+        cur, prev = current[name], prev_results[name]
+        if cur["score"] != prev.get("score", 0):
+            changed.append({"skill": name, "old": prev.get("score", 0),
+                "old_l": prev.get("label", "?"), "new": cur["score"], "new_l": cur["label"]})
+        diff = cur["findings_count"] - prev.get("findings_count", 0)
+        if diff > 0: new_threats.append({"skill": name, "delta": diff})
+        elif diff < 0: resolved.append({"skill": name, "delta": -diff})
+    has_changes = new_skills or removed_skills or changed or new_threats
+    print("-" * 62); print("MONITOR REPORT"); print("-" * 62 + "\n")
+    if new_skills:
+        print(f"  NEW SKILLS ({len(new_skills)}):")
+        for n in sorted(new_skills):
+            r = current[n]; print(f"    + {n}: {r['score']}/100 [{r['label']}]")
+        print()
+    if removed_skills:
+        print(f"  REMOVED/QUARANTINED ({len(removed_skills)}):")
+        for n in sorted(removed_skills): print(f"    - {n}")
+        print()
+    if changed:
+        print(f"  RISK SCORE CHANGES ({len(changed)}):")
+        for ch in sorted(changed, key=lambda x: x["new"], reverse=True):
+            d = "UP" if ch["new"] > ch["old"] else "DOWN"
+            print(f"    {ch['skill']}: {ch['old']} [{ch['old_l']}] -> {ch['new']} [{ch['new_l']}] ({d})")
+        print()
+    if new_threats:
+        print(f"  NEW THREATS ({sum(t['delta'] for t in new_threats)} new finding(s)):")
+        for t in new_threats: print(f"    {t['skill']}: +{t['delta']} finding(s)")
+        print()
+    if resolved:
+        print(f"  RESOLVED ({sum(t['delta'] for t in resolved)} finding(s)):")
+        for t in resolved: print(f"    {t['skill']}: -{t['delta']} finding(s)")
+        print()
+    if not has_changes: print("  No changes detected since last scan.\n")
+    print("-" * 62); print("CURRENT SCORES"); print("-" * 62 + "\n")
+    for name in sorted(current):
+        r = current[name]; print(f"  {name}: {r['score']}/100 [{r['label']}]")
+    print()
+    max_exit = 0
+    for r in current.values():
+        if r["score"] >= 50: max_exit = 2
+        elif r["score"] > 0 and max_exit < 1: max_exit = 1
+    if max_exit == 2: print("[WARNING] High-risk skills detected. Use 'protect' for automated response.\n")
+    elif new_threats: print("[ALERT] New threats detected since last scan.\n")
+    elif has_changes: print("[INFO] Changes detected. Review above.\n")
+    else: print("[OK] Workspace unchanged since last scan.\n")
+    return max_exit
+
+def cmdtect(workspace):
+    print("=" * 62); print("OPENCLAW SENTINEL FULL — FULLTECT"); print("=" * 62)
+    print(f"Workspace: {workspace}\nTimestamp: {now_iso()}\n")
+    print("Running full automated protection sweep...\n")
+    tdb = load_threat_db(workspace)
+    skill_dirs = collect_skill_dirs(workspace)
+    all_names = [d.name for d in skill_dirs]
+    # Phase 1: Scan
+    print("[1/4] Scanning all installed skills...")
+    results = {}
+    for sd in skill_dirs:
+        f, s = scan_skill(sd, workspace, tdb, all_names)
+        results[sd.name] = {"findings": f, "score": s, "path": sd}
+    clean = sum(1 for r in results.values() if r["score"] == 0)
+    critical = sum(1 for r in results.values() if r["score"] >= 75)
+    print(f"  Scanned {len(results)} skills: {clean} clean, "
+          f"{len(results)-clean-critical} review, {critical} critical\n")
+    # Phase 2: Auto-quarantine CRITICAL
+    print("[2/4] Auto-quarantining CRITICAL risk skills...")
+    q_names = []
+    for name in sorted(results):
+        r = results[name]
+        if r["score"] >= 75:
+            sp, qp = r["path"], r["path"].parent / f"{QUARANTINE_PREFIX}{name}"
+            evidence = {"skill": name, "quarantined_at": now_iso(),
+                "quarantined_by": "protect (auto)", "risk_score": r["score"],
+                "risk_label": risk_label(r["score"]), "findings_count": len(r["findings"]),
+                "findings": r["findings"][:50], "original_path": str(sp),
+                "quarantined_path": str(qp), "file_inventory": file_inventory(sp)}
+            save_json(quarantine_evidence_dir(workspace) / f"{name}-evidence.json", evidence)
+            try: sp.rename(qp); q_names.append(name); print(f"  QUARANTINED: {name} (score: {r['score']}/100)")
+            except OSError as e: print(f"  FAILED to quarantine {name}: {e}")
+    if not q_names: print("  No skills require quarantine.")
+    else: print(f"  {len(q_names)} skill(s) quarantined.")
+    print()
+    # Phase 3: SBOM
+    print("[3/4] Generating SBOM...")
+    remaining = collect_skill_dirs(workspace)
+    remaining_names = [d.name for d in remaining]
+    skills_sbom = []
+    for sd in remaining:
+        inv = file_inventory(sd)
+        _, oc = parse_skill_meta(sd)
+        declared = oc.get("requires", {}).get("bins", [])
+        findings, score = scan_skill(sd, workspace, tdb, remaining_names)
+        skills_sbom.append({"name": sd.name, "path": str(sd),
+            "risk_score": score, "risk_label": risk_label(score),
+            "findings_count": len(findings), "file_count": len(inv),
+            "total_size": sum(f["size"] for f in inv),
+            "declared_dependencies": declared, "files": inv})
+    ts = datetime.now(timezone.utc)
+    sbom = {"sbom_version": "1.0", "generator": "openclaw-sentinel/protect",
+        "generated_at": ts.isoformat(), "workspace": str(workspace),
+        "summary": {"total_skills": len(skills_sbom),
+            "total_files": sum(s["file_count"] for s in skills_sbom),
+            "clean": sum(1 for s in skills_sbom if s["risk_score"] == 0),
+            "risky": sum(1 for s in skills_sbom if s["risk_score"] >= 50)},
+        "skills": skills_sbom}
+    sbom_path = sentinel_dir(workspace) / f"sbom-{ts.strftime('%Y%m%dT%H%M%SZ')}.json"
+    save_json(sbom_path, sbom)
+    print(f"  SBOM saved: {sbom_path}\n")
+    # Phase 4: Scan history
+    print("[4/4] Updating scan history...")
+    scan_results = {}
+    for sd in remaining:
+        findings, score = scan_skill(sd, workspace, tdb, remaining_names)
+        scan_results[sd.name] = {"score": score, "label": risk_label(score),
+            "findings_count": len(findings)}
+    save_json(scans_dir(workspace) / f"scan-{ts.strftime('%Y%m%dT%H%M%SZ')}.json",
+        {"timestamp": ts.isoformat(), "skills_scanned": len(scan_results),
+         "triggered_by": "protect", "results": scan_results})
+    hist = load_history(workspace)
+    hist["scans"].append({"timestamp": ts.isoformat(),
+        "skills_scanned": len(scan_results),
+        "clean": sum(1 for r in scan_results.values() if r["score"] == 0),
+        "risky": sum(1 for r in scan_results.values() if r["score"] >= 50),
+        "quarantined": q_names, "triggered_by": "protect",
+        "results": {k: {"score": v["score"], "findings_count": v["findings_count"]}
+                    for k, v in scan_results.items()}})
+    hist["scans"] = hist["scans"][-50:]; save_history(workspace, hist)
+    print("  Scan history updated.\n")
+    # Report
+    print("=" * 62); print("FULLTECTION REPORT"); print("=" * 62 + "\n")
+    r_clean = sum(1 for s in skills_sbom if s["risk_score"] == 0)
+    r_risky = sum(1 for s in skills_sbom if s["risk_score"] >= 50)
+    print(f"  Skills scanned:     {len(results)}")
+    print(f"  Auto-quarantined:   {len(q_names)}")
+    print(f"  Remaining skills:   {len(remaining)}")
+    print(f"  Remaining clean:    {r_clean}")
+    print(f"  Remaining risky:    {r_risky}\n")
+    if q_names:
+        print("  Quarantined skills:")
+        for n in q_names:
+            r = results[n]; print(f"    - {n} (score: {r['score']}/100 [{risk_label(r['score'])}])")
+        print()
+    if r_risky > 0:
+        print("  Remaining risky skills:")
+        for s in skills_sbom:
+            if s["risk_score"] >= 50:
+                print(f"    - {s['name']} (score: {s['risk_score']}/100 [{s['risk_label']}])")
+        print("\n[WARNING] Some HIGH-risk skills remain. Review or reject manually.\n")
+    elif q_names: print("[FULLTECTED] Critical threats quarantined. Workspace secured.\n")
+    else: print("[OK] No threats detected. Workspace is clean.\n")
+    max_exit = 0
+    if q_names or r_risky > 0: max_exit = 2
+    elif any(r["score"] > 0 for r in scan_results.values()): max_exit = 1
+    return max_exit
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    pa = argparse.ArgumentParser(description="OpenClaw Sentinel — Supply chain security")
+    pa = argparse.ArgumentParser(description="OpenClaw Sentinel— Full supply chain security suite")
     pa.add_argument("--workspace", "-w", help="Workspace path")
     sub = pa.add_subparsers(dest="command")
+    # Free
     ps = sub.add_parser("scan", help="Scan installed skills"); ps.add_argument("skill", nargs="?")
     pi = sub.add_parser("inspect", help="Pre-install inspection"); pi.add_argument("path")
     pt = sub.add_parser("threats", help="Manage threat DB"); pt.add_argument("--update-from")
     sub.add_parser("status", help="Quick status summary")
+    # Pro
+    pq = sub.add_parser("quarantine", help="Quarantine a risky skill"); pq.add_argument("skill")
+    pu = sub.add_parser("unquarantine", help="Restore quarantined skill"); pu.add_argument("skill")
+    pr = sub.add_parser("reject", help="Remove HIGH+ risk skill"); pr.add_argument("skill")
+    sub.add_parser("sbom", help="Generate Software Bill of Materials")
+    sub.add_parser("monitor", help="Compare current vs previous scan")
+    sub.add_parser("protect", help="Full automated sweep")
     args = pa.parse_args()
     if not args.command: pa.print_help(); sys.exit(1)
     if args.command == "inspect": sys.exit(cmd_inspect(args.path))
     ws = resolve_workspace(args.workspace)
     if not ws.exists(): print(f"Workspace not found: {ws}"); sys.exit(1)
-    if args.command == "scan": sys.exit(cmd_scan(ws, target_skill=args.skill))
-    elif args.command == "threats": sys.exit(cmd_threats(ws, update_from=args.update_from))
-    elif args.command == "status": sys.exit(cmd_status(ws))
+    dispatch = {"scan": lambda: cmd_scan(ws, target_skill=args.skill),
+                "threats": lambda: cmd_threats(ws, update_from=args.update_from),
+                "status": lambda: cmd_status(ws),
+                "quarantine": lambda: cmd_quarantine(ws, args.skill),
+                "unquarantine": lambda: cmd_unquarantine(ws, args.skill),
+                "reject": lambda: cmd_reject(ws, args.skill),
+                "sbom": lambda: cmd_sbom(ws), "monitor": lambda: cmd_monitor(ws),
+                "protect": lambda: cmdtect(ws)}
+    sys.exit(dispatch[args.command]())
 
 if __name__ == "__main__":
     main()
