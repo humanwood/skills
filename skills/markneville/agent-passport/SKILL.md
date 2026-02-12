@@ -1,11 +1,11 @@
 ---
-name: agent-passport
+name: agent-passport-lite
 description: "OAuth for the agentic era — consent-gating for ALL sensitive agent actions including purchases, emails, file operations, system commands, and API calls. Provides spending caps, rate limits, allowlists, TTL expiry, audit trails, and KYA (Know Your Agent) metadata."
-metadata: {"openclaw":{"primaryEnv":"AGENT_PASSPORT_API_KEY"}}
+metadata: {"openclaw":{"requires":{"bins":["jq","bc","xxd","head","date","mkdir"],"env":["AGENT_PASSPORT_LEDGER_DIR"]}}}
 user-invocable: true
 ---
 
-# Agent Passport (OpenClaw)
+# Agent Passport Lite (OpenClaw)
 
 ## 30-Second Setup
 
@@ -46,7 +46,7 @@ Before performing ANY of these actions, you MUST call `check-action` first:
 ### How to Check
 
 ```bash
-SCRIPT_DIR="$HOME/.openclaw/skills/agent-passport/scripts"
+SCRIPT_DIR="$HOME/.openclaw/skills/agent-passport-lite/scripts"
 
 result=$($SCRIPT_DIR/mandate-ledger.sh check-action "<your_agent_id>" "<category>" "<target>" [amount])
 ```
@@ -161,7 +161,7 @@ Allowlists and deny lists support three wildcard styles:
 
 - **Local mode** (default): Full offline operation. Mandates stored in `~/.openclaw/agent-passport/`.
 - **Preview mode:** No storage, no network. Generates validated payloads and curl templates.
-- **Live mode:** Connected to Agent Bridge backend for multi-agent sync and compliance.
+- **Live mode (roadmap):** Future connection to Agent Bridge backend for multi-agent sync and compliance. Not yet implemented — this skill is fully offline.
 
 ## Quick Start Commands
 
@@ -257,9 +257,11 @@ kya-revoke <agent_id> [why]
 }
 ```
 
-## Agent Bridge (SaaS Upgrade)
+## Agent Bridge (Future Roadmap)
 
-Local mode handles single-user, single-agent scenarios. Agent Bridge adds:
+> **Note:** This skill is 100% local. It makes NO network calls. Agent Bridge is a planned future service — no networking code is included in this release. No API keys are required.
+
+Local mode handles single-user, single-agent scenarios. A future Agent Bridge service would add:
 
 - **Multi-agent coordination** — prevent overlapping mandates
 - **Cross-device sync** — same mandates everywhere
@@ -275,7 +277,7 @@ Export local ledger anytime: `./mandate-ledger.sh export > backup.json`
 {
   "skills": {
     "entries": {
-      "agent-passport": {
+      "agent-passport-lite": {
         "env": {
           "AGENT_PASSPORT_LOCAL_LEDGER": "true"
         },

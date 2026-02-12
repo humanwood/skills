@@ -1,4 +1,4 @@
-# Agent Passport
+# Agent Passport Lite
 
 **OAuth for the agentic era** — consent-gating for ALL sensitive agent actions.
 
@@ -141,7 +141,7 @@ $ ./mandate-ledger.sh audit
 
 1. **Local** (default) — Fully offline, mandates in `~/.openclaw/agent-passport/`
 2. **Preview** — Validation only, no storage
-3. **Live** — Connected to Agent Bridge for multi-agent sync
+3. **Live (roadmap)** — Future connection to Agent Bridge for multi-agent sync (not yet implemented)
 
 ## Commands
 
@@ -194,7 +194,7 @@ Or in OpenClaw config:
 {
   "skills": {
     "entries": {
-      "agent-passport": {
+      "agent-passport-lite": {
         "env": {
           "AGENT_PASSPORT_LOCAL_LEDGER": "true"
         }

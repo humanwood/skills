@@ -1,5 +1,5 @@
 #!/bin/bash
-# Agent Passport - Local Mandate Ledger (Expanded)
+# Agent Passport Lite - Local Mandate Ledger (Expanded)
 # Consent-gating for ALL sensitive actions, not just purchases
 
 LEDGER_DIR="${AGENT_PASSPORT_LEDGER_DIR:-$HOME/.openclaw/agent-passport}"
@@ -862,7 +862,7 @@ case "$1" in
         kya_revoke "$2" "$3"
         ;;
     *)
-        echo "Agent Passport - Local Mandate Ledger v2.0"
+        echo "Agent Passport Lite - Local Mandate Ledger v2.0"
         echo "Consent-gating for ALL sensitive agent actions"
         echo ""
         echo "Usage: mandate-ledger.sh <command> [args]"
