@@ -45,11 +45,14 @@ def load_config():
 def get_dooray_config(config):
     """Extract Dooray skill config from OpenClaw config"""
     try:
-        dooray_config = config.get("skills", {}).get("entries", {}).get("dooray", {}).get("config", {})
+        # Strict matching: Only look for 'dooray-hook' as defined in SKILL.md
+        entries = config.get("skills", {}).get("entries", {})
+        dooray_config = entries.get("dooray-hook", {}).get("config", {})
+        
+        # Return empty dict if not found, to be handled by caller
         return dooray_config
     except (KeyError, AttributeError):
-        print("Error: Dooray skill config not found in OpenClaw config", file=sys.stderr)
-        print("Add 'skills.entries.dooray.config' to openclaw.json", file=sys.stderr)
+        print("Error: Dooray skill config structure is invalid", file=sys.stderr)
         sys.exit(1)
 
 
@@ -58,9 +61,18 @@ def list_rooms(dooray_config):
     rooms = dooray_config.get("rooms", {})
     
     if not rooms:
-        print("No Dooray rooms configured.")
-        print("\nAdd rooms to OpenClaw config:")
-        print('  skills.entries.dooray.config.rooms = { "RoomName": "webhook-url", ... }')
+        print("No Dooray rooms configured or 'dooray-hook' entry is missing.")
+        print("\nPlease add the configuration to ~/.openclaw/openclaw.json:")
+        print('  "skills": {')
+        print('    "entries": {')
+        print('      "dooray-hook": {')
+        print('        "config": {')
+        print('          "verify_ssl": true,')
+        print('          "rooms": { "RoomName": "https://hook.dooray.com/..." }')
+        print('        }')
+        print('      }')
+        print('    }')
+        print('  }')
         return
     
     print("Configured Dooray rooms:")
@@ -75,8 +87,12 @@ def send_message(room_name, message_text, dooray_config):
     """Send a message to a Dooray chat room"""
     rooms = dooray_config.get("rooms", {})
     
+    if not rooms:
+         print(f"Error: No rooms configured under 'dooray-hook'.", file=sys.stderr)
+         sys.exit(1)
+
     if room_name not in rooms:
-        print(f"Error: Room '{room_name}' not found in config", file=sys.stderr)
+        print(f"Error: Room '{room_name}' not found in 'dooray-hook' config", file=sys.stderr)
         print(f"\nAvailable rooms: {', '.join(sorted(rooms.keys()))}", file=sys.stderr)
         sys.exit(1)
     
@@ -84,6 +100,9 @@ def send_message(room_name, message_text, dooray_config):
     bot_name = dooray_config.get("botName", "OpenClaw")
     bot_icon = dooray_config.get("botIconImage", "https://static.dooray.com/static_images/dooray-bot.png")
     
+    # Check for SSL verification override (Default: True)
+    verify_ssl = dooray_config.get("verify_ssl", True)
+
     # Prepare payload
     payload = {
         "botName": bot_name,
@@ -105,11 +124,15 @@ def send_message(room_name, message_text, dooray_config):
             method='POST'
         )
         
-        # Create SSL context that doesn't verify certificates (for corporate proxies)
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-        
+        # [SECURITY] Conditional SSL Context
+        if verify_ssl:
+            # Secure default: Validates SSL certificates
+            ssl_context = ssl.create_default_context()
+        else:
+            # Insecure opt-in: Ignores certificate errors (for proxies/self-signed certs)
+            # This handles the [SSL: CERTIFICATE_VERIFY_FAILED] error if config allows it.
+            ssl_context = ssl._create_unverified_context()
+
         with urllib.request.urlopen(req, timeout=10, context=ssl_context) as response:
             status_code = response.getcode()
             response_body = response.read().decode('utf-8')
@@ -133,6 +156,8 @@ def send_message(room_name, message_text, dooray_config):
     
     except urllib.error.URLError as e:
         print(f"❌ Network error: {e.reason}", file=sys.stderr)
+        if "CERTIFICATE_VERIFY_FAILED" in str(e.reason):
+             print("\n💡 Hint: Try setting 'verify_ssl': false in your config if using a proxy or self-signed cert.", file=sys.stderr)
         return False
     
     except Exception as e:
