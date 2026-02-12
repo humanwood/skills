@@ -4,7 +4,6 @@ Network data loss prevention for [OpenClaw](https://github.com/openclaw/openclaw
 
 Maps every external connection your skills could make. Flags exfiltration endpoints, suspicious domains, and network function calls.
 
-**Want automated blocking?** Upgrade to Pro — blocking, quarantine, and URL allowlist enforcement. [Get Pro access](https://github.com/sponsors/AtlasPA).
 
 ## Install
 
@@ -41,9 +40,7 @@ python3 scripts/egress.py status
 - **Network code** — urllib, requests, httpx, aiohttp, curl, wget, fetch
 - **Webhook callbacks** — /webhook, /callback, /hook, /beacon endpoints
 
-## Free vs Pro
 
-| Feature | Free | [Pro](https://github.com/sponsors/AtlasPA) |
 |---------|------|-----|
 | URL detection & classification | Yes | Yes |
 | Network code analysis | Yes | Yes |

@@ -1,6 +1,5 @@
 ---
 name: openclaw-egress
-description: "Network data loss prevention for agent workspaces. Scans skills and files for outbound URLs, data exfiltration endpoints, suspicious domains, and network function calls. Maps every external connection. Free alert layer — upgrade to openclaw-egress-pro for blocking, quarantine, and URL allowlists."
 user-invocable: true
 metadata: {"openclaw":{"emoji":"🌐","requires":{"bins":["python3"]},"os":["darwin","linux","win32"]}}
 ---
@@ -13,7 +12,6 @@ Network DLP for agent workspaces. Scans skills and files for outbound URLs, data
 
 Skills can phone home. A compromised skill can POST your workspace contents, API keys, or conversation history to an external server. Nothing monitors what URLs your skills connect to or what data they could send.
 
-**Need automated blocking?** Upgrade to [openclaw-egress-pro](https://github.com/AtlasPA/openclaw-egress-pro) for blocking, quarantine, and URL allowlists.
 
 ## Commands
 
