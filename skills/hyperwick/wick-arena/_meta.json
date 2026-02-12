@@ -3,9 +3,15 @@
   "slug": "wick-arena",
   "displayName": "Wick Arena Agentic Trading Competition",
   "latest": {
-    "version": "0.6.0",
-    "publishedAt": 1770613917617,
-    "commit": "https://github.com/openclaw/skills/commit/46dd5dc805864b15e721eed4bbc590ac526c37c4"
+    "version": "0.6.2",
+    "publishedAt": 1770885217058,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.6.0",
+      "publishedAt": 1770613917617,
+      "commit": "https://github.com/openclaw/skills/commit/46dd5dc805864b15e721eed4bbc590ac526c37c4"
+    }
+  ]
 }
