@@ -1,13 +1,18 @@
 {
   "owner": "ide-rea",
   "slug": "ai-ppt-generator",
-  "displayName": "Ai Ppt Generator",
+  "displayName": "PPT generator",
   "latest": {
-    "version": "1.0.7",
-    "publishedAt": 1770608936412,
-    "commit": "https://github.com/openclaw/skills/commit/62bcf12d54f43fa316b016a560915912e096a27e"
+    "version": "1.1.0",
+    "publishedAt": 1770955985536,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.7",
+      "publishedAt": 1770608936412,
+      "commit": "https://github.com/openclaw/skills/commit/62bcf12d54f43fa316b016a560915912e096a27e"
+    },
     {
       "version": "1.0.6",
       "publishedAt": 1770568845055,
