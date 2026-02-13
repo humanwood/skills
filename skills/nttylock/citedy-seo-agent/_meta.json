@@ -1,13 +1,18 @@
 {
   "owner": "nttylock",
   "slug": "citedy-seo-agent",
-  "displayName": "Clawhub Skill",
+  "displayName": "Citedy SEO Agent",
   "latest": {
-    "version": "1.5.2",
-    "publishedAt": 1770685774383,
-    "commit": "https://github.com/openclaw/skills/commit/aa6a6726e0252295907995051bea1ec0f03e4c43"
+    "version": "2.2.1",
+    "publishedAt": 1770942057741,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.5.2",
+      "publishedAt": 1770685774383,
+      "commit": "https://github.com/openclaw/skills/commit/aa6a6726e0252295907995051bea1ec0f03e4c43"
+    },
     {
       "version": "1.5.0",
       "publishedAt": 1770563479360,
