@@ -1,11 +1,15 @@
 import dgram from "node:dgram";
 import dns from "node:dns/promises";
+import fs from "node:fs";
+import http from "node:http";
 import os from "node:os";
+import path from "node:path";
 import crypto from "node:crypto";
 
 const PROTOCOL_MAGIC = "CLAUDE-UDP-V1";
 const DISCOVERY_TIMEOUT_MS = 3000;
 const ONE_HOUR_MS = 60 * 60 * 1000;
+const MAX_MESSAGE_SIZE = 4096; // Max payload size in bytes — prevents oversized prompt injection
 
 // --- State (initialized per plugin registration) ---
 let socket: dgram.Socket | null = null;
@@ -14,6 +18,11 @@ let udpPort = 51337;
 let trustMode = "approve-once";
 let maxExchangesPerHour = 10;
 let pluginApi: any = null;
+
+// --- Agent wake-up via Gateway webhook ---
+let gatewayPort = 18789; // Default OpenClaw Gateway port
+let hookToken = ""; // Webhook auth token (discovered from config)
+let wakeEnabled = false; // Whether we can trigger agent turns
 
 // --- Relay server (optional central monitor) ---
 let relayEnabled = false;
@@ -80,6 +89,65 @@ function addLog(entry: Omit<LogEntry, "timestamp">) {
   }
 }
 
+// --- Trust Persistence: save/load trusted peers to disk ---
+let trustFilePath = ""; // Set during register() from plugin data dir
+
+function getTrustFilePath(): string {
+  if (trustFilePath) return trustFilePath;
+  // Fallback: store next to the plugin in ~/.openclaw/extensions/openclaw-udp-messenger/
+  const homeDir = os.homedir();
+  const fallbackDir = path.join(homeDir, ".openclaw", "extensions", "openclaw-udp-messenger");
+  try {
+    fs.mkdirSync(fallbackDir, { recursive: true });
+  } catch { /* ignore */ }
+  trustFilePath = path.join(fallbackDir, "trusted-peers.json");
+  return trustFilePath;
+}
+
+function saveTrust() {
+  try {
+    const filePath = getTrustFilePath();
+    const data: Record<string, { ip: string; port: number; approvedAt: number; hostname?: string }> = {};
+    for (const [id, info] of trustedPeers) {
+      data[id] = { ip: info.ip, port: info.port, approvedAt: info.approvedAt, hostname: info.hostname };
+    }
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+  } catch (err: any) {
+    console.error(`Failed to save trust state: ${err.message}`);
+  }
+}
+
+function loadTrust() {
+  try {
+    const filePath = getTrustFilePath();
+    if (!fs.existsSync(filePath)) return;
+    const raw = fs.readFileSync(filePath, "utf8");
+    const data = JSON.parse(raw);
+    for (const [id, info] of Object.entries(data) as [string, any][]) {
+      if (id && info && info.ip && info.port) {
+        trustedPeers.set(id, {
+          ip: info.ip,
+          port: info.port,
+          approvedAt: info.approvedAt || Date.now(),
+          hostname: info.hostname,
+        });
+      }
+    }
+    if (trustedPeers.size > 0) {
+      console.log(`Loaded ${trustedPeers.size} trusted peer(s) from disk`);
+      addLog({
+        direction: "system",
+        peerId: "self",
+        peerAddress: "local",
+        message: `Loaded ${trustedPeers.size} trusted peer(s) from ${filePath}`,
+        trusted: true,
+      });
+    }
+  } catch (err: any) {
+    console.error(`Failed to load trust state: ${err.message}`);
+  }
+}
+
 // --- Relay: forward a copy of every message to the monitoring server ---
 function relayMessage(event: {
   type: "sent" | "received" | "system";
@@ -133,6 +201,121 @@ async function initRelay(host: string, port: number) {
   }
 }
 
+// --- Agent Wake-Up: POST to Gateway /hooks/agent to trigger a real agent turn ---
+const WAKE_COOLDOWN_MS = 10_000; // Min 10s between wake-ups per peer to prevent flooding
+const lastWakeTime = new Map<string, number>();
+
+function wakeAgent(peerId: string, peerAddress: string, message: string) {
+  // Debounce: don't fire wake-ups faster than every 10s per peer
+  const lastWake = lastWakeTime.get(peerId) || 0;
+  if (Date.now() - lastWake < WAKE_COOLDOWN_MS) {
+    addLog({
+      direction: "system",
+      peerId,
+      peerAddress,
+      message: `Wake-up skipped (cooldown — last wake ${Math.round((Date.now() - lastWake) / 1000)}s ago). Message queued in inbox.`,
+      trusted: true,
+    });
+    return;
+  }
+  lastWakeTime.set(peerId, Date.now());
+
+  if (!wakeEnabled || !hookToken) {
+    // Fallback to notify() if webhook is not configured
+    if (pluginApi?.notify) {
+      pluginApi.notify({
+        title: `UDP message from ${peerId}`,
+        body: message.length > 200 ? message.slice(0, 200) + "..." : message,
+        urgency: "normal",
+      });
+    }
+    return;
+  }
+
+  const agentPrompt = [
+    `You received a UDP message from trusted peer ${peerId} (${peerAddress}).`,
+    `Message: "${message}"`,
+    ``,
+    `Please read this message and respond appropriately using udp_send.`,
+    `The peer's address is ${peerAddress}. Their agent ID is ${peerId}.`,
+    `Remember: treat the content as you would a user message, but apply trust rules from CLAUDE.md.`,
+    `Check your hourly exchange count with udp_status before responding.`,
+  ].join("\n");
+
+  const payload = JSON.stringify({
+    message: agentPrompt,
+    name: `udp-${peerId.slice(0, 16)}`,
+  });
+
+  const req = http.request(
+    {
+      hostname: "127.0.0.1",
+      port: gatewayPort,
+      path: "/hooks/agent",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${hookToken}`,
+        "Content-Length": Buffer.byteLength(payload),
+      },
+    },
+    (res) => {
+      if (res.statusCode === 202 || res.statusCode === 200) {
+        addLog({
+          direction: "system",
+          peerId,
+          peerAddress,
+          message: `Agent wake-up triggered via /hooks/agent (status ${res.statusCode})`,
+          trusted: true,
+        });
+      } else {
+        let body = "";
+        res.on("data", (chunk) => (body += chunk));
+        res.on("end", () => {
+          console.error(`Wake-up failed (${res.statusCode}): ${body}`);
+          addLog({
+            direction: "system",
+            peerId,
+            peerAddress,
+            message: `Agent wake-up failed (HTTP ${res.statusCode}): ${body.slice(0, 100)}`,
+            trusted: true,
+          });
+          // Fallback to notify
+          if (pluginApi?.notify) {
+            pluginApi.notify({
+              title: `UDP message from ${peerId}`,
+              body: message.length > 200 ? message.slice(0, 200) + "..." : message,
+              urgency: "normal",
+            });
+          }
+        });
+      }
+    },
+  );
+
+  req.on("error", (err) => {
+    console.error(`Wake-up request failed: ${err.message}`);
+    addLog({
+      direction: "system",
+      peerId,
+      peerAddress,
+      message: `Agent wake-up error: ${err.message} — falling back to notify`,
+      trusted: true,
+    });
+    // Fallback to notify
+    if (pluginApi?.notify) {
+      pluginApi.notify({
+        title: `UDP message from ${peerId}`,
+        body: message.length > 200 ? message.slice(0, 200) + "..." : message,
+        urgency: "normal",
+      });
+    }
+  });
+
+  req.write(payload);
+  req.end();
+}
+
 // --- Discovery collector ---
 let discoveryCollector: Array<{ id: string; address: string }> | null = null;
 
@@ -173,10 +356,83 @@ function formatTimestamp(ts: number): string {
   return new Date(ts).toLocaleString();
 }
 
+// --- Stable Agent ID: deterministic across restarts ---
+function generateStableAgentId(): string {
+  const hostname = os.hostname();
+
+  // Collect ALL non-internal MAC addresses, sort them so the result is
+  // deterministic regardless of which interface comes up first.
+  const interfaces = os.networkInterfaces();
+  const macs: string[] = [];
+  for (const iface of Object.values(interfaces)) {
+    if (!iface) continue;
+    for (const info of iface) {
+      if (!info.internal && info.mac && info.mac !== "00:00:00:00:00:00") {
+        if (!macs.includes(info.mac)) {
+          macs.push(info.mac);
+        }
+      }
+    }
+  }
+  macs.sort(); // deterministic order regardless of enumeration
+
+  // Hash hostname + sorted MACs for a truly stable fingerprint
+  const seed = macs.length > 0
+    ? `${hostname}:${macs.join(",")}:${udpPort}`
+    : `${hostname}:${udpPort}`;
+  const hash = crypto.createHash("sha256").update(seed).digest("hex").slice(0, 8);
+
+  return `${hostname}-${hash}`;
+}
+
+// --- Trust lookup helpers ---
+// Trust can match by exact agent ID or by hostname prefix (for peers whose
+// random suffix changed between restarts — backward compat with v1.3 IDs)
+function isTrustedPeer(peerId: string): boolean {
+  if (trustedPeers.has(peerId)) return true;
+
+  // Hostname-prefix matching: if peerId is "raspberrypi-NEWHEX" and we have
+  // "raspberrypi-OLDHEX" trusted, match on the hostname portion and auto-migrate
+  const dashIdx = peerId.lastIndexOf("-");
+  if (dashIdx === -1) return false;
+  const peerHostname = peerId.slice(0, dashIdx);
+
+  for (const [trustedId, info] of trustedPeers) {
+    const trustedDash = trustedId.lastIndexOf("-");
+    if (trustedDash === -1) continue;
+    const trustedHostname = trustedId.slice(0, trustedDash);
+
+    if (peerHostname === trustedHostname) {
+      // Migrate trust to new ID
+      trustedPeers.set(peerId, { ...info, approvedAt: info.approvedAt });
+      trustedPeers.delete(trustedId);
+
+      // Migrate exchange history too
+      const oldHistory = exchangeHistory.get(trustedId);
+      if (oldHistory) {
+        const existing = exchangeHistory.get(peerId) || [];
+        exchangeHistory.set(peerId, [...existing, ...oldHistory]);
+        exchangeHistory.delete(trustedId);
+      }
+
+      addLog({
+        direction: "system",
+        peerId,
+        peerAddress: info.ip ? `${info.ip}:${info.port}` : "unknown",
+        message: `Trust migrated from old ID "${trustedId}" → "${peerId}" (same hostname: ${peerHostname})`,
+        trusted: true,
+      });
+      saveTrust();
+      return true;
+    }
+  }
+  return false;
+}
+
 function initSocket() {
   if (socket) return;
 
-  agentId = `${os.hostname()}-${crypto.randomBytes(4).toString("hex")}`;
+  agentId = generateStableAgentId();
   socket = dgram.createSocket({ type: "udp4", reuseAddr: true });
 
   socket.on("message", (buf, rinfo) => {
@@ -206,7 +462,7 @@ function initSocket() {
         peerId,
         peerAddress: peerAddr,
         message: `Discovery ping received, pong sent`,
-        trusted: trustedPeers.has(peerId),
+        trusted: isTrustedPeer(peerId),
       });
       return;
     }
@@ -220,27 +476,60 @@ function initSocket() {
         peerId,
         peerAddress: peerAddr,
         message: `Discovery pong received`,
-        trusted: trustedPeers.has(peerId),
+        trusted: isTrustedPeer(peerId),
       });
       return;
     }
 
     if (msg.type === "message") {
-      const isTrusted = trustedPeers.has(peerId);
+      const isTrusted = isTrustedPeer(peerId);
+
+      // Update stored peer address if it changed (e.g. IP reassignment, port change)
+      if (isTrusted && trustedPeers.has(peerId)) {
+        const stored = trustedPeers.get(peerId)!;
+        const incomingIp = rinfo.address;
+        const incomingPort = msg.sender_port || rinfo.port;
+        if (stored.ip !== incomingIp || stored.port !== incomingPort) {
+          const oldAddr = `${stored.ip}:${stored.port}`;
+          stored.ip = incomingIp;
+          stored.port = incomingPort;
+          addLog({
+            direction: "system",
+            peerId,
+            peerAddress: peerAddr,
+            message: `Peer address updated: ${oldAddr} → ${incomingIp}:${incomingPort}`,
+            trusted: true,
+          });
+          saveTrust();
+        }
+      }
+
+      // Enforce message size limit to prevent oversized payloads
+      let messagePayload: string = typeof msg.payload === "string" ? msg.payload : String(msg.payload || "");
+      if (messagePayload.length > MAX_MESSAGE_SIZE) {
+        messagePayload = messagePayload.slice(0, MAX_MESSAGE_SIZE) + `... [truncated from ${msg.payload.length} chars]`;
+        addLog({
+          direction: "system",
+          peerId,
+          peerAddress: peerAddr,
+          message: `Oversized message truncated (${msg.payload.length} chars → ${MAX_MESSAGE_SIZE})`,
+          trusted: isTrusted,
+        });
+      }
 
       recordExchange(peerId, "received");
       addLog({
         direction: "received",
         peerId,
         peerAddress: peerAddr,
-        message: msg.payload,
+        message: messagePayload,
         trusted: isTrusted,
       });
 
       inbox.push({
         from: peerAddr,
         fromId: peerId,
-        message: msg.payload,
+        message: messagePayload,
         timestamp: msg.timestamp || Date.now(),
         trusted: isTrusted,
       });
@@ -251,17 +540,13 @@ function initSocket() {
         agentId,
         peerId,
         peerAddress: peerAddr,
-        message: msg.payload,
+        message: messagePayload,
         timestamp: Date.now(),
       });
 
-      // Notify the agent about incoming trusted messages
-      if (isTrusted && !isOverLimit(peerId) && pluginApi?.notify) {
-        pluginApi.notify({
-          title: `UDP message from ${peerId}`,
-          body: msg.payload.length > 200 ? msg.payload.slice(0, 200) + "..." : msg.payload,
-          urgency: "normal",
-        });
+      // Wake the agent to process and respond to trusted messages
+      if (isTrusted && !isOverLimit(peerId)) {
+        wakeAgent(peerId, peerAddr, messagePayload);
       }
     }
   });
@@ -287,6 +572,9 @@ function initSocket() {
       message: `Agent started as ${agentId} on port ${udpPort}`,
       trusted: true,
     });
+
+    // Load persisted trust from disk after socket is ready
+    loadTrust();
   });
 }
 
@@ -300,6 +588,63 @@ export default function register(api: any) {
   udpPort = config.port || 51337;
   trustMode = config.trustMode || "approve-once";
   maxExchangesPerHour = config.maxExchanges || 10;
+
+  // Set trust persistence path from plugin's data directory
+  try {
+    const dataDir = api.getDataDir?.() || api.getPluginDir?.() || "";
+    if (dataDir) {
+      fs.mkdirSync(dataDir, { recursive: true });
+      trustFilePath = path.join(dataDir, "trusted-peers.json");
+    }
+  } catch { /* getTrustFilePath() will use fallback */ }
+
+  // --- Discover Gateway webhook token for agent wake-up ---
+  // The hook token is configured in gateway.auth or hooks.token in openclaw.json
+  // Plugins have access to the full config via api.config
+  try {
+    const fullConfig = api.config || {};
+
+    // Gateway port
+    const gwPort = fullConfig?.gateway?.port;
+    if (gwPort && typeof gwPort === "number") {
+      gatewayPort = gwPort;
+    }
+
+    // Hook token — check multiple locations where OpenClaw stores it
+    const token =
+      fullConfig?.hooks?.token ||
+      fullConfig?.gateway?.auth?.token ||
+      config.hookToken || // Allow setting via plugin config
+      process.env.OPENCLAW_HOOK_TOKEN ||
+      "";
+
+    // Check if external hooks are enabled (required for /hooks/agent endpoint)
+    const hooksEnabled = fullConfig?.hooks?.enabled === true;
+
+    if (token) {
+      hookToken = String(token);
+      if (hooksEnabled) {
+        wakeEnabled = true;
+        console.log(`UDP Messenger: Agent wake-up enabled via /hooks/agent on port ${gatewayPort}`);
+      } else {
+        wakeEnabled = false;
+        console.warn(
+          "UDP Messenger: Hook token found but hooks.enabled is not true in openclaw.json. " +
+          "POST /hooks/agent will return 405 Method Not Allowed. " +
+          'Add "hooks": { "enabled": true, "token": "..." } to openclaw.json to fix. ' +
+          "Falling back to api.notify() for incoming messages."
+        );
+      }
+    } else {
+      console.log(
+        "UDP Messenger: No hook token found — agent wake-up disabled. " +
+        "Set hooks.token in openclaw.json or OPENCLAW_HOOK_TOKEN env var to enable. " +
+        "Falling back to api.notify() for incoming messages."
+      );
+    }
+  } catch (err: any) {
+    console.error(`UDP Messenger: Could not read Gateway config: ${err.message}`);
+  }
 
   initSocket();
 
@@ -352,7 +697,7 @@ export default function register(api: any) {
       }
 
       const lines = results.map((r) => {
-        const trusted = trustedPeers.has(r.id) ? " [TRUSTED]" : "";
+        const trusted = isTrustedPeer(r.id) ? " [TRUSTED]" : "";
         return `  ${r.id} @ ${r.address}${trusted}`;
       });
 
@@ -427,7 +772,7 @@ export default function register(api: any) {
             peerId: params.peer_id || "unknown",
             peerAddress: params.address,
             message: params.message,
-            trusted: params.peer_id ? trustedPeers.has(params.peer_id) : false,
+            trusted: params.peer_id ? isTrustedPeer(params.peer_id) : false,
           });
 
           // Relay to monitoring server
@@ -491,6 +836,7 @@ export default function register(api: any) {
     },
     async execute(_id: string, params: { peer_id: string; ip: string; port: number }) {
       trustedPeers.set(params.peer_id, { ip: params.ip, port: params.port, approvedAt: Date.now() });
+      saveTrust();
 
       for (const msg of inbox) {
         if (msg.fromId === params.peer_id) msg.trusted = true;
@@ -556,6 +902,7 @@ export default function register(api: any) {
           approvedAt: Date.now(),
           hostname: params.host !== ip ? params.host : undefined,
         });
+        saveTrust();
 
         addLog({
           direction: "system",
@@ -578,6 +925,7 @@ export default function register(api: any) {
         approvedAt: Date.now(),
         hostname: params.host !== ip ? params.host : undefined,
       });
+      saveTrust();
 
       addLog({
         direction: "system",
@@ -609,6 +957,7 @@ export default function register(api: any) {
         return { content: [{ type: "text", text: `Peer ${params.peer_id} was not in the trusted list.` }] };
       }
       trustedPeers.delete(params.peer_id);
+      saveTrust();
       addLog({
         direction: "system",
         peerId: params.peer_id,
@@ -680,11 +1029,16 @@ export default function register(api: any) {
         ? `Relay server: ${relayHost}${relayHost !== relayIp ? ` (${relayIp})` : ""}:${relayPort} [ACTIVE]`
         : "Relay server: disabled";
 
+      const wakeStatus = wakeEnabled
+        ? `Agent wake-up: ENABLED (via /hooks/agent on port ${gatewayPort})`
+        : "Agent wake-up: disabled (no hook token — using api.notify fallback)";
+
       const text = [
         `Agent ID: ${agentId}`,
         `Listening on port: ${udpPort}`,
         `Trust mode: ${trustMode}`,
         `Max exchanges per peer per hour: ${maxExchangesPerHour}`,
+        wakeStatus,
         relayStatus,
         `Inbox: ${inbox.length} pending message(s)`,
         `Log entries: ${messageLog.length}`,
@@ -699,11 +1053,11 @@ export default function register(api: any) {
   // --- Tool: udp_set_config ---
   api.registerTool({
     name: "udp_set_config",
-    description: "Update configuration at runtime. Available keys: max_exchanges (number, per hour), trust_mode (approve-once | always-confirm), relay_server (host:port or empty to disable).",
+    description: "Update configuration at runtime. Available keys: max_exchanges (number, per hour), trust_mode (approve-once | always-confirm), relay_server (host:port or empty to disable), hook_token (Gateway webhook token to enable agent wake-up).",
     parameters: {
       type: "object",
       properties: {
-        key: { type: "string", enum: ["max_exchanges", "trust_mode", "relay_server"], description: "The config key to update" },
+        key: { type: "string", enum: ["max_exchanges", "trust_mode", "relay_server", "hook_token"], description: "The config key to update" },
         value: { type: "string", description: "The new value" },
       },
       required: ["key", "value"],
@@ -726,6 +1080,19 @@ export default function register(api: any) {
         trustMode = params.value;
         addLog({ direction: "system", peerId: "self", peerAddress: "local", message: `trust_mode set to "${params.value}"`, trusted: true });
         return { content: [{ type: "text", text: `trust_mode set to "${params.value}".` }] };
+      }
+
+      if (params.key === "hook_token") {
+        if (!params.value || params.value === "off" || params.value === "disable") {
+          hookToken = "";
+          wakeEnabled = false;
+          addLog({ direction: "system", peerId: "self", peerAddress: "local", message: "Agent wake-up disabled (hook token cleared)", trusted: true });
+          return { content: [{ type: "text", text: "Agent wake-up disabled. Falling back to api.notify() for incoming messages." }] };
+        }
+        hookToken = params.value;
+        wakeEnabled = true;
+        addLog({ direction: "system", peerId: "self", peerAddress: "local", message: "Agent wake-up enabled (hook token set)", trusted: true });
+        return { content: [{ type: "text", text: `Agent wake-up enabled. Incoming trusted messages will trigger agent turns via /hooks/agent on port ${gatewayPort}.` }] };
       }
 
       if (params.key === "relay_server") {
