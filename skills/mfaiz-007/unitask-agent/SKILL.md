@@ -13,6 +13,7 @@ metadata: {"clawdbot":{"emoji":"✅","requires":{"env":["UNITASK_API_KEY"]},"pri
 ## Purpose
 
 This skill lets an AI agent safely manage a user's Unitask account using **scoped API tokens**.
+Unitask is in **public beta**. Anyone can sign up at `https://unitask.app`.
 
 Supported operations:
 - List tasks
@@ -34,8 +35,9 @@ Subtasks:
 
 ## Required setup
 
-1. User creates a Unitask API token from `Unitask -> Dashboard -> Settings -> API`.
-2. User stores it in their agent/app secret store as: `UNITASK_API_KEY=<token>`.
+1. User signs up (public beta) at `https://unitask.app` if they do not already have an account.
+2. User creates a Unitask API token from `Unitask -> Dashboard -> Settings -> API`.
+3. User stores it in their agent/app secret store as: `UNITASK_API_KEY=<token>`.
 
 Never ask users to paste full tokens in chat logs.
 
@@ -57,6 +59,7 @@ Auth header (recommended):
 ## MCP tools
 
 - `list_tasks` — filter by `status` (`todo|done`), `limit`, `offset`, `parent_id`, `tag_id`
+  - advanced filters: `view` (`today|upcoming`), `tz`, `window_days`, `due_from`, `due_to`, `start_from`, `start_to`, `sort_by`, `sort_dir`
 - `get_task` — fetch one task
 - `create_task` — create task/subtask
 - `update_task` — full mutable field update
@@ -78,6 +81,7 @@ Auth header (recommended):
 ## Safety rules
 
 - Use smallest required scope for the requested action.
+- For public beta, keep least-privilege scopes by workflow: `read`, `write`, `delete`.
 - Confirm destructive actions (delete) unless user explicitly asks to proceed.
 - Prefer `status=done` over delete when intent is completion.
 - For `move_subtask` and `merge_parent_tasks`, keep `dry_run=true` first and apply only after confirmation.

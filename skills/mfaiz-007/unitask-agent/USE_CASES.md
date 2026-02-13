@@ -1,72 +1,42 @@
-# Unitask Agent Use Cases (Compact)
+# Unitask Agent Use Cases (Public Beta)
 
-Use these prompts to get fast value from `unitask-agent`.
+Unitask is in **public beta**. Anyone can sign up at `https://unitask.app`, create a scoped token in `Dashboard -> Settings -> API`, and connect an AI agent.
 
-## Plan Day
-1. "What are my todo tasks right now?"
-   - Tool path: `list_tasks(status=todo)`
-2. "Show only parent tasks I should focus on first."
-   - Tool path: `list_tasks(status=todo,parent_id=null)`
-3. "Show subtasks under this parent: <parent_id>."
-   - Tool path: `list_tasks(parent_id=<id>)`
-4. "Build a 9-5 plan and preview it first."
-   - Tool path: `plan_day_timeblocks(apply=false)`
-5. "Apply the exact plan you just previewed."
-   - Tool path: `plan_day_timeblocks(apply=true)`
+## Day-to-Day Matrix (20)
 
-## Capture
-6. "Create a task: finalize launch copy."
-   - Tool path: `create_task`
-7. "Create a subtask under <parent_id>: draft FAQ."
-   - Tool path: `create_task(parent_id)`
-8. "Create this task with high priority and due date tomorrow."
-   - Tool path: `create_task(priority,due_date)`
-9. "Add a recurring task every weekday."
-   - Tool path: `create_task(recurrence)`
-10. "Convert this note into a task and schedule 45 minutes tomorrow 10am."
-   - Tool path: `create_task(scheduled_start,duration_minutes)`
+| # | Use Case | Recommended Query/Tool | Support | Gap / Next Patch |
+|---|---|---|---|---|
+| 1 | What are my tasks for today including overdue? | `list_tasks(view=today,tz=<IANA>,status=todo,limit=100)` | Yes | None |
+| 2 | What is coming up this week? | `list_tasks(view=upcoming,tz=<IANA>,window_days=7,status=todo)` | Yes | None |
+| 3 | Tasks due in next 3 days | `list_tasks(due_from=<ISO>,due_to=<ISO>,status=todo)` | Yes | None |
+| 4 | Tasks starting tomorrow | `list_tasks(start_from=<ISO>,start_to=<ISO>,status=todo)` | Yes | None |
+| 5 | Today tasks sorted by priority | `list_tasks(view=today,sort_by=priority,sort_dir=desc)` | Yes | None |
+| 6 | Parent tasks only | `list_tasks(parent_id=null,status=todo)` | Yes | None |
+| 7 | Subtasks under a parent | `list_tasks(parent_id=<parent_id>,status=todo)` | Yes | None |
+| 8 | Filter tasks by tag | `list_tasks(tag_id=<tag_id>,status=todo)` | Yes | None |
+| 9 | Create a task | `create_task` | Yes | None |
+| 10 | Create a subtask | `create_task(parent_id=<parent_id>)` | Yes | None |
+| 11 | Update any task fields | `update_task` | Yes | None |
+| 12 | Mark task done / reopen | `update_task_status` | Yes | None |
+| 13 | Move subtask to another parent | `move_subtask(dry_run=true|false)` | Yes | None |
+| 14 | Merge parent B into A | `merge_parent_tasks(dry_run=true|false)` | Yes | None |
+| 15 | Create / rename / delete tags | `create_tag`, `update_tag`, `delete_tag` | Yes | None |
+| 16 | Attach / remove tag on task | `add_task_tag`, `remove_task_tag` | Yes | None |
+| 17 | Plan my day 9-5 with preview | `plan_day_timeblocks(apply=false)` | Yes | None |
+| 18 | Apply approved timeblock plan | `plan_day_timeblocks(apply=true)` | Yes | None |
+| 19 | Update onboarding/settings profile | `update_settings` | Yes | None |
+| 20 | Mark many tasks done from one prompt | repeated `update_task_status` calls | Partial | Add `batch_update_task_status` tool |
 
-## Organize
-11. "Rename task <id> to clearer action language."
-   - Tool path: `update_task(title)`
-12. "Set task <id> priority to critical and add context in description."
-   - Tool path: `update_task(priority,description)`
-13. "Move subtask <task_id> from parent A to parent B (preview first)."
-   - Tool path: `move_subtask(dry_run=true)`
-14. "Now apply that subtask move."
-   - Tool path: `move_subtask(dry_run=false)`
-15. "Merge parent B into parent A with all subtasks, preview first."
-   - Tool path: `merge_parent_tasks(dry_run=true)`
-16. "Apply that parent merge now."
-   - Tool path: `merge_parent_tasks(dry_run=false)`
-17. "List all tasks tagged urgent."
-   - Tool path: `list_tasks(tag_id=<tag_id>)`
-18. "Create tags: urgent, deep-work, admin."
-   - Tool path: `create_tag`
-19. "Attach tag <tag_id> to task <task_id>."
-   - Tool path: `add_task_tag`
-20. "Remove tag <tag_id> from task <task_id>."
-   - Tool path: `remove_task_tag`
+## Quick Prompts
 
-## Cleanup
-21. "Mark task <id> done."
-   - Tool path: `update_task_status(status=done)`
-22. "Reopen task <id> back to todo."
-   - Tool path: `update_task_status(status=todo)`
-23. "Soft-delete this obsolete task tree: <id>."
-   - Tool path: `delete_task`
-24. "Soft-delete outdated tag <id>."
-   - Tool path: `delete_tag`
-
-## Review
-25. "Show me my settings and suggest optimizations for speed and focus."
-   - Tool path: `get_settings` + `update_settings`
-26. "Update my onboarding preferences based on my role and work style."
-   - Tool path: `update_settings(quiz)`
-27. "Estimate where my day is overloaded from current scheduled blocks."
-   - Tool path: `list_tasks` + `plan_day_timeblocks(apply=false)`
+1. "What are my tasks for today including overdue?"
+2. "Show what is upcoming in the next 7 days."
+3. "List tasks tagged urgent and sort by priority."
+4. "Move subtask <id> under parent <id>, preview first."
+5. "Merge parent B into parent A, preview then apply."
 
 ## Safety Defaults
+
+- Use least-privilege scopes (`read`, `write`, `delete`) for each workflow.
 - Use dry-run first for `move_subtask` and `merge_parent_tasks`.
-- Confirm destructive actions before applying `delete_task` or `delete_tag`.
-- Use least-privilege token scopes (`read`, `write`, `delete`) for each workflow.
+- Confirm destructive actions (`delete_task`, `delete_tag`) before apply.
