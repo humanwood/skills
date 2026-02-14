@@ -1,10 +1,53 @@
 ---
 name: performance-reporter
-description: Generates comprehensive SEO and GEO performance reports combining rankings, traffic, backlinks, and AI visibility metrics. Creates executive summaries and detailed analyses for stakeholder reporting.
-geo-relevance: "medium"
+description: 'Use when the user asks to "generate SEO report", "performance report", "traffic report", "SEO dashboard", "report to stakeholders", "show me the numbers", "monthly SEO report", or "present SEO results to my boss". Generates comprehensive SEO and GEO performance reports combining rankings, traffic, backlinks, and AI visibility metrics. Creates executive summaries and detailed analyses for stakeholder reporting. For detailed rank tracking, see rank-tracker. For link-specific analysis, see backlink-analyzer.'
+license: Apache-2.0
+metadata:
+  author: aaron-he-zhu
+  version: "2.0.0"
+  geo-relevance: "medium"
+  tags:
+    - seo
+    - geo
+    - performance report
+    - seo report
+    - traffic analysis
+    - seo dashboard
+    - executive summary
+    - analytics report
+    - kpi tracking
+  triggers:
+    - "generate SEO report"
+    - "performance report"
+    - "traffic report"
+    - "SEO dashboard"
+    - "report to stakeholders"
+    - "monthly report"
+    - "SEO analytics"
+    - "show me the numbers"
+    - "monthly SEO report"
+    - "present SEO results to my boss"
 ---
 
 # Performance Reporter
+
+
+> **[SEO & GEO Skills Library](https://skills.sh/aaron-he-zhu/seo-geo-claude-skills)** · 20 skills for SEO + GEO · Install all: `npx skills add aaron-he-zhu/seo-geo-claude-skills`
+
+<details>
+<summary>Browse all 20 skills</summary>
+
+**Research** · [keyword-research](../../research/keyword-research/) · [competitor-analysis](../../research/competitor-analysis/) · [serp-analysis](../../research/serp-analysis/) · [content-gap-analysis](../../research/content-gap-analysis/)
+
+**Build** · [seo-content-writer](../../build/seo-content-writer/) · [geo-content-optimizer](../../build/geo-content-optimizer/) · [meta-tags-optimizer](../../build/meta-tags-optimizer/) · [schema-markup-generator](../../build/schema-markup-generator/)
+
+**Optimize** · [on-page-seo-auditor](../../optimize/on-page-seo-auditor/) · [technical-seo-checker](../../optimize/technical-seo-checker/) · [internal-linking-optimizer](../../optimize/internal-linking-optimizer/) · [content-refresher](../../optimize/content-refresher/)
+
+**Monitor** · [rank-tracker](../rank-tracker/) · [backlink-analyzer](../backlink-analyzer/) · **performance-reporter** · [alert-manager](../alert-manager/)
+
+**Cross-cutting** · [content-quality-auditor](../../cross-cutting/content-quality-auditor/) · [domain-authority-auditor](../../cross-cutting/domain-authority-auditor/) · [entity-optimizer](../../cross-cutting/entity-optimizer/) · [memory-management](../../cross-cutting/memory-management/)
+
+</details>
 
 This skill creates comprehensive SEO and GEO performance reports that combine multiple metrics into actionable insights. It produces executive summaries, detailed analyses, and visual data presentations for stakeholder communication.
 
@@ -779,7 +822,7 @@ Focus on: Progress against goals, wins, clear recommendations
 
 ## Reference Materials
 
-- [KPI Definitions](../../references/kpi-definitions.md) — Complete SEO/GEO metric definitions with benchmarks, good ranges, and warning thresholds
+- [KPI Definitions](./references/kpi-definitions.md) — Complete SEO/GEO metric definitions with benchmarks, good ranges, and warning thresholds
 - [Report Templates](./references/report-templates.md) — Report templates by audience (executive, marketing, technical, client)
 
 ## Related Skills
