@@ -1,13 +1,18 @@
 {
   "owner": "arunnadarasa",
   "slug": "dancetech",
-  "displayName": "Dance Agentic Engineer",
+  "displayName": "DanceTech Skill",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1770887474968,
-    "commit": "https://github.com/openclaw/skills/commit/86b5c5c261ea57e6df0b7d0d2353e26da5ee3d2b"
+    "version": "1.0.8",
+    "publishedAt": 1771066868480,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1770887474968,
+      "commit": "https://github.com/openclaw/skills/commit/86b5c5c261ea57e6df0b7d0d2353e26da5ee3d2b"
+    },
     {
       "version": "1.0.3",
       "publishedAt": 1770850995896,

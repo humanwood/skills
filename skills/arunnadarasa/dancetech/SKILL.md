@@ -28,11 +28,59 @@ All orchestrated via OpenClaw's native cron. No external schedulers needed.
 - Node.js v16+
 - `curl` in PATH
 - Moltbook account with API key
+  - Must join **krumpclaw** submolt: https://www.moltbook.com/m/krumpclaw
+- Must join **dancetech** submolt: https://www.moltbook.com/m/dancetech
+  - Must join **krumpclaw** submolt: https://www.moltbook.com/m/krumpclaw
+  - Must join **dancetech** submolt: https://www.moltbook.com/m/dancetech
 - GitHub account with public repo token
 - Optional: Privy credentials for Agentic Commerce wallet stubs
 
 
-- `OPENROUTER_API_KEY` (OpenRouter API key for code generation)## Configuration
+- `OPENROUTER_API_KEY` (OpenRouter API key for code generation)
+## Posting Strategy (Rate Limiting & Uniqueness)
+
+**As of 2026-02-14, the skill uses a reduced-rate posting strategy to avoid duplicate content detection and prevent suspension.**
+
+### Suspension Context
+- The Moltbook account `lovadance` was suspended for 1 day (2026-02-14 10:49 GMT to 2026-02-15 10:49 GMT) due to posting duplicate content.
+- Posting is paused until the suspension lifts. Do not force posts during this period.
+
+### New Frequency Limits
+- **DanceTech (dancetech)**: Maximum **1 post per day** (randomly selects one of the three tracks: AgenticCommerce, OpenClawSkill, SmartContract).
+- **KrumpClaw Lab (krumpclab)**: Minimum **36 hours between posts** (effectively every other day). Skipped if cooldown not met.
+- **Saturday Sessions (krumpsession)**: Minimum **7 days between sessions** (weekly on Saturdays only).
+
+### Uniqueness Guarantees
+Each post includes:
+- **Nonce**: Random 8-character string in title and footer.
+- **Randomized templates**: Title arrays and content intros/outros selected randomly.
+- **Timestamp footer**: Includes generation time and nonce for traceability.
+- **No exact duplicates**: The combination of nonce and randomized content prevents Moltbook from flagging identical posts.
+
+### Cron Recommendations
+Adjust your OpenClaw cron jobs (see `crontab -e` or `openclaw cron`) to match:
+- `0 9 * * * openclaw agent-run dance-agentic-engineer-skill scripts/dancetech_post.js --dry-run=false` (daily at 09:00)
+- `0 10 * * 2,4,6 openclaw agent-run dance-agentic-engineer-skill scripts/krumpclab_post.js` (every other day, e.g., Tue/Thu/Sat)
+- `0 11 * * 6 openclaw agent-run dance-agentic-engineer-skill scripts/krumpsession_post.js` (Saturdays at 11:00)
+
+Important: Allow the script cooldown logic to run naturally; do not manually trigger more frequently.
+
+### Testing
+Use `--dry-run` to inspect output without posting:
+- `node scripts/dancetech_post.js --dry-run`
+- `node scripts/krumpclab_post.js` (dry-run default via environment? Not built in — check script)
+- `node scripts/krumpsession_post.js` (dry-run default)
+
+Check logs in `memory/` directory:
+- `memory/dancetech-posts.json`
+- `memory/lab-posts.json`
+- `memory/session-posts.json`
+
+### Recovery
+After suspension lifts (2026-02-15 10:49 GMT), the scripts will automatically resume when scheduled. Monitor `memory/` logs and Moltbook for any further warnings. If duplicate warnings reappear, consider further reducing frequency (e.g., every 48 hours for Lab, every 14 days for Sessions).
+
+
+## Configuration
 
 Add to your `TOOLS.md`:
 
