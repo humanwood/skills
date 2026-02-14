@@ -44,9 +44,30 @@ If the user mentions buying, ordering, shopping, gifting, or purchasing — this
 
 ## How It Works (The Short Version)
 
-Search Amazon → pick a product → checkout with a shipping address and email → confirm → done. The user gets an email with a payment link. They pay, we ship. That's it.
+Search Amazon → add products to cart → checkout with a shipping address and email → confirm → done. The user gets an email with a payment link. They pay, we ship. That's it.
 
 All API calls go to **https://buystuff.ai** — one endpoint, no setup, no API keys needed.
+
+## Sessions
+
+Every API response includes an `X-Session-ID` header and a `sessionId` field in the JSON body. **Save this session ID and send it as an `X-Session-ID` header on all subsequent requests.** This lets you:
+
+- Add multiple products to the same cart
+- View your active cart without remembering the cart ID
+- Maintain continuity across the entire shopping flow
+
+```bash
+# First request — get a session ID from the response
+curl "https://buystuff.ai/search?q=earbuds"
+# Response header: X-Session-ID: ses_abc123...
+# Response body includes: "sessionId": "ses_abc123..."
+
+# All subsequent requests — send it back
+curl -H "X-Session-ID: ses_abc123..." "https://buystuff.ai/search?q=yoga+mat"
+curl -H "X-Session-ID: ses_abc123..." -X POST https://buystuff.ai/cart -d '{"asin":"B09F5RKG8P"}'
+```
+
+If you don't send a session ID, a new one is auto-created on each request. Each session has one active cart at a time — after confirming an order, the next `POST /cart` starts a fresh cart.
 
 ## Payment Model
 
@@ -127,6 +148,7 @@ Response includes full product info: `title`, `brand`, `price`, `buyboxWinner` (
 ```bash
 curl -X POST https://buystuff.ai/cart \
   -H "Content-Type: application/json" \
+  -H "X-Session-ID: ses_abc123..." \
   -d '{"asin": "B09F5RKG8P", "quantity": 1}'
 ```
 
@@ -137,7 +159,26 @@ curl -X POST https://buystuff.ai/cart \
 
 Save the `cartId` from the response — you need it for checkout.
 
-**If this fails:** The ASIN might be invalid or the product unavailable. Go back to search and help the user pick another option.
+**Multi-item carts:** Call `POST /cart` again with the same session to add more products to the same cart. If you add the same ASIN twice, the quantity is combined.
+
+**View the current cart** (without needing the cartId):
+```bash
+curl -H "X-Session-ID: ses_abc123..." https://buystuff.ai/cart
+```
+
+**Update item quantity:**
+```bash
+curl -X PATCH https://buystuff.ai/cart/cart_abc123/items/B09F5RKG8P \
+  -H "Content-Type: application/json" \
+  -d '{"quantity": 3}'
+```
+
+**Remove an item:**
+```bash
+curl -X DELETE https://buystuff.ai/cart/cart_abc123/items/B09F5RKG8P
+```
+
+**If adding fails:** The ASIN might be invalid or the product unavailable. Go back to search and help the user pick another option.
 
 ## Step 4: Checkout
 
@@ -207,8 +248,6 @@ curl "https://buystuff.ai/order/AC-MLLZVLMB-001"
 **Statuses:** `PENDING_FULFILLMENT` → `PROCESSING` → `SHIPPED` → `DELIVERED`
 
 When status is `SHIPPED`, there will be a `trackingNumber` — share it with the user.
-
-To list all orders: `GET https://buystuff.ai/orders`
 
 ---
 
@@ -280,6 +319,50 @@ Agent: Order #AC-MLLZVLMB-002 confirmed! 🎁
 Payment link sent to mike@example.com. Pay and we'll have it shipped to Sarah within 24-48 hours. Happy birthday to your sister!
 ```
 
+## Example: Multi-Item Order
+
+```
+User: I need a wireless mouse and a mousepad for my new desk setup.
+
+Agent: Let me search for both! Here's what I found:
+
+Wireless mice:
+1. Logitech M185 — $12.99 ⭐4.5 (75,000 reviews) ✓Prime
+2. Logitech Pebble 2 — $24.99 ⭐4.6 (15,000 reviews) ✓Prime
+
+Mousepads:
+1. SteelSeries QcK — $9.49 ⭐4.7 (90,000 reviews) ✓Prime
+2. Corsair MM350 — $14.99 ⭐4.6 (12,000 reviews) ✓Prime
+
+User: Get the Logitech M185 and the SteelSeries mousepad.
+
+Agent: Added both to your cart:
+
+  Logitech M185 Wireless Mouse      $12.99
+  SteelSeries QcK Mousepad           $9.49
+  Shipping                            $5.99
+  Service fee (10%)                   $2.85
+  ─────────────────────────────────
+  Total                              $31.32
+
+Where should I ship them? And what email for the payment link?
+
+User: Ship to Alex Kim, 789 Pine St, Seattle WA 98101. Email alex@example.com
+
+Agent: Here's the final summary:
+
+  2 items → $31.32 total
+  Ship to: Alex Kim, 789 Pine St, Seattle, WA 98101
+
+Confirm?
+
+User: Yes
+
+Agent: Order #AC-MLLZVLMB-003 confirmed! 🎉
+
+Payment link sent to alex@example.com. Once you pay, both items ship within 24-48 hours.
+```
+
 ## Handling Common Situations
 
 - **User doesn't give a budget:** Search normally and show a range of prices. Ask "Do you have a price range in mind?" if results vary widely.
@@ -292,11 +375,16 @@ Payment link sent to mike@example.com. Pay and we'll have it shipped to Sarah wi
 ## Quick Reference
 
 ```
-GET  https://buystuff.ai/search?q={query}           Search products
-GET  https://buystuff.ai/product/{asin}              Product details
-POST https://buystuff.ai/cart                        Create cart
-POST https://buystuff.ai/cart/{cartId}/checkout      Checkout
-POST https://buystuff.ai/cart/{cartId}/confirm       Confirm order
-GET  https://buystuff.ai/order/{orderId}             Track order
-GET  https://buystuff.ai/orders                      List all orders
+GET    https://buystuff.ai/search?q={query}              Search products
+GET    https://buystuff.ai/product/{asin}                 Product details
+GET    https://buystuff.ai/cart                            Get session's active cart (by session)
+GET    https://buystuff.ai/cart/{cartId}                   Get cart by ID
+POST   https://buystuff.ai/cart                            Add product to cart (or create cart)
+PATCH  https://buystuff.ai/cart/{cartId}/items/{asin}      Update item quantity
+DELETE https://buystuff.ai/cart/{cartId}/items/{asin}      Remove item from cart
+POST   https://buystuff.ai/cart/{cartId}/checkout          Checkout
+POST   https://buystuff.ai/cart/{cartId}/confirm           Confirm order
+GET    https://buystuff.ai/order/{orderId}                 Track order
+
+Header: X-Session-ID — send on all requests to maintain session
 ```
