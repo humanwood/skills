@@ -1,0 +1,11 @@
+{
+  "owner": "foscomputerservices",
+  "slug": "fosmvvm-viewmodel-generator",
+  "displayName": "FOSMVVM ViewModel Generator",
+  "latest": {
+    "version": "2.0.6",
+    "publishedAt": 1771086496740,
+    "commit": null
+  },
+  "history": []
+}
