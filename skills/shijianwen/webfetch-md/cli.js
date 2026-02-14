@@ -1,45 +1,56 @@
 #!/usr/bin/env node
 /**
  * WebFetch MD CLI - 命令行工具
+ * 输出 JSON 格式供下游处理
  */
 
 const { fetchAsMarkdown } = require('./index');
 
 async function main() {
-  const url = process.argv[2];
-  const outputFlag = process.argv.indexOf('-o');
-  const outputPath = outputFlag > -1 ? process.argv[outputFlag + 1] : null;
+  const args = process.argv.slice(2);
+  const urlIndex = args.indexOf('--url');
   
-  if (!url || url.startsWith('-')) {
-    console.log('用法: npx webfetch-md <url> [-o output.md]');
-    console.log('示例: npx webfetch-md https://example.com -o article.md');
+  // 支持 --url 参数或直接传 URL
+  let url;
+  if (urlIndex !== -1 && args[urlIndex + 1]) {
+    url = args[urlIndex + 1];
+  } else if (args[0] && !args[0].startsWith('-')) {
+    url = args[0];
+  }
+  
+  if (!url) {
+    console.log(JSON.stringify({ 
+      error: '缺少 URL 参数',
+      usage: 'npx webfetch-md <url> 或 npx webfetch-md --url <url>'
+    }));
     process.exit(1);
   }
   
   try {
-    console.log(`🚀 正在抓取: ${url}`);
     const result = await fetchAsMarkdown(url);
     
     if (result.success) {
-      console.log(`✅ 抓取成功！`);
-      console.log(`📄 标题: ${result.title || '无标题'}`);
-      console.log(`🖼️ 图片数: ${result.images.length}`);
-      console.log(`📝 内容长度: ${result.markdown.length} 字符`);
-      
-      if (outputPath) {
-        const fs = require('fs');
-        fs.writeFileSync(outputPath, result.markdown, 'utf-8');
-        console.log(`💾 已保存到: ${outputPath}`);
-      } else {
-        console.log('\n--- Markdown 内容 ---\n');
-        console.log(result.markdown);
-      }
+      // 输出 JSON 格式供下游处理
+      console.log(JSON.stringify({
+        success: true,
+        title: result.title,
+        markdown: result.markdown,
+        images: result.images,
+        imageCount: result.imageCount,
+        contentLength: result.contentLength
+      }));
     } else {
-      console.error('❌ 抓取失败:', result.error);
+      console.log(JSON.stringify({
+        success: false,
+        error: result.error
+      }));
       process.exit(1);
     }
   } catch (error) {
-    console.error('❌ 错误:', error.message);
+    console.log(JSON.stringify({
+      success: false,
+      error: error.message
+    }));
     process.exit(1);
   }
 }

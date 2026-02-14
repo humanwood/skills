@@ -1,11 +1,17 @@
 {
   "owner": "shijianwen",
   "slug": "webfetch-md",
-  "displayName": "WebFetch MD",
+  "displayName": "Webfetch Md",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771092794782,
-    "commit": "https://github.com/openclaw/skills/commit/22bb48f308d7fcda92670ff9da71eacfb18fc06e"
+    "version": "1.0.5",
+    "publishedAt": 1771095279272,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771092794782,
+      "commit": "https://github.com/openclaw/skills/commit/22bb48f308d7fcda92670ff9da71eacfb18fc06e"
+    }
+  ]
 }
