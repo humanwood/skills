@@ -1,6 +1,16 @@
 ---
 name: ticktick-cli
 description: Operate TickTick through the `ticktick` command-line interface, including authentication, read/query flows, and safe mutations for tasks, projects, folders, columns, tags, habits, user info, focus analytics, and sync payloads. Use when users ask to run TickTick terminal commands, parse TickTick CLI JSON output, resolve IDs, or fix TickTick CLI configuration/auth failures.
+version: 1.0.3
+metadata:
+  openclaw:
+    requires:
+      env:
+        - TICKTICK_CLIENT_ID
+        - TICKTICK_CLIENT_SECRET
+        - TICKTICK_ACCESS_TOKEN
+        - TICKTICK_USERNAME
+        - TICKTICK_PASSWORD
 ---
 
 # TickTick CLI
