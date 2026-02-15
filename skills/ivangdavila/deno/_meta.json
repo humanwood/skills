@@ -1,0 +1,11 @@
+{
+  "owner": "ivangdavila",
+  "slug": "deno",
+  "displayName": "Deno",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771186702433,
+    "commit": null
+  },
+  "history": []
+}
