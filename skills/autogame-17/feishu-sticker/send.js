@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { program } = require('commander');
-const FormData = require('form-data');
+// const FormData = require('form-data'); // Removed: using native fetch FormData logic
 // Try to resolve ffmpeg-static from workspace root
 let ffmpegPath;
 try {
@@ -101,14 +101,17 @@ async function uploadImage(token, filePath) {
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
             const fileBuffer = fs.readFileSync(filePath);
-            const blob = new Blob([fileBuffer]);
+            
+            // Use native Blob/FormData for robust fetch compatibility
+            // Node.js 18+ has native global FormData and Blob
+            const blob = new Blob([fileBuffer], { type: 'application/octet-stream' });
             const formData = new FormData();
             formData.append('image_type', 'message');
             formData.append('image', blob, path.basename(filePath));
 
             const res = await fetch('https://open.feishu.cn/open-apis/im/v1/images', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
+                headers: { 'Authorization': `Bearer ${token}` }, // Content-Type is auto-set by fetch
                 body: formData
             });
             const data = await res.json();

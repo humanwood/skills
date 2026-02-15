@@ -1,13 +1,18 @@
 {
   "owner": "autogame-17",
   "slug": "feishu-sticker",
-  "displayName": "Feishu Sticker",
+  "displayName": "feishu-sticker",
   "latest": {
-    "version": "1.0.9",
-    "publishedAt": 1770791743429,
-    "commit": "https://github.com/openclaw/skills/commit/99d4a955d53433fb8dc472dea7cf57aee64a1a9b"
+    "version": "1.0.8",
+    "publishedAt": 1771046458660,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.9",
+      "publishedAt": 1770791743429,
+      "commit": "https://github.com/openclaw/skills/commit/99d4a955d53433fb8dc472dea7cf57aee64a1a9b"
+    },
     {
       "version": "1.0.8",
       "publishedAt": 1769967785861,
