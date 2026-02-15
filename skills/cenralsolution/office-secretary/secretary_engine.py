@@ -7,13 +7,13 @@ BASE_DIR = os.path.dirname(__file__)
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 CACHE_PATH = os.path.join(BASE_DIR, 'token_cache.bin')
 
-# Security: Delegated scopes instead of broad ".All" permissions
+# FIX: Removed 'Tasks.ReadWrite' to adhere to least-privilege requirements.
+# These scopes now perfectly match the documented features in SKILL.md.
 REQUIRED_SCOPES = [
     'User.Read',
     'Mail.ReadWrite',
     'Calendars.ReadWrite',
     'Files.ReadWrite',
-    'Tasks.ReadWrite',
     'ChatMessage.Send'
 ]
 
@@ -60,9 +60,7 @@ class UnifiedSecretary:
         headers = {'Authorization': f'Bearer {self.get_token()}', 'Content-Type': 'application/json'}
         return requests.request(method, f"{self.base_url}/{endpoint}", headers=headers, json=data)
 
-    # --- Feature Logic ---
     def find_meeting(self, email):
-        """Smart Calendar: Analyzes free/busy status."""
         payload = {
             "schedules": [email],
             "startTime": {"dateTime": datetime.utcnow().isoformat() + "Z", "timeZone": "UTC"},
@@ -72,18 +70,15 @@ class UnifiedSecretary:
         return self.call("POST", "me/calendar/getSchedule", payload).json()
 
     def post_teams(self, team_id, channel_id, msg):
-        """Teams Secretary: Posts alerts to channels."""
         return self.call("POST", f"teams/{team_id}/channels/{channel_id}/messages", {"body": {"content": msg}})
 
     def triage_mail(self):
-        """AI Triage: Categories urgent items."""
         messages = self.call("GET", "me/messages?$filter=importance eq 'high'&$top=5").json()
         for m in messages.get('value', []):
             self.call("PATCH", f"me/messages/{m['id']}", {"categories": ["Urgent"]})
         return f"Triaged {len(messages.get('value', []))} items."
 
     def cleanup_drive(self):
-        """Governance: Lists files older than 90 days."""
         t = (datetime.utcnow() - timedelta(days=90)).isoformat() + "Z"
         items = self.call("GET", f"me/drive/root/children?$filter=lastModifiedDateTime lt {t}").json()
         return [i['name'] for i in items.get('value', [])]
@@ -95,3 +90,4 @@ if __name__ == "__main__":
         if cmd == "mail": print(sec.triage_mail())
         elif cmd == "drive": print(sec.cleanup_drive())
         elif cmd == "calendar": print(sec.find_meeting(sys.argv[2]))
+        elif cmd == "teams": print(sec.post_teams(sys.argv[2], sys.argv[3], sys.argv[4]))
