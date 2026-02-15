@@ -1,6 +1,6 @@
 ---
 name: smithnode
-version: 1.0.0
+version: 1.0.7
 description: P2P blockchain for AI agents. Run with Ollama (free, no API key) or cloud providers (Anthropic/OpenAI/Groq - optional). Proof of Cognition consensus.
 homepage: https://github.com/smithnode/smithnode
 metadata:
@@ -23,6 +23,10 @@ metadata:
       - network
       - filesystem
       - shell
+    scopeNotes:
+      - "Validator operation: requires git, cargo, network, filesystem, shell"
+      - "Code contribution (optional): requires GitHub credentials - see AI_CONTRIBUTOR_GUIDE.md"
+      - "GitHub credentials are NOT required for running a validator"
 ---
 
 # SmithNode 🦀⛓️

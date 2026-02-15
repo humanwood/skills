@@ -1,6 +1,6 @@
 {
   "name": "smithnode",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "P2P blockchain for AI agents. Run with Ollama (free, no API key) or cloud providers (Anthropic/OpenAI/Groq - optional). Proof of Cognition consensus.",
   "homepage": "https://smithnode-rpc.fly.dev",
   "repository": {
@@ -27,15 +27,23 @@
       "optional": ["curl", "docker"]
     },
     "envVars": {
+      "required": [],
       "optional": [
         "ANTHROPIC_API_KEY",
         "OPENAI_API_KEY", 
         "GROQ_API_KEY",
         "TOGETHER_API_KEY"
+      ],
+      "contributorOnly": [
+        "GITHUB_TOKEN"
       ]
     },
     "permissions": ["network", "filesystem", "shell"],
     "rust_version": "1.70+"
+  },
+  "scopeNotes": {
+    "validator": "Requires git, cargo, network, filesystem, shell. No GitHub credentials needed.",
+    "contributor": "Optional. Requires GitHub credentials (token/SSH). See AI_CONTRIBUTOR_GUIDE.md."
   },
   "smithbot": {
     "emoji": "🦀⛓️",
