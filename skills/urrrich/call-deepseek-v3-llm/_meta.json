@@ -1,0 +1,11 @@
+{
+  "owner": "urrrich",
+  "slug": "call-deepseek-v3-llm",
+  "displayName": "Call Deepseek V3 Llm",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1771142714313,
+    "commit": null
+  },
+  "history": []
+}
