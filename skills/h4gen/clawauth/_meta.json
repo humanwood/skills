@@ -1,0 +1,11 @@
+{
+  "owner": "h4gen",
+  "slug": "clawauth",
+  "displayName": "ClawAuth - User-Delegated API Access",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1771176293502,
+    "commit": null
+  },
+  "history": []
+}
