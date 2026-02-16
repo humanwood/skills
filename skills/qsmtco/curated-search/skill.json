@@ -1,7 +1,7 @@
 {
   "name": "curated-search",
-  "version": "1.0.0",
-  "description": "Domain-restricted full-text search over curated whitelist",
+  "version": "1.0.5",
+  "description": "Domain-restricted full-text search over curated technical documentation",
   "author": "Qrusher",
   "license": "MIT",
   "openclaw": ">=2025.2.9",

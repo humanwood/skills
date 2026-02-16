@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.org/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.5] - 2026-02-14
+
+### Security
+- Added `metadata.openclaw.requires.bins: ["node"]` to SKILL.md to declare Node.js runtime requirement
+- This resolves ClawHub security scan "suspicious" flag due to missing required binaries declaration
+
 ## [1.0.4] - 2026-02-14
 
 ### Security

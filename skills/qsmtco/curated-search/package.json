@@ -1,7 +1,7 @@
 {
   "name": "curated-search",
-  "version": "1.0.4",
-  "description": "Domain-restricted search for OpenClaw",
+  "version": "1.0.5",
+  "description": "Domain-restricted full-text search for OpenClaw",
   "main": "scripts/search.js",
   "bin": {
     "curated-search": "./scripts/search.js"

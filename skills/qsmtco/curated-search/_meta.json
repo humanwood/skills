@@ -3,11 +3,16 @@
   "slug": "curated-search",
   "displayName": "Curated Search",
   "latest": {
-    "version": "1.0.4",
-    "publishedAt": 1771097215461,
-    "commit": "https://github.com/openclaw/skills/commit/9bdcce147bf3d0866e67de816e3668153c9e2b24"
+    "version": "1.0.5",
+    "publishedAt": 1771100762578,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.4",
+      "publishedAt": 1771097215461,
+      "commit": "https://github.com/openclaw/skills/commit/9bdcce147bf3d0866e67de816e3668153c9e2b24"
+    },
     {
       "version": "1.0.3",
       "publishedAt": 1771087689258,

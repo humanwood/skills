@@ -1,3 +1,12 @@
+---
+name: curated-search
+description: Domain-restricted full-text search over curated technical documentation
+metadata:
+  openclaw:
+    requires:
+      bins: ["node"]
+---
+
 # Curated Search Skill
 
 ## Summary
