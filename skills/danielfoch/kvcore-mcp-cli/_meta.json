@@ -1,0 +1,11 @@
+{
+  "owner": "danielfoch",
+  "slug": "kvcore-mcp-cli",
+  "displayName": "KVcore MCP CLI",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1771108702130,
+    "commit": null
+  },
+  "history": []
+}
