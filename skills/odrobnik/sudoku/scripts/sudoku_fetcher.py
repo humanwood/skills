@@ -161,6 +161,7 @@ def generate_scl_link(grid, size, title="Sudoku", author="Moltbot"):
     return link
 
 import lzstring as _lzstring
+import urllib.parse
 
 _lz = _lzstring.LZString()
 
@@ -188,7 +189,11 @@ def _zip_classic_sudoku2(puzzle: str) -> str:
 
 
 def generate_puzzle_link(grid, size, title="Sudoku", author="Moltbot"):
-    """Generate a SudokuPad /puzzle/ link (LZString compressed)."""
+    """Generate a SudokuPad /puzzle/ link (LZString compressed).
+    
+    Note: URL-encodes the payload to prevent issues with '+' being interpreted
+    as space in URLs (particularly in Telegram and other messaging apps).
+    """
     givens_str = ""
     for r in range(size):
         for c in range(size):
@@ -200,17 +205,24 @@ def generate_puzzle_link(grid, size, title="Sudoku", author="Moltbot"):
         "givens": givens_str,
         "metadata": {"title": title, "author": author},
     }
-    json_str = json.dumps(scl_obj)
+    json_str = json.dumps(scl_obj, separators=(',', ':'))
 
     try:
         compressed = _lz.compressToBase64(json_str)
-        return f"https://sudokupad.svencodes.com/puzzle/{compressed}"
+        # URL-encode to prevent '+' from being interpreted as space
+        # SudokuPad correctly decodes URL-encoded payloads
+        url_safe = urllib.parse.quote(compressed, safe='')
+        return f"https://sudokupad.svencodes.com/puzzle/{url_safe}"
     except Exception as e:
         return f"Error generating puzzle link: {e}"
 
 
 def generate_native_link(grid, size, title="Sudoku"):
-    """Generate a SudokuPad /puzzle/ share link for classic 9x9 sudoku."""
+    """Generate a SudokuPad /puzzle/ share link for classic 9x9 sudoku.
+    
+    Note: URL-encodes the payload to prevent issues with '+' being interpreted
+    as space in URLs (particularly in Telegram and other messaging apps).
+    """
     if size != 9:
         return "Native /puzzle/ classic format currently implemented for 9x9 only."
 
@@ -226,8 +238,11 @@ def generate_native_link(grid, size, title="Sudoku"):
     }
 
     try:
-        compressed = _lz.compressToBase64(json.dumps(wrapper))
-        return f"https://sudokupad.svencodes.com/puzzle/{compressed}"
+        compressed = _lz.compressToBase64(json.dumps(wrapper, separators=(',', ':')))
+        # URL-encode to prevent '+' from being interpreted as space
+        # SudokuPad correctly decodes URL-encoded payloads
+        url_safe = urllib.parse.quote(compressed, safe='')
+        return f"https://sudokupad.svencodes.com/puzzle/{url_safe}"
     except Exception as e:
         return f"Error generating native link: {e}"
 
@@ -255,8 +270,8 @@ def generate_fpuzzles_link(grid, size, title="Sudoku", author="Moltbot"):
                 cell["given"] = True
             fpuzzles_obj["grid"].append(cell)
 
-    # Convert to JSON string
-    json_str = json.dumps(fpuzzles_obj)
+    # Convert to JSON string (compact, like JSON.stringify)
+    json_str = json.dumps(fpuzzles_obj, separators=(',', ':'))
 
     # Compress (Raw Deflate)
     compressor = zlib.compressobj(level=9, wbits=-15)
