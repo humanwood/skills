@@ -1,6 +1,7 @@
 ---
 name: kraken-pro
 description: Manage Kraken exchange accounts — portfolio, market data, trading, earn/staking, ledger export. REST API via python-kraken-sdk. Use when the user wants to check crypto portfolio, get prices, place/cancel orders, manage staking, export ledger for taxes, deposit/withdraw funds, or interact with Kraken in any way.
+metadata: {"openclaw":{"requires":{"bins":["python3"],"env":["KRAKEN_API_KEY","KRAKEN_API_SECRET"]},"primaryEnv":"KRAKEN_API_KEY"}}
 ---
 
 # Kraken Skill
@@ -13,11 +14,7 @@ Manage your Kraken exchange account via CLI.
 pip3 install -r requirements.txt
 ```
 
-Set credentials via env vars or `.env` in skill directory:
-```
-KRAKEN_API_KEY=your_key
-KRAKEN_API_SECRET=your_secret
-```
+Set credentials via environment variables or OpenClaw config (`skills.entries.kraken-pro.env`).
 
 Get API key: https://www.kraken.com/u/security/api
 

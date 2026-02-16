@@ -11,9 +11,7 @@ import os
 import sys
 from datetime import datetime
 from decimal import Decimal
-from pathlib import Path
 
-from dotenv import load_dotenv
 from kraken.spot import Market, User, Earn, Funding, Trade
 
 
@@ -26,10 +24,6 @@ class KrakenCLI:
         self.trade = None
 
     def load_credentials(self):
-        env_path = Path(__file__).parent / '.env'
-        if env_path.exists():
-            load_dotenv(env_path)
-
         api_key = os.getenv('KRAKEN_API_KEY')
         api_secret = os.getenv('KRAKEN_API_SECRET')
 
@@ -43,7 +37,7 @@ class KrakenCLI:
 
     def require_auth(self):
         if not self.load_credentials():
-            print("Error: Set KRAKEN_API_KEY and KRAKEN_API_SECRET, or create .env in skill directory.", file=sys.stderr)
+            print("Error: KRAKEN_API_KEY and KRAKEN_API_SECRET environment variables are required.", file=sys.stderr)
             sys.exit(1)
 
     def output_json(self, data, as_json=False):

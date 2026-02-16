@@ -1,2 +1,1 @@
-python-kraken-sdk
-python-dotenv
+python-kraken-sdk==3.2.7
