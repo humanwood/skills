@@ -195,7 +195,6 @@ def deduplicate_articles(articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     
     for i, article in enumerate(articles):
         if i in duplicate_indices:
-            article["quality_score"] = article.get("quality_score", 0) + PENALTY_DUPLICATE
             continue
         
         title = article.get("title", "")
@@ -465,7 +464,8 @@ Examples:
                 article["quality_score"] = calculate_base_score(article, source)
                 all_articles.append(article)
         
-        logger.info(f"Total articles collected: {len(all_articles)}")
+        total_collected = len(all_articles)
+        logger.info(f"Total articles collected: {total_collected}")
         
         # Load previous digest titles for penalty
         previous_titles = set()
@@ -496,7 +496,7 @@ Examples:
                 "twitter_articles": twitter_data.get("total_articles", 0),
                 "web_articles": web_data.get("total_articles", 0),
                 "github_articles": github_data.get("total_articles", 0),
-                "total_input": len(all_articles)
+                "total_input": total_collected
             },
             "processing": {
                 "deduplication_applied": True,
@@ -523,7 +523,7 @@ Examples:
             f.write(json_str)
         
         logger.info(f"✅ Merged and scored articles:")
-        logger.info(f"   Input: {len(all_articles)} articles")
+        logger.info(f"   Input: {total_collected} articles")
         logger.info(f"   Output: {total_final} articles across {len(topic_groups)} topics")
         logger.info(f"   File: {args.output}")
         

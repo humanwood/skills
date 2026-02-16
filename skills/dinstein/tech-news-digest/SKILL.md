@@ -1,7 +1,7 @@
 ---
 name: tech-news-digest
 description: Generate tech news digests with unified source model, quality scoring, and multi-format output. Four-layer data collection from RSS feeds, Twitter/X KOLs, GitHub releases, and web search. Pipeline-based scripts with retry mechanisms and deduplication. Supports Discord, email, and markdown templates.
-version: "2.5.0"
+version: "2.6.1"
 homepage: https://github.com/draco-agent/tech-news-digest
 source: https://github.com/draco-agent/tech-news-digest
 env:
@@ -144,7 +144,7 @@ python3 scripts/merge-sources.py --rss rss.json --twitter twitter.json --web web
 
 ### 6. `validate-config.py` - Configuration Validator
 ```bash
-python3 scripts/validate-config.py [--config-dir CONFIG_DIR] [--verbose]
+python3 scripts/validate-config.py [--defaults DEFAULTS_DIR] [--config CONFIG_DIR] [--verbose]
 ```
 - **JSON Schema**: Validates structure and required fields
 - **Consistency**: Checks topic references, duplicate IDs
@@ -247,7 +247,7 @@ python3 scripts/fetch-twitter.py --hours 1 --verbose
 ### Archive Management
 - Digests automatically archived to `workspace/archive/tech-digest/`
 - Previous digest titles used for duplicate detection
-- Old archives cleaned automatically (30+ days)
+- Old archives cleaned automatically (90+ days)
 
 ### Error Handling
 - **Network Failures**: Retry with exponential backoff
@@ -377,3 +377,18 @@ All scripts support `--verbose` flag for detailed logging and troubleshooting.
 - **Parallel Workers**: Adjust `MAX_WORKERS` in scripts for your system
 - **Timeout Settings**: Increase `TIMEOUT` for slow networks
 - **Article Limits**: Adjust `MAX_ARTICLES_PER_FEED` based on needs
+## Security Considerations
+
+### Shell Execution
+The digest prompt instructs agents to run Python scripts via shell commands. All script paths and arguments are skill-defined constants — no user input is interpolated into commands. Scripts themselves contain no subprocess/os.system calls.
+
+### Third-Party RSS Sources
+One RSS source (`anthropic-rss`) uses a community-maintained GitHub mirror since Anthropic has no official RSS feed. Users should be aware of supply chain risks from third-party mirrors. The source is clearly annotated in `sources.json`.
+
+### Input Sanitization
+- URL resolution rejects non-HTTP(S) schemes (javascript:, data:, etc.)
+- RSS fallback parsing uses simple, non-backtracking regex patterns (no ReDoS risk)
+- All fetched content is treated as untrusted data for display only
+
+### Network Access
+Scripts make outbound HTTP requests to configured RSS feeds, Twitter API, GitHub API, and Brave Search API. No inbound connections or listeners are created.

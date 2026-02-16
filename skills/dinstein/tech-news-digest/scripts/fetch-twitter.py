@@ -38,7 +38,6 @@ ID_CACHE_TTL_DAYS = 7
 
 # Twitter API v2 endpoints
 API_BASE = "https://api.x.com/2"
-USER_TWEETS_ENDPOINT = f"{API_BASE}/users/by/username/{{username}}/tweets"
 USER_LOOKUP_ENDPOINT = f"{API_BASE}/users/by"
 
 
@@ -397,8 +396,13 @@ Examples:
     # Check for bearer token
     bearer_token = get_bearer_token()
     if not bearer_token:
-        logger.error("X_BEARER_TOKEN not found. Please set environment variable.")
-        return 1
+        logger.warning("X_BEARER_TOKEN not set. Writing empty result and skipping Twitter fetch.")
+        empty_result = {"source": "twitter", "fetched_at": datetime.now(timezone.utc).isoformat(), "tweets": [], "skipped_reason": "X_BEARER_TOKEN not set"}
+        output_path = args.output or Path("/tmp/td-twitter.json")
+        with open(output_path, "w") as f:
+            json.dump(empty_result, f, indent=2)
+        print(f"Output (empty): {output_path}")
+        return 0
     
     # Auto-generate unique output path if not specified
     if not args.output:

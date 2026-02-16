@@ -13,17 +13,20 @@ Unified template for both daily and weekly digests. Replace `<...>` placeholders
 | `<ITEMS_PER_SECTION>` | `3-5` | `5-8` |
 | `<BLOG_PICKS_COUNT>` | `2-3` | `3-5` |
 | `<EXTRA_SECTIONS>` | *(remove line)* | `- 📊 Weekly Trend Summary (2-3 sentences summarizing macro trends)` |
-| `<SUBJECT>` | `Daily Tech Digest - YYYY-MM-DD` | `Weekly Tech Digest - YYYY-MM-DD` |
+| `<SUBJECT>` | `Daily Tech News Digest - YYYY-MM-DD` | `Weekly Tech News Digest - YYYY-MM-DD` |
 | `<WORKSPACE>` | Your workspace path | Your workspace path |
 | `<SKILL_DIR>` | Path to the installed skill directory | Path to the installed skill directory |
 | `<DISCORD_CHANNEL_ID>` | Target channel ID | Target channel ID |
 | `<EMAIL>` | *(optional)* Recipient email | *(optional)* Recipient email |
 | `<LANGUAGE>` | `Chinese` (default) | `Chinese` (default) |
 | `<TEMPLATE>` | `discord` / `email` / `markdown` | `discord` / `email` / `markdown` |
+| `<DATE>` | Today's date in YYYY-MM-DD (caller provides) | Today's date in YYYY-MM-DD (caller provides) |
 
 ---
 
-Generate the <MODE> tech digest. Follow the steps below.
+Generate the <MODE> tech digest for **<DATE>**. Follow the steps below.
+
+**Important:** Use `<DATE>` as the report date in the title and archive filename. Do NOT infer the date yourself — always use the provided value.
 
 ## Configuration
 
@@ -122,8 +125,8 @@ Use sections defined in `topics.json`. Each topic has:
 - `search.must_include` / `search.exclude` for content filtering
 
 ### Fixed Sections (append after topic sections)
-- 📢 KOL Updates (Twitter KOLs + notable blog posts from RSS authors)
-- 🔥 Twitter/X Trending
+- 📢 KOL Updates (Twitter KOLs + notable blog posts from RSS authors — **each entry MUST include the source tweet/post URL**. Format: `• **@handle** — summary\n  <https://twitter.com/handle/status/ID>`)
+- 🔥 Twitter/X Trending (**each entry MUST include at least one reference link** — tweet URL, article URL, or web source. No link-free entries allowed.)
 - 📝 Blog Picks (<BLOG_PICKS_COUNT> high-quality deep articles from RSS)
 <EXTRA_SECTIONS>
 
@@ -134,7 +137,7 @@ Use sections defined in `topics.json`. Each topic has:
 
 ### Rules
 - **Only include news from the <TIME_WINDOW>**
-- **Append source link after each item** (wrap in `<link>` for Discord)
+- **Every item in every section must include the source link** — no exceptions. Discord: wrap in `<link>`; Email: `<a href>`; Telegram: `<a href>`; Markdown: `[title](link)`
 - **<ITEMS_PER_SECTION> items per section**
 - **Use bullet lists, no markdown tables** (Discord compatibility)
 
@@ -168,7 +171,7 @@ Write the report in <LANGUAGE>.
 Before running the pipeline, optionally validate configuration:
 ```bash
 python3 <SKILL_DIR>/scripts/validate-config.py \
-  --config-dir <WORKSPACE>/config \
-  --defaults-dir <SKILL_DIR>/config/defaults \
+  --config <WORKSPACE>/config \
+  --defaults <SKILL_DIR>/config/defaults \
   --verbose
 ```
