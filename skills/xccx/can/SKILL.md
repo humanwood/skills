@@ -1,43 +1,29 @@
 ---
-name: can
-description: Three-pole naming for agents. Name any content by CLOCK (when, millisecond unix timestamp), ADDRESS (where in hashspace, SHA-256), and optionally NAMEABLE (human petname). Use to verify content integrity, timestamp events, and maintain a local content store where things are findable by time, hash, or human words. Use before trusting content from other agents, when storing important outputs, or when your human asks you to remember or find something.
+name: CAN
+description: "Three-pole naming + routing for agents. Name any content by CLOCK (when), ADDRESS (where, SHA-256), and NAMES (how humans name things). Route by name and address, not location. Verify integrity, timestamp events, find things by time/hash/words, route content from nearest source. Use before trusting content, when storing outputs, when your human asks you to find something, or when fetching content that might exist locally or on a peer."
 homepage: https://github.com/xccx/can
-metadata: {"openclaw":{"emoji":"⌛","requires":{"bins":["sha256sum"]},"config":{"stateDirs":[".can"]}}}
+metadata: {"openclaw":{"emoji":"⌛","requires":{"bins":["sha256sum"]}}}
 ---
 
-# CAN: Clock Address Nameable
+# CAN: Clock Address Naming
 
-Three-pole naming. Every piece of content gets three addresses:
+v1.3.1 — three-pole naming + routing.
+
+Every piece of content gets three addresses:
 
 ```
-CLOCK    → WHERE in time         (objective, automatic, millisecond unix)
-ADDRESS  → WHERE in hashspace    (objective, automatic, SHA-256)
-NAMEABLE → WHERE in human's head (subjective, optional, mutable)
+CLOCK    → WHEN in time           (objective, automatic, millisecond unix)
+ADDRESS  → WHERE in hashspace     (objective, automatic, SHA-256)
+NAMES    → HOW humans name things (subjective, optional, mutable)
 ```
 
-Computer handles the first two silently; optionally adding human naming. Human edits nameables if/when they feel like it. Both find things fast.
+Computer always defines the when and where, preferably including how humans name things. Unique naming is automated; humans name things naturally. Both computers and humans find things faster, saving energy and time.
 
 ## Why this exists
 
-Agents and humans share problems: finding and trusting things. Paths like `/home/agent/skills/foo/bar/v2_final.md` tell you nothing about WHAT something is or WHEN it existed. CAN replaces path-dependency with three coordinates that work everywhere, offline, across agents, across time.
+To trust and find things instantly. Path/name.md may change; hash addresses do not. Time wasted by humans fumbling with 1970s naming totals millions of hours every day. Agents waste significant compute dealing with insecure naming and addressing. Billions of human hours and substantially more efficient compute can be unlocked now, at zero switching cost.
 
-## Zero switching cost
-
-CAN runs parallel to existing paths. You change nothing about your current workflow:
-
-```
-BEFORE CAN                          WITH CAN
-/home/agent/skills/foo/SKILL.md     /home/agent/skills/foo/SKILL.md  (unchanged)
-                                    + shadow: 1770508800000 a3f8b2c1... "foo"
-```
-
-Your files stay where they are. Your paths still work. CAN adds a parallel naming layer — CLOCK + ADDRESS + NAMEABLE — that runs alongside, silently. Zero dependencies to install. Zero configs to change. Zero workflows to rewrite.
-
-To test: hash one file. Check the hash later. If it matches, the content hasn't been tampered with. That's it. You just used CAN. Everything else is optional.
-
-To stop: delete `~/.can/`. You're back to where you started. Nothing else changed.
-
-The old naming world doesn't break. The new naming world runs underneath. When you're ready to lean in, it's already there. When you're not, it costs you nothing.
+Even if `/home/agent/skills/foo/bar/v2_final.md` resolves, contents contained there may change. Obsolete 1970s location naming makes things hard to name, hard to find, hard to trust. CAN replaces location-dependency with three coordinates that work everywhere, offline, across agents, across time.
 
 ## The three poles
 
@@ -46,19 +32,14 @@ The old naming world doesn't break. The new naming world runs underneath. When y
 Millisecond-precision unix timestamp. When content was created or witnessed.
 
 ```bash
-# Current time in milliseconds
 CLOCK=$(date +%s%3N)
 # Example: 1770508800000
-
-# Agents comparing clocks can establish ordering
-# "This existed before that" is provable
 ```
+CLOCK gives you time-sorting for free. Every entry is automatically ordered chronologically.
 
-CLOCK gives you time-sorting for free. Every entry is automatically ordered. No filenames like `report_final_v3_ACTUALLY_FINAL.doc` — just ask "what happened at this time?"
+### Pole 2: ADDRESS (where)
 
-### Pole 2: ADDRESS (where in hashspace)
-
-SHA-256 of the content. The content's true location in the 2^256 namespace.
+SHA-256 of the content. The content's true address unique in the 2^256 logical namespace.
 
 ```bash
 # Hash a file
@@ -71,58 +52,35 @@ ADDRESS=$(echo -n "{content}" | sha256sum | awk '{print $1}')
 ADDRESS=$(find {dir} -type f | sort | xargs cat | sha256sum | awk '{print $1}')
 ```
 
-Two agents anywhere in the universe hashing the same content get the same ADDRESS. No coordination needed. If the hash matches, the content is what it claims to be. No trust in source required.
+Two agents anywhere hashing the same content get the same ADDRESS. Things on separate machines can be verified as same, with no need to transmit bulk contents. If the hash matches, the content is what it claims to be. No trust in source required.
 
-### Pole 3: NAMEABLE (where in human's head)
+### Pole 3: NAMES
 
-Optional. Mutable. Personal. Multiple petnames can point to one ADDRESS. Humans call things whatever they want. Agents can add nameables too.
-
-```
-ADDRESS a3f8b2c1e9...  →  "that openclaw security rant"
-                        →  "moltbook analysis"
-                        →  #security #agents #feb2026
-```
-
-NAMEABLEs are subjective tags, petnames, descriptions — whatever helps find the thing later. They're stored alongside the objective poles, never replace them. Rename freely, no consequences.
-
-**Metadata lives outside the hash by default.** NAMEABLEs float in the index, pointing at the ADDRESS. You can rename, retag, add descriptions all day — the hash never changes, the content is still verified.
+Generatable. Mutable. Personal. Multiple petnames can point to one ADDRESS.
 
 ```
-# Default: metadata OUTSIDE the hash (mutable, free)
-INDEX:  1770508800000  a3f8b2c1...  security rant
-# rename:
-INDEX:  1770508800000  a3f8b2c1...  ToxicSkills analysis feb2026
-# hash unchanged, content unchanged, name changed. Zero cost.
+ADDRESS a3f8b2c1e9...  →  "that security rant"
+                       →  "feb2026 analysis"
+                       →  #security #agents
 ```
 
-**Metadata can be folded INTO the hash when it matters.** When a name becomes a commitment — a contract, a versioned release, an identity claim — hash the content AND the metadata together. Now the name is baked in. Immutable. Provable.
+NAMES are tags, petnames, descriptions. Stored alongside the objective poles, never replace them. Rename freely.
 
-```bash
-# Committed: metadata INSIDE the hash (immutable, permanent)
-CONTENT=$(cat {file})
-METADATA="name:ToxicSkills-v1.2.0 author:xccx"
-ADDRESS=$(echo -n "$CONTENT$METADATA" | sha256sum | awk '{print $1}')
-# This ADDRESS proves BOTH the content AND the name existed together
-```
-
-**The upgrade path:** casual names float free (default). When a name earns permanence, hash it in. The petname becomes a fact. This is a one-way door — once baked, you can't rename without a new ADDRESS. That's the point. Casual use costs nothing. Commitment costs one hash.
+Naming for things can persist if included with contents in a new hash (which can optionally stack in Merkle tree for true thread)
 
 ## Core operations
 
-### 1. CAN-stamp: name content with all three poles
+### 1. CAN-stamp: name content
 
 ```bash
-# Generate a CAN entry for any file
 CLOCK=$(date +%s%3N)
 ADDRESS=$(sha256sum {file} | awk '{print $1}')
-NAMEABLE=""  # human fills this in later, or not
+NAME=""  # agent can generate name, humans can easily edit
 
-# Output: a CAN record
-echo "$CLOCK $ADDRESS $NAMEABLE"
-# 1770508800000 a3f8b2c1e9d7...
+echo "$CLOCK $ADDRESS $NAME"
 ```
 
-The CLOCK+ADDRESS pair is the objective identity. Globally unique. Automatic. The NAMEABLE is the human layer on top.
+The CLOCK+ADDRESS pair is the objective identity. Globally unique. Automatic.
 
 ### 2. CAN-verify: check content integrity
 
@@ -149,36 +107,84 @@ fi
 CAN_STORE=~/.can/store
 CAN_INDEX=~/.can/index.tsv
 
-# Store content
 CLOCK=$(date +%s%3N)
 ADDRESS=$(sha256sum {file} | awk '{print $1}')
 mkdir -p "$CAN_STORE"
+
+# Copy content to store (truth copy — survives renames/moves/deletes)
 cp {file} "$CAN_STORE/$ADDRESS"
 
-# Index it (append-only log, tab-separated)
-echo -e "$CLOCK\t$ADDRESS\t{nameable}" >> "$CAN_INDEX"
+# Index it (append-only TSV log)
+echo -e "$CLOCK\t$ADDRESS\t{name}\t{filepath}\t{bag}" >> "$CAN_INDEX"
 ```
 
-The store is content-addressed: files named by hash. The index is a simple TSV log: CLOCK, ADDRESS, NAMEABLE. The index is human-readable, grep-able, sort-able.
+The store is content-addressed: files named by hash. The file at `$CAN_STORE/$ADDRESS` is the truth. The original can be renamed, moved, copied, deleted — the store doesn't care. The index tracks every sighting: same hash, different paths, different timestamps = movement log.
+
+Index format (TSV, human-readable, grep-able):
+```
+CLOCK              ADDRESS                           NAME             PATH                    BAG
+1770508800000      a3f8b2c1e9d7f0a1b2c3d4e5f6a7b8    meme.jpg         ~/Downloads/meme.jpg    GOOD
+1770508900000      a3f8b2c1e9d7f0a1b2c3d4e5f6a7b8    meme.jpg         ~/pics/funny/meme.jpg   GOOD
+```
+
+Same hash, two paths, two timestamps. The file wandered. The truth didn't.
 
 ### 4. CAN-find: search across all three poles
 
 ```bash
-# Find by time range (what happened today?)
+# Find by time range
 awk -F'\t' -v start="1770460800000" -v end="1770547200000" \
   '$1 >= start && $1 <= end' ~/.can/index.tsv
 
-# Find by address prefix (I remember it started with a3f8...)
+# Find by address prefix
 grep "a3f8" ~/.can/index.tsv
 
-# Find by nameable (fuzzy human search)
+# Find by name (fuzzy human search)
 grep -i "security" ~/.can/index.tsv
-grep -i "#agents" ~/.can/index.tsv
+
+# Find by bag
+awk -F'\t' '$5 == "GOOD"' ~/.can/index.tsv
 ```
 
-Computer searches by CLOCK and ADDRESS (fast, exact). Human searches by NAMEABLE (fuzzy, personal). Both hit the same index.
+Computer searches by CLOCK and ADDRESS (fast, exact). Human searches by NAME (fuzzy, personal). Both hit the same index.
 
-### 5. CAN-verify-skill: check a skill before installing
+### 5. CAN-locate: find where a hash lives NOW
+
+When you know ADDRESS (hash) but not LOCATION (path), search scoped sources in priority order:
+
+```bash
+TARGET="a3f8b2c1"
+CAN_STORE=~/.can/store
+CAN_INDEX=~/.can/index.tsv
+
+# 1. Check store first (guaranteed if indexed as GOOD/HUSH/POST)
+FULL_HASH=$(grep "$TARGET" "$CAN_INDEX" | head -1 | cut -f2)
+STORE_PATH="$CAN_STORE/$FULL_HASH"
+if [ -f "$STORE_PATH" ]; then
+  echo "STORE HIT: $STORE_PATH"
+  exit 0
+fi
+
+# 2. Check last known paths from index
+while IFS=$'\t' read -r clock addr name path bag; do
+  if [ -f "$path" ]; then
+    VERIFY=$(sha256sum "$path" | awk '{print $1}')
+    if [ "$VERIFY" = "$addr" ]; then
+      echo "INDEX HIT: $path"
+      exit 0
+    fi
+  fi
+done < <(grep "$TARGET" "$CAN_INDEX")
+
+# 3. Not found in store or index
+echo "NOT FOUND in store or index."
+echo "Content may have been moved or deleted from known paths."
+echo "To scan broader filesystem, agent should ask human for permission."
+```
+
+Priority: store (instant, guaranteed) → index paths (fast, verified) → ask human. The hash is the eternal address. Paths are sightings. Store is the guarantee. Broad filesystem scans are not performed automatically — agent asks human before scanning outside known locations.
+
+### 6. CAN-verify-skill: check a skill before installing
 
 ```bash
 TMPDIR=$(mktemp -d)
@@ -191,53 +197,80 @@ echo "Skill: {skill-slug}"
 echo "Clock: $CLOCK"
 echo "Address: $ADDRESS"
 
-# Log to CAN index
-echo -e "$CLOCK\t$ADDRESS\tskill:{skill-slug}" >> ~/.can/index.tsv
+echo -e "$CLOCK\t$ADDRESS\tskill:{skill-slug}\t$TMPDIR\tSAVE" >> ~/.can/index.tsv
 
 # Only install if ADDRESS matches known-good or human approves
 rm -rf "$TMPDIR"
 ```
 
-### 6. CAN-sign: WHO (identity)
+### 7. CAN-route: get content by name/address, not location
 
-WHO vouches for this content. Optional fourth coordinate. The three poles work without it. WHO adds accountability.
-
-Any NIP-07 signer (SIG, nos2x, Alby, etc.) exposes `window.nostr` in the browser. Agents with access to a Nostr private key can sign directly.
+Ask for WHAT you want. Let the network figure out WHERE.
 
 ```bash
-# Get WHO (public key) from NIP-07 signer
-# In browser console or agent with NIP-07 access:
-# WHO = await window.nostr.getPublicKey()
+WANTED="{address}"
 
-# Sign a CAN record: CLOCK:ADDRESS as the content
-RECORD="$CLOCK:$ADDRESS"
+# Priority order: local store → peer agents → relays → web
+# Each source returns content. Verify hash. First valid match wins.
 
-# Create a Nostr event (kind 1 note, or custom kind)
-# {
-#   "kind": 1,
-#   "created_at": CLOCK/1000,
-#   "content": "CAN:$CLOCK:$ADDRESS:$NAMEABLE",
-#   "tags": [["can-clock","$CLOCK"],["can-address","$ADDRESS"]],
-#   "pubkey": WHO
-# }
-# signed = await window.nostr.signEvent(event)
+# 1. Local store (instant, offline, free)
+LOCAL="$CAN_STORE/$WANTED"
+if [ -f "$LOCAL" ]; then
+  echo "LOCAL HIT: $LOCAL"
+  # done — zero network, zero latency, zero trust needed
+  exit 0
+fi
+
+# 2. Peer agent (nearby, fast, one hop)
+# Ask peers: "who has $WANTED?"
+# Protocol: agent broadcasts WANTED hash
+# Any agent with $WANTED in their store responds with content
+# Requester verifies: sha256sum == $WANTED
+# If verified, save to local store (cache)
+
+# 3. Relay (nostr relay, IPFS gateway, any content-addressed network)
+# Query relay for events containing CAN ADDRESS tag
+# Relay returns content. Verify hash. Cache locally.
+
+# 4. Web fallback (legacy, location-addressed)
+# Use URL hint from index if available
+# Fetch, verify hash, cache locally
+# If hash doesn't match URL content: STALE or TAMPERED
 ```
 
-The signed event proves: this WHO, at this CLOCK, vouches for this ADDRESS. Other agents verify the signature against the pubkey. No server. No certificate authority. No password.
+Step 1 works now. Steps 2-4 are protocol sketches — the design for how the network grows. The local store hit alone is already a massive win: zero network, zero latency, zero trust needed.
 
-**WHO is not locked to Nostr.** Farcaster, web2 OAuth, local machine login, or any other auth method can provide WHO. The pattern is the same: a key signs a CLOCK:ADDRESS pair. Nostr is first because it's open, permissionless, and already deployed.
+**Why this matters for agents:**
 
-**For agents without browser access:**
+Every `web_fetch` today is location-addressed: go to this URL, hope the content hasn't changed, hope nobody's in the middle, hope the server is up. That's four hopes. CAN-route is zero hopes: give me this hash, verify on receipt, done.
 
-```bash
-# If agent has a hex private key at ~/.can/nostr.key or $NOSTR_PRIVKEY
-# Sign the CLOCK:ADDRESS pair directly via secp256k1 schnorr
-# Libraries: python-nostr, nostr-tools (JS), or openssl
+An agent that CAN-routes:
+- Checks local store first (offline works, instant, free)
+- Never fetches the same content twice (hash = dedup key)
+- Never trusts the wrong content (hash = verification)
+- Never cares where content came from (any source, same hash = same truth)
+- Shares verified content with peers (network gets faster as it grows)
+
+**Routing table is the CAN index itself.** Every entry says "this ADDRESS was seen at this PATH at this CLOCK." Multiple entries for the same ADDRESS = multiple sources. Pick the freshest, closest, or fastest. The index IS the routing table.
+
+### 8. CAN-sign: identity (optional fourth pole)
+
+WHO signed this content. Not required — the three poles work without it. WHO adds accountability.
+
+When identity is needed, any key that signs a CLOCK:ADDRESS pair works. Nostr (NIP-07) is first option. Farcaster, web2 OAuth, local machine key — any signer can provide WHO. The pattern is the same: a key signs a CLOCK:ADDRESS pair. Verification is the same: check signature against pubkey.
+
+## BAG
+
+Content has intent. Bags capture WHY at save time:
+
+```
+SAVE  →  bag of meh, index silently
+GOOD  →  bag of goodies, tag it
+HUSH  →  hush bag, local only, no sharing, store copy
+POST  →  bag of poasted, publish, share, sign
 ```
 
-**WOT (Web of Trust):**
-
-WHO alone is just a pubkey. WHO + other WHOs vouching for each other = Web of Trust. Agents that verify CAN records AND check the signer's WOT position can make trust decisions without any central authority. Bad actors get pruned by the network. Good actors accumulate vouches. This is reputation as a side effect of using CAN, not a separate system to maintain.
+BAGS are the fifth column in the index. SAVE is default (watcher auto-indexes). GOOD/HUSH/POST copy to content store automatically. Promote anytime: SAVE→GOOD→POST. HUSH stays HUSH — it doesn't promote, it whispers.
 
 ## Path naming vs CAN naming
 
@@ -251,27 +284,43 @@ WHO alone is just a pubkey. WHO + other WHOs vouching for each other = Web of Tr
 | Works offline | Depends on mount | Always |
 | Works across agents | Always | Always |
 | Rename breaks references | Yes | Never (petnames are aliases) |
-| Switching cost to adopt | — | Zero. Runs parallel, change nothing |
-| Switching cost to remove | — | Delete ~/.can/. Done |
+| Content survives delete | No | Yes (store has truth copy) |
+| Routable by name | No (need full path) | Yes (hash = global address) |
 
-Paths and CAN coexist. Use paths for human convenience. CAN runs underneath for trust.
+Paths and CAN coexist. Use paths for human convenience. CAN runs underneath for trust and routing.
+
+## Location-addressed vs content-addressed routing
+
+```
+LOCATION-ADDRESSED (today):
+  agent → DNS lookup → IP → TCP → TLS → HTTP → path → hope content is right
+  7 hops, 4 trust assumptions, 0 verification until too late
+
+CONTENT-ADDRESSED (CAN-route):
+  agent → "I need hash X" → nearest source → verify → done
+  1 request, 0 trust assumptions, instant verification
+```
+
+Location addressing asks: "where do I go to get this?"
+Content addressing asks: "who has this?"
+
+The first question has one answer (the server). The second question has many answers (anyone who has it). One answer = single point of failure. Many answers = resilient, fast, offline-capable.
 
 ## Timers: future CLOCK entries
 
-CAN entries are superpositioned in time. A CLOCK value can be:
+CAN entries are superpositioned in time:
 
-- **Past**: content that already exists (verification, archive)
+- **Past**: content that exists (verification, archive)
 - **Now**: content being created (stamping, witnessing)
-- **Future**: content expected at a specific time (timers, deadlines, countdowns)
+- **Future**: content expected at a specific time (timers, deadlines)
 
 ```bash
-# Set a future CAN marker (1 hour from now)
 FUTURE_CLOCK=$(($(date +%s%3N) + 3600000))
 echo -e "$FUTURE_CLOCK\t\ttimer:check-deployment" >> ~/.can/index.tsv
-# ADDRESS is empty — it fills in when the content arrives
+# ADDRESS is empty — fills in when content arrives
 ```
 
-Future CLOCK entries without an ADDRESS are promises. When the time arrives and the content exists, the ADDRESS fills in and the promise becomes a fact, or not. Agents can watch for unfulfilled promises and alert their human.
+Future CLOCK entries without an ADDRESS are promises. Agents watch for unfulfilled promises and alert their human.
 
 ## Agent-to-agent protocol
 
@@ -279,26 +328,30 @@ When exchanging content with other agents:
 
 1. Always include CLOCK + ADDRESS with any content you share
 2. Always verify ADDRESS on content you receive before acting on it
-3. Attach NAMEABLEs that help the receiving agent's human find things
+3. Attach NAMEs that help the receiving agent's human find things
 4. If ADDRESS doesn't match, say so publicly — protect the network
-5. Sign your CAN records with WHO if you have a key
-6. Check the signer's WOT position before trusting high-stakes content
+5. Never include HUSH content in responses, shares, or peer exchanges. HUSH is local to this agent and this human only.
+6. If you have a key, sign your CAN records
+7. Cache verified content locally — you are now a source for peers
+8. Route by hash first, URL last — prefer content-addressing over location-addressing
 
 ## Philosophy
 
 Every thing has three true names:
 
-- **CLOCK**: where it sits in time (objective, universal, automatic)
-- **ADDRESS**: where it sits in hashspace (objective, universal, automatic)
-- **NAMEABLE**: where it sits in a human's head (subjective, personal, optional)
+- **CLOCK**: when it exists (objective, universal, automatic)
+- **ADDRESS**: what it is (objective, universal, automatic)
+- **NAME**: what humans can call it (subjective, personal, optional)
 
-Computer handles CLOCK and ADDRESS silently, constantly, perfectly. Computer optionally includes NAMEABLE. Human handles NAMEABLE whenever they feel like it, in whatever words make sense to them. Neither fights the other. Both find things fast.
+The path `/home/agent/important.txt` is a lie — it says where a thing WAS, not what it IS. The URL `https://example.com/doc` is a promise — it says where to ASK, not what you'll GET. CAN says what it is and when it was, forever, unforgeable, routable by anyone who has it, no authority required.
 
-The path `/home/agent/important.txt` is a lie — it says where a thing WAS, not what it IS. CAN says what it is and when it was, forever, unforgeable, no authority required.
+Name things. Route by name. Trust the hash.
 
 ## References
 
-- Van Jacobson, Named Data Networking
+- Van Jacobson, Named Data Networking (NDN)
+- John Day, Recursive InterNetwork Architecture (RINA)
 - Git content-addressable object store
 - Nostr protocol (NIP-01) for identity
-- Zooko's Triangle (CAN resolves it: global + secure + human-meaningful via three poles instead of forcing two)
+- IPFS content-addressed distribution
+- Zooko's Triangle (CAN resolves it: global + secure + human-meaningful via three poles)
