@@ -203,7 +203,9 @@ Report format:
 📅 CALENDAR: [today's events]
 🔗 DASHBOARD: [mission control link]
 
-Send to Telegram (8264585335) and email using message tool.`
+Send to Telegram using message tool.
+
+Note: Email delivery from isolated sessions requires SMTP credentials or is better handled via main session heartbeats for reliability.`
   },
   delivery: { mode: "announce", to: "8264585335", channel: "telegram" }
 }
