@@ -1,8 +1,8 @@
 ---
 name: "Skill Finder"
 description: "Find the right skill for any need. Search, evaluate, and compare skills intelligently."
-version: "1.0.3"
-changelog: "Fix inconsistency: remove /tmp install instruction that contradicted scope"
+version: "1.0.4"
+changelog: "Add Security Note about npx for VirusTotal compliance"
 ---
 
 ## Find the Right Skill
@@ -31,6 +31,12 @@ This skill NEVER:
 - Reads files outside `~/skill-finder/`
 - Observes or infers preferences from user behavior
 - Installs skills automatically
+
+---
+
+## Security Note
+
+This skill uses `npx clawhub search` which queries the ClawHub registry. This is a read-only operation that does not download or execute skill code. Skill installation requires separate user consent.
 
 ---
 
