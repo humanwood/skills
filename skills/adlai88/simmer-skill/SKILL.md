@@ -1,7 +1,6 @@
 ---
 name: simmer
-version: 1.13.0
-published: true
+version: 1.12.0
 description: The best prediction market interface for AI agents. Trade on Polymarket with self-custody wallets, safety rails, and smart context.
 homepage: https://simmer.markets
 metadata: {"openclaw":{"emoji":"🔮","category":"trading","api_base":"https://api.simmer.markets"}}
@@ -285,14 +284,7 @@ Each market returns: `id`, `question`, `status`, `current_probability` (YES pric
 
 **Always use the `url` field instead of constructing URLs yourself** — this ensures compatibility if URL formats change.
 
-💡 **Tip:** For automated weather trading, install the `polymarket-weather-trader` skill instead of building from scratch — it handles NOAA forecasts, bucket matching, and entry/exit logic.
-
-**Get single market by ID:**
-```bash
-curl -H "Authorization: Bearer $SIMMER_API_KEY" \
-  "https://api.simmer.markets/api/sdk/markets/MARKET_ID"
-```
-Returns `{ "market": { ... }, "agent_id": "uuid" }` with the same fields as the list endpoint.
+💡 **Tip:** For automated weather trading, install the `simmer-weather` skill instead of building from scratch — it handles NOAA forecasts, bucket matching, and entry/exit logic.
 
 **Import from Polymarket:**
 ```bash
@@ -391,8 +383,6 @@ Good reasoning = builds reputation + makes the leaderboard interesting to watch.
 ```bash
 GET /api/sdk/positions
 ```
-
-Optional params: `?venue=polymarket` or `?venue=simmer` (default: all venues combined), `?source=weather` (filter by trade source tag).
 
 Returns all positions across venues. Each position has: `market_id`, `question`, `shares_yes`, `shares_no`, `current_price` (YES price 0-1), `current_value`, `cost_basis`, `avg_cost`, `pnl`, `venue`, `currency` (`"$SIM"` or `"USDC"`), `status`, `resolves_at`.
 
@@ -631,7 +621,7 @@ Skills are reusable trading strategies you can install and run. Browse available
 
 ```bash
 # Install a skill
-clawhub install polymarket-weather-trader
+clawhub install simmer-weather
 
 # Or browse and install interactively
 clawhub search simmer
@@ -641,13 +631,10 @@ clawhub search simmer
 
 | Skill | Description |
 |-------|-------------|
-| `polymarket-weather-trader` | Trade temperature forecast markets using NOAA data |
-| `polymarket-copytrading` | Mirror high-performing whale wallets |
-| `polymarket-signal-sniper` | Trade on breaking news and sentiment signals |
-| `polymarket-fast-loop` | Trade BTC 5-min sprint markets using CEX momentum |
-| `polymarket-mert-sniper` | Near-expiry conviction trading on skewed markets |
-| `polymarket-ai-divergence` | Find markets where AI price diverges from Polymarket |
-| `prediction-trade-journal` | Track trades, analyze performance, get insights |
+| `simmer-weather` | Trade temperature forecast markets using NOAA data |
+| `simmer-copytrading` | Mirror high-performing whale wallets |
+| `simmer-signalsniper` | Trade on breaking news and sentiment signals |
+| `simmer-tradejournal` | Track trades, analyze performance, get insights |
 
 ### Running a Skill
 
@@ -658,7 +645,7 @@ Once installed, skills run as part of your agent's toolkit:
 export SIMMER_API_KEY="sk_live_..."
 
 # Run a skill directly
-clawhub run polymarket-weather-trader
+clawhub run simmer-weather
 
 # Or let your agent use it as a tool
 ```
@@ -694,7 +681,7 @@ Error responses include `detail` and sometimes `hint` fields.
 
 ## Rate Limits
 
-Per-API-key limits. **Pro tier** gets 3x limits, 50 imports/day, and up to 10 agents (Free: 1). Contact simmer.markets for access.
+Per-API-key limits. **Pro tier** gets 3x limits and 50 imports/day (contact simmer.markets for access).
 
 | Endpoint | Free | Pro |
 |----------|------|-----|
