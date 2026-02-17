@@ -299,6 +299,7 @@ Contributors will be:
 - **Technical Questions**: https://github.com/anikrahman0/security-skill-scanner/discussions
 - **Bug Reports**: https://github.com/anikrahman0/security-skill-scanner/issues
 - **Security Vulnerabilities**: Use GitHub Security tab to report privately
+- **Direct Contact**: a7604366@gmail.com (for urgent security matters)
 
 ## License
 

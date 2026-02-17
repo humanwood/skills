@@ -1,6 +1,6 @@
 {
   "name": "security-skill-scanner",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Security scanner for OpenClaw skills - detects malicious patterns and vulnerabilities",
   "main": "scanner.js",
   "bin": {
@@ -19,7 +19,7 @@
     "vulnerability",
     "skills"
   ],
-  "author": "Md Anik Rahman",
+  "author": "Md Anik Rahman <a7604366@gmail.com>",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
@@ -30,5 +30,6 @@
   },
   "bugs": {
     "url": "https://github.com/anikrahman0/security-skill-scanner/issues"
-  }
+  },
+  "homepage": "https://github.com/anikrahman0/security-skill-scanner#readme"
 }

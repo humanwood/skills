@@ -1,8 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Security Skill Scanner
- * Analyzes OpenClaw skills for security vulnerabilities and malicious patterns
+ * Security Skill Scanner v2.0.0
+ * Analyzes OpenClaw skill markdown files for suspicious instruction patterns
+ * 
+ * Note: This scans SKILL.md files (markdown documentation).
+ * It looks for suspicious INSTRUCTIONS that tell agents to do unsafe things,
+ * not for executable malware (since skills are just text instructions).
+ * 
+ * Author: Md Anik Rahman
+ * License: MIT
  */
 
 const fs = require('fs');

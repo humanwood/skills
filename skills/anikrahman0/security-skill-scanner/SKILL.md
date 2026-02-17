@@ -2,7 +2,7 @@
 name: security-scanner
 description: Scans OpenClaw skills for security vulnerabilities and suspicious patterns before installation
 author: anikrahman0
-version: 1.0.0
+version: 2.0.0
 tags: [security, scanner, malware-detection, safety, validation]
 license: MIT
 ---
@@ -20,7 +20,7 @@ A security-focused skill that analyzes OpenClaw SKILL.md files and skill package
 - Unusual prerequisite requirements
 - Known malicious patterns
 
-**Why this matters:** With 341+ malicious skills recently discovered on ClawHub, this scanner provides an essential security layer before installing any skill.
+**Why this matters:** This scanner helps you review skills before installation by flagging potentially suspicious instruction patterns.
 
 ## Features
 
@@ -33,26 +33,33 @@ A security-focused skill that analyzes OpenClaw SKILL.md files and skill package
 - ✅ **Detailed Reports**: Provides clear explanations of findings
 - ✅ **Whitelist Support**: Configure trusted domains and patterns
 
-## Prerequisites
+## How It Works
 
-- Node.js 18+ (for running the scanner)
-- No external API keys required
-- No network access needed (works offline)
+This is an OpenClaw skill (not a standalone program). When you ask the agent to scan a skill file:
+1. The agent reads this security-scanner skill to learn what patterns to look for
+2. The agent reads the skill file you want to scan
+3. The agent analyzes the instructions and reports findings
+4. You manually review the flagged items
+
+**Note:** The included `scanner.js` file can also be run directly with Node.js 18+ if you prefer command-line usage.
 
 ## Installation
 
-```bash
-# Clone or download the skill
-git clone https://github.com/anikrahman0/security-skill-scanner.git
+Install via ClawHub or add to your OpenClaw skills directory.
 
-# Or install via ClawHub
-clawhub install security-skill-scanner
+For command-line usage (optional):
+```bash
+# Clone the repository
+git clone https://github.com/anikrahman0/security-skill-scanner.git
+cd security-skill-scanner
+
+# Run the scanner
+node scanner.js path/to/SKILL.md
 ```
 
 ## Configuration
 
 Create a `.security-scanner-config.json` in your OpenClaw directory (optional):
-
 ```json
 {
   "whitelistedDomains": [
@@ -72,21 +79,21 @@ Create a `.security-scanner-config.json` in your OpenClaw directory (optional):
 ## Usage
 
 ### Scan a SKILL.md file
-
 ```
 User: "Scan the skill file at ~/Downloads/new-skill/SKILL.md for security issues"
 Agent: [Runs security scan and reports findings]
 ```
 
 ### Scan before installation
+```
+User: "I have the email-automation skill file. Can you scan it for security risks?"
+[User uploads the SKILL.md file]
+Agent: [Reads and analyzes the skill file, provides risk assessment]
+```
 
-```
-User: "Before installing the email-automation skill, scan it for security risks"
-Agent: [Downloads and scans the skill, provides risk assessment]
-```
+**Important:** If you ask Claude to download a skill from the internet first, that download step will use network access (though the scanner itself runs offline).
 
 ### Batch scan all installed skills
-
 ```
 User: "Scan all my installed OpenClaw skills for security issues"
 Agent: [Scans all skills in ~/.openclaw/skills/ and generates report]
@@ -121,8 +128,37 @@ Agent: [Scans all skills in ~/.openclaw/skills/ and generates report]
 - Incomplete documentation
 - Non-critical warnings
 
-## Output Format
+## ⚠️ IMPORTANT: False Positives & Limitations
 
+### This Scanner WILL Flag Legitimate Patterns
+
+The scanner uses regex patterns that may match innocent code. **Common false positives:**
+
+- ✗ **Backticks in markdown** - Code examples using `backticks` 
+- ✗ **Template strings** - Documentation showing `${variable}` syntax
+- ✗ **Base64 examples** - Skills demonstrating encoding/decoding
+- ✗ **Package managers** - Legitimate `npm install` or `pip install` commands
+- ✗ **GitHub URLs** - Links to `raw.githubusercontent.com`
+
+### What This Actually Scans
+
+Skills are **markdown instruction files**, not executable code. This scanner:
+- ✅ Reads the markdown text of skill files
+- ✅ Looks for instruction patterns that might be concerning
+- ✅ Flags items for **your manual review**
+- ❌ Does NOT scan for executable malware (skills aren't programs)
+- ❌ Does NOT provide definitive verdicts
+
+### Your Responsibility
+
+**YOU must review all flagged items in context.** Ask yourself:
+- Does this pattern make sense for what the skill does?
+- Is the author trustworthy?
+- Are the instructions clear and reasonable?
+
+**When in doubt, ask the skill author or community.**
+
+## Output Format
 ```
 === Security Scan Report ===
 Skill: email-automation
@@ -190,7 +226,7 @@ Agent: "⚠️ CAUTION - Risk Level: LOW
 
 This scanner itself is designed with security in mind:
 
-- ✅ **No Network Access**: Runs completely offline
+- ✅ **No Network Access**: The scanner itself runs completely offline (but if you ask Claude to download a skill file first, that download uses network)
 - ✅ **No External Dependencies**: Pure JavaScript/Node.js
 - ✅ **Read-Only**: Never modifies files being scanned
 - ✅ **No Telemetry**: Doesn't send data anywhere
@@ -238,7 +274,7 @@ Found a malicious pattern not detected? Submit an issue or PR with:
 
 - Report issues: https://github.com/anikrahman0/security-skill-scanner/issues
 - Suggest improvements: Pull requests welcome
-- Security concerns: security@yourdomain.com
+- Security concerns: a7604366@gmail.com
 
 ## License
 
@@ -246,7 +282,11 @@ MIT License - Free to use, modify, and distribute
 
 ## Disclaimer
 
-This tool provides best-effort security scanning but cannot guarantee detection of all malicious code. Always review skills carefully before installation, especially those requiring system-level permissions. The authors are not responsible for any damages resulting from use of this tool or installation of scanned skills.
+This tool provides pattern-based security scanning with **expected false positives**. It scans instruction files (markdown), not executable code. 
+
+**Critical: This scanner cannot provide definitive security verdicts.** All flagged items require manual review in context. Skills are instructions for Claude to read, not programs that execute automatically.
+
+Always review skills carefully before installation, especially those requiring system-level permissions. The authors are not responsible for any damages resulting from use of this tool or installation of scanned skills.
 
 ---
 
