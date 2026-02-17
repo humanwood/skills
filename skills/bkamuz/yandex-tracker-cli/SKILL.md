@@ -7,15 +7,32 @@
 1. Скопируйте скрипт в директорию в PATH:
 ```bash
 mkdir -p ~/bin
-cp yandex-tracker ~/bin/
+cp yandex-tracker.sh ~/bin/yandex-tracker
 chmod +x ~/bin/yandex-tracker
 ```
 
-2. Создайте конфигурационный файл `~/.yandex-tracker-env`:
+Или создайте симлинк:
 ```bash
-TOKEN='y0__...'      # OAuth токен из Tracker UI (Application → OAuth)
-ORG_ID='7446...'     # On-premise Org ID (из URL или DevTools → X-Org-Id)
+ln -s /path/to/skill/yandex-tracker.sh ~/bin/yandex-tracker
 ```
+
+2. **Предоставьте credentials** (выберите вариант):
+
+**Вариант A — через переменные окружения (рекомендуется):**
+```bash
+export TRACKER_TOKEN='y0__...'      # OAuth токен (Tracker UI → Settings → Applications → OAuth)
+export TRACKER_ORG_ID='7446...'     # Org ID (DevTools → Network → X-Org-Id)
+```
+Эти переменные можно добавить в `~/.bashrc` или `~/.profile`.
+
+**Вариант B — через конфигурационный файл (обратная совместимость):**
+Создайте `~/.yandex-tracker-env`:
+```bash
+TOKEN='y0__...'      # или TRACKER_TOKEN
+ORG_ID='7446...'     # или TRACKER_ORG_ID
+```
+
+⚠️ **Безопасность:** Для файла установите права `chmod 600 ~/.yandex-tracker-env`, чтобы он был доступен только вам.
 
 3. Убедитесь, что `jq` установлен:
 ```bash
