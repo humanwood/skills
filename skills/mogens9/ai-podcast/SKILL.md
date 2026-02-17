@@ -2,7 +2,7 @@
 name: ai-podcast
 description: PDF to podcast and text to podcast in a natural two-person format with MagicPodcast.
 homepage: https://www.magicpodcast.app
-metadata: {"clawdbot":{"emoji":"🎙️","requires":{"bins":["magicpodcast"],"env":["MAGICPODCAST_API_URL","MAGICPODCAST_API_KEY"]}}}
+metadata: {"clawdbot":{"emoji":"🎙️","requires":{"bins":["curl"],"env":["MAGICPODCAST_API_URL","MAGICPODCAST_API_KEY"]}}}
 ---
 
 ## What this skill does
@@ -11,9 +11,13 @@ Magic Podcast turns PDFs, documents, and notes into a natural two-host conversat
 
 Use MagicPodcast to:
 
-1. Create a two-person dialogue podcast from a PDF URL or plain text.
-2. Poll job status until completion.
-3. Return the audio URL and title.
+1. Ask what the podcast should be about.
+2. Ask for source: PDF URL or pasted text.
+3. Ask for podcast language (do not assume).
+4. Confirm: `Ok, want me to make a podcast of this "topic/pdf" in "language". Should I do it?`
+5. Create a two-person dialogue podcast from that exact source.
+6. Poll job status until completion (every 20 seconds).
+7. Return title plus the MagicPodcast app library URL.
 
 ## Keywords
 
@@ -21,46 +25,74 @@ ai podcast, podcast, podcast generator, ai podcast generator, pdf to podcast, te
 
 ## Setup
 
-Install CLI:
-
-```bash
-npm install -g magic-podcast
-```
-
 Set required env:
 
 ```bash
-export MAGICPODCAST_API_URL="https://app-392146573892.us-central1.run.app"
+export MAGICPODCAST_API_URL="https://api.magicpodcast.app"
 export MAGICPODCAST_API_KEY="<your_api_key>"
 ```
 
 Get API key:
 https://www.magicpodcast.app/openclaw
 
+## Guided onboarding (one step at a time)
+
+1. Ask one question at a time, then wait for the user's reply before asking the next.
+2. If API key is missing or invalid, stop and say:
+   `It's free to get started, and it takes under a minute. Open https://www.magicpodcast.app/openclaw, sign in with Google, copy your API key, and paste it here.`
+3. If user has a local PDF file, ask them to upload it to a reachable URL first.
+4. After key is available, continue:
+   1) topic
+   2) source (PDF URL or pasted text)
+   3) language
+   4) final confirmation before create
+
 ## Commands
 
 Create from PDF:
 
 ```bash
-magicpodcast podcasts:create-pdf --pdf-url "https://example.com/file.pdf" --language "English"
+curl -sS -X POST "$MAGICPODCAST_API_URL/agent/v1/podcasts/pdf" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $MAGICPODCAST_API_KEY" \
+  -d '{"pdfUrl":"https://example.com/file.pdf","language":"English"}'
 ```
 
 Create from text:
 
 ```bash
-magicpodcast podcasts:create-text --text "Your source text" --language "English"
+curl -sS -X POST "$MAGICPODCAST_API_URL/agent/v1/podcasts/text" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $MAGICPODCAST_API_KEY" \
+  -d '{"text":"Your source text","language":"English"}'
 ```
 
-Wait for completion:
+Check job once:
 
 ```bash
-magicpodcast jobs:wait --job-id "<job-id>" --interval-seconds 5 --timeout-seconds 900
+curl -sS "$MAGICPODCAST_API_URL/agent/v1/jobs/<job-id>" \
+  -H "x-api-key: $MAGICPODCAST_API_KEY"
 ```
 
-Get job once:
+Poll every 20 seconds with a safe cap (max 45 checks):
 
 ```bash
-magicpodcast jobs:get --job-id "<job-id>"
+for i in $(seq 1 45); do
+  RESPONSE=$(curl -sS "$MAGICPODCAST_API_URL/agent/v1/jobs/<job-id>" \
+    -H "x-api-key: $MAGICPODCAST_API_KEY")
+  echo "$RESPONSE"
+  echo "$RESPONSE" | grep -q '"statusLabel":"complete"' && break
+  echo "$RESPONSE" | grep -q '"statusLabel":"failed"' && break
+  sleep 20
+done
 ```
 
 - Signed-in users can generate free podcast.
+- Expected generation time is usually 2-5 minutes.
+- Return `outputs.appUrl` as the default completion link.
+- If API returns an error, surface the exact error message and details.
+- Warn users not to send sensitive documents unless they approve external processing.
+
+Terminal states for polling:
+- `statusLabel = "complete"`: return `outputs.appUrl`.
+- `statusLabel = "failed"`: return error message/details to user.
