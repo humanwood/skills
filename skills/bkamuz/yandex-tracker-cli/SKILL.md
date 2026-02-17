@@ -1,3 +1,21 @@
+---
+name: yandex-tracker-cli
+description: CLI for Yandex Tracker (bash + curl). Queues, issues, comments, worklogs, attachments, YQL.
+homepage: https://github.com/bkamuz/yandex-tracker-cli
+metadata:
+  clawdbot:
+    emoji: "📋"
+    requires:
+      env: ["TOKEN", "ORG_ID"]
+    primaryEnv: "TOKEN"
+    files: ["yandex-tracker.sh"]
+  openclaw:
+    requires:
+      env: ["TOKEN", "ORG_ID"]
+      bins: ["curl", "jq"]
+    primaryEnv: "TOKEN"
+---
+
 # Yandex Tracker CLI Skill
 
 Простой CLI для Yandex Tracker на чистом bash + curl. Работает напрямую через API с правильными заголовками (`X-Org-Id`). Не требует внешних зависимостей кроме `curl` и `jq`.
@@ -20,17 +38,18 @@ ln -s /path/to/skill/yandex-tracker.sh ~/bin/yandex-tracker
 
 **Вариант A — через переменные окружения (рекомендуется):**
 ```bash
-export TRACKER_TOKEN='y0__...'      # OAuth токен (Tracker UI → Settings → Applications → OAuth)
-export TRACKER_ORG_ID='7446...'     # Org ID (DevTools → Network → X-Org-Id)
+export TOKEN='y0__...'      # OAuth токен (Tracker UI → Settings → Applications → OAuth)
+export ORG_ID='1234...'     # Org ID (DevTools → Network → X-Org-Id)
 ```
 Эти переменные можно добавить в `~/.bashrc` или `~/.profile`.
 
-**Вариант B — через конфигурационный файл (обратная совместимость):**
+**Вариант B — через конфигурационный файл:**
 Создайте `~/.yandex-tracker-env`:
 ```bash
-TOKEN='y0__...'      # или TRACKER_TOKEN
-ORG_ID='7446...'     # или TRACKER_ORG_ID
+TOKEN='y0__...'
+ORG_ID='1234...'
 ```
+(Старый формат с `TOKEN`/`ORG_ID` также поддерживается для обратной совместимости.)
 
 ⚠️ **Безопасность:** Для файла установите права `chmod 600 ~/.yandex-tracker-env`, чтобы он был доступен только вам.
 

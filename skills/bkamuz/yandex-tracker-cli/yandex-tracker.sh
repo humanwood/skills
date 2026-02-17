@@ -5,33 +5,21 @@ set -e -o pipefail
 # Используйте: yandex-tracker <command> [args]
 # Файл: yandex-tracker.sh (можно скопировать/переименовать в yandex-tracker)
 
-# Приоритет 1: переменные окружения TRACKER_TOKEN и TRACKER_ORG_ID
-# Приоритет 2: файл ~/.yandex-tracker-env с TOKEN и ORG_ID (обратная совместимость)
-# Приоритет 2 (альтернатива): файл ~/.yandex-tracker-env с TRACKER_TOKEN и TRACKER_ORG_ID
+# Приоритет 1: переменные окружения TOKEN и ORG_ID
+# Приоритет 2: файл ~/.yandex-tracker-env с TOKEN и ORG_ID
 
-if [[ -z "${TRACKER_TOKEN}" || -z "${TRACKER_ORG_ID}" ]]; then
+if [[ -z "${TOKEN}" || -z "${ORG_ID}" ]]; then
   CONFIG="${HOME}/.yandex-tracker-env"
   if [[ ! -f "$CONFIG" ]]; then
-    echo "Error: Neither TRACKER_TOKEN/TRACKER_ORG_ID env vars nor config file $CONFIG found" >&2
+    echo "Error: Neither TOKEN/ORG_ID env vars nor config file $CONFIG found" >&2
     exit 1
   fi
   source "$CONFIG"
-  # Поддерживаем оба имени переменных в конфиге
-  # Если заданы TRACKER_TOKEN/TRACKER_ORG_ID — используем их
-  # Иначе используем TOKEN/ORG_ID (старый формат)
-  : "${TOKEN:=}"
-  : "${ORG_ID:=}"
-  : "${TRACKER_TOKEN:=}"
-  : "${TRACKER_ORG_ID:=}"
-  if [[ -n "$TRACKER_TOKEN" && -n "$TRACKER_ORG_ID" ]]; then
-    TOKEN="$TRACKER_TOKEN"
-    ORG_ID="$TRACKER_ORG_ID"
-  fi
 fi
 
 # Проверка, что TOKEN и ORG_ID определены
 if [[ -z "$TOKEN" || -z "$ORG_ID" ]]; then
-  echo "Error: TOKEN and ORG_ID must be set (via TRACKER_TOKEN/TRACKER_ORG_ID env or ~/.yandex-tracker-env)" >&2
+  echo "Error: TOKEN and ORG_ID must be set (via env or ~/.yandex-tracker-env)" >&2
   exit 1
 fi
 
