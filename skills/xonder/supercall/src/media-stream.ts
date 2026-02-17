@@ -14,6 +14,7 @@ import type {
   OpenAIRealtimeConversationProvider,
   RealtimeConversationSession,
 } from "./providers/openai-realtime-conversation.js";
+import { generateDtmfAudio, chunkDtmfAudio } from "./dtmf.js";
 
 export interface MediaStreamConfig {
   /** Conversation provider for realtime speech-to-speech */
@@ -40,6 +41,7 @@ interface StreamSession {
   ws: WebSocket;
   conversationSession: RealtimeConversationSession;
   pendingHangup?: { reason: string; resolve: () => void };
+  pendingDtmf?: { digits: string; resolve: () => void };
 }
 
 /**
@@ -49,6 +51,7 @@ export class MediaStreamHandler {
   private wss: WebSocketServer | null = null;
   private sessions = new Map<string, StreamSession>();
   private config: MediaStreamConfig;
+  private wsCounter = 0;
 
   constructor(config: MediaStreamConfig) {
     this.config = config;
@@ -75,6 +78,8 @@ export class MediaStreamHandler {
     ws: WebSocket,
     _request: IncomingMessage,
   ): Promise<void> {
+    const wsId = ++this.wsCounter;
+    console.log(`[MediaStream] New WebSocket connection #${wsId}`);
     let session: StreamSession | null = null;
 
     ws.on("message", async (data: Buffer) => {
@@ -83,7 +88,7 @@ export class MediaStreamHandler {
 
         switch (message.event) {
           case "connected":
-            console.log("[MediaStream] Twilio connected");
+            console.log(`[MediaStream] Twilio connected (ws #${wsId})`);
             break;
 
           case "start":
@@ -98,6 +103,7 @@ export class MediaStreamHandler {
             break;
 
           case "stop":
+            console.log(`[MediaStream] Stop event on ws #${wsId} (hasSession: ${!!session})`);
             if (session) {
               this.handleStop(session);
               session = null;
@@ -110,6 +116,9 @@ export class MediaStreamHandler {
             if (session?.pendingHangup && message.mark?.name === "hangup") {
               console.log(`[MediaStream] ✅ Hangup mark matched! Audio finished for ${session.callId}`);
               session.pendingHangup.resolve();
+            } else if (session?.pendingDtmf && message.mark?.name === "dtmf") {
+              console.log(`[MediaStream] ✅ DTMF mark matched! Audio finished for ${session.callId}`);
+              session.pendingDtmf.resolve();
             } else if (session?.pendingHangup) {
               console.log(`[MediaStream] Mark name mismatch: expected 'hangup', got '${message.mark?.name}'`);
             }
@@ -120,9 +129,11 @@ export class MediaStreamHandler {
       }
     });
 
-    ws.on("close", () => {
+    ws.on("close", (code, reason) => {
+      console.log(`[MediaStream] WebSocket close event (code: ${code}, reason: ${reason?.toString() || 'none'}, hasSession: ${!!session})`);
       if (session) {
         this.handleStop(session);
+        session = null;
       }
     });
 
@@ -137,9 +148,20 @@ export class MediaStreamHandler {
   private async handleStart(
     ws: WebSocket,
     message: TwilioMediaMessage,
-  ): Promise<StreamSession> {
+  ): Promise<StreamSession | null> {
     const streamSid = message.streamSid || "";
     const callSid = message.start?.callSid || "";
+
+    // Guard against duplicate Twilio WebSocket connections for the same call.
+    // Twilio sometimes sends two WS upgrades; the second would create a
+    // competing OpenAI session and both end up dying.
+    for (const existing of this.sessions.values()) {
+      if (existing.callId === callSid) {
+        console.log(`[MediaStream] Ignoring duplicate stream ${streamSid} for call ${callSid} (already have ${existing.streamSid})`);
+        ws.close();
+        return null;
+      }
+    }
 
     console.log(`[MediaStream] Stream started: ${streamSid} (call: ${callSid})`);
 
@@ -188,6 +210,13 @@ export class MediaStreamHandler {
     });
 
     conversationSession.onHangupRequested((reason) => {
+      // Guard against duplicate hangup requests (OpenAI Realtime API
+      // can fire multiple hangup function calls in a single response.done)
+      if (session.pendingHangup) {
+        console.log(`[MediaStream] Ignoring duplicate hangup request for ${callSid}`);
+        return;
+      }
+
       console.log(`[MediaStream] AI requested hangup for call ${callSid}: ${reason}`);
       console.log(`[MediaStream] Sending hangup mark, will wait for Twilio to confirm playback complete`);
       
@@ -221,6 +250,56 @@ export class MediaStreamHandler {
       });
     });
 
+    conversationSession.onDtmfRequested((digits) => {
+      console.log(`[MediaStream] DTMF "${digits}" requested for call ${callSid}`);
+
+      if (ws.readyState !== WebSocket.OPEN) {
+        console.log(`[MediaStream] WebSocket not open, cannot send DTMF`);
+        return;
+      }
+
+      // Send a mark first, wait for AI audio to finish, then inject tones
+      const done = new Promise<void>(resolve => {
+        session.pendingDtmf = { digits, resolve };
+      });
+
+      ws.send(JSON.stringify({
+        event: "mark",
+        streamSid,
+        mark: { name: "dtmf" }
+      }));
+      console.log(`[MediaStream] Sent DTMF mark, waiting for audio to finish`);
+
+      let dtmfResolved = false;
+      Promise.race([
+        done,
+        new Promise<void>(r => setTimeout(() => {
+          if (!dtmfResolved) {
+            console.log(`[MediaStream] ⚠️ DTMF mark timeout for ${callSid}, sending tones anyway`);
+            r();
+          }
+        }, 5000))
+      ]).then(() => {
+        if (dtmfResolved) return;
+        dtmfResolved = true;
+        session.pendingDtmf = undefined;
+        console.log(`[MediaStream] Injecting DTMF tones "${digits}" into stream ${streamSid}`);
+
+        const dtmfAudio = generateDtmfAudio(digits);
+        const chunks = chunkDtmfAudio(dtmfAudio);
+
+        for (const chunk of chunks) {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              event: "media",
+              streamSid,
+              media: { payload: chunk.toString("base64") },
+            }));
+          }
+        }
+      });
+    });
+
     this.sessions.set(streamSid, session);
     this.config.onConnect?.(callSid, streamSid);
 
@@ -242,25 +321,6 @@ export class MediaStreamHandler {
     this.sessions.delete(session.streamSid);
   }
 
-  /**
-   * Get active session by call ID.
-   */
-  getSessionByCallId(callId: string): StreamSession | undefined {
-    return [...this.sessions.values()].find(
-      (session) => session.callId === callId,
-    );
-  }
-
-  /**
-   * Close all sessions.
-   */
-  closeAll(): void {
-    for (const session of this.sessions.values()) {
-      session.conversationSession.close();
-      session.ws.close();
-    }
-    this.sessions.clear();
-  }
 }
 
 /**

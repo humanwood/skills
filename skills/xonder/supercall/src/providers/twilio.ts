@@ -65,10 +65,6 @@ export class TwilioProvider implements VoiceCallProvider {
     this.currentPublicUrl = url;
   }
 
-  getPublicUrl(): string | null {
-    return this.currentPublicUrl;
-  }
-
   /**
    * Make an authenticated request to the Twilio API.
    */
@@ -319,6 +315,8 @@ export class TwilioProvider implements VoiceCallProvider {
       Url: url.toString(), // TwiML serving endpoint
       StatusCallback: statusUrl.toString(), // Separate status callback endpoint
       StatusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+      Record: "true",
+      RecordingChannels: "dual",
       Timeout: "30",
     };
 

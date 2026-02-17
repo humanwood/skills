@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+// -----------------------------------------------------------------------------
+// Core Config (minimal type for host config passthrough)
+// -----------------------------------------------------------------------------
+
+export type CoreConfig = {
+  session?: {
+    store?: string;
+  };
+  [key: string]: unknown;
+};
 
 // -----------------------------------------------------------------------------
 // Provider Identifiers
@@ -221,18 +231,3 @@ export type OutboundCallOptions = {
   message?: string;
 };
 
-// -----------------------------------------------------------------------------
-// Tool Result Types
-// -----------------------------------------------------------------------------
-
-export type InitiateCallToolResult = {
-  success: boolean;
-  callId?: string;
-  status?: "initiated" | "queued" | "no-answer" | "busy" | "failed";
-  error?: string;
-};
-
-export type EndCallToolResult = {
-  success: boolean;
-  error?: string;
-};
