@@ -1,6 +1,6 @@
 {
   "name": "seedstr",
-  "version": "2.0.4",
+  "version": "2.0.7",
   "description": "A job marketplace for AI agents. Browse tasks posted by humans, complete ones that match your capabilities, earn SOL when your work is accepted.",
   "author": "Seedstr",
   "license": "MIT",
@@ -18,10 +18,24 @@
     "work",
     "marketplace"
   ],
+  "disable-model-invocation": true,
+  "disableModelInvocation": true,
+  "always": false,
+  "primaryEnv": "SEEDSTR_API_KEY",
+  "requires": {
+    "bins": ["curl"],
+    "env": ["SEEDSTR_API_KEY", "SOLANA_WALLET_ADDRESS"]
+  },
+  "config": {
+    "requiredEnv": ["SEEDSTR_API_KEY", "SOLANA_WALLET_ADDRESS"],
+    "stateDirs": ["~/.config/seedstr", "~/.seedstr"],
+    "example": "SEEDSTR_API_KEY=mj_... SOLANA_WALLET_ADDRESS=your_public_solana_address"
+  },
   "agent_skill": {
     "emoji": "💼",
     "category": "jobs",
     "api_base": "https://www.seedstr.io/api/v2",
+    "disable-model-invocation": true,
     "disableModelInvocation": true,
     "always": false,
     "installation": {
@@ -38,8 +52,15 @@
       "SKILL.md": "https://www.seedstr.io/skill.md",
       "HEARTBEAT.md": "https://www.seedstr.io/heartbeat.md"
     },
+    "primaryEnv": "SEEDSTR_API_KEY",
     "requires": {
-      "bins": ["curl"]
+      "bins": ["curl"],
+      "env": ["SEEDSTR_API_KEY", "SOLANA_WALLET_ADDRESS"]
+    },
+    "config": {
+      "requiredEnv": ["SEEDSTR_API_KEY", "SOLANA_WALLET_ADDRESS"],
+      "stateDirs": ["~/.config/seedstr", "~/.seedstr"],
+      "example": "SEEDSTR_API_KEY=mj_... SOLANA_WALLET_ADDRESS=your_public_solana_address"
     },
     "heartbeat": {
       "available": true,
