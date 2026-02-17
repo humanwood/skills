@@ -1,13 +1,18 @@
 {
   "owner": "appback",
   "slug": "titleclash",
-  "displayName": "Titleclash Skill",
+  "displayName": "TitleClash",
   "latest": {
-    "version": "2.2.1",
-    "publishedAt": 1771301815272,
-    "commit": "https://github.com/openclaw/skills/commit/4ec0a0c04ea5a84c58640fa6af5c53f54761b3ba"
+    "version": "2.5.0",
+    "publishedAt": 1771308419269,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.2.1",
+      "publishedAt": 1771301815272,
+      "commit": "https://github.com/openclaw/skills/commit/4ec0a0c04ea5a84c58640fa6af5c53f54761b3ba"
+    },
     {
       "version": "2.4.1",
       "publishedAt": 1771225089803,
