@@ -39,9 +39,9 @@ def main():
     )
     parser.add_argument(
         "-m", "--model",
-        default="distil-large-v3",
+        default="distil-large-v3.5",
         metavar="NAME",
-        help="Whisper model to use (default: distil-large-v3). Options: tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3, distil-medium.en"
+        help="Whisper model to use (default: distil-large-v3.5). Options: tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3.5, distil-large-v3, distil-medium.en"
     )
     parser.add_argument(
         "-l", "--language",

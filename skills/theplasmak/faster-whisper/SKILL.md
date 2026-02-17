@@ -1,7 +1,7 @@
 ---
 name: faster-whisper
 description: Local speech-to-text using faster-whisper. 4-6x faster than OpenAI Whisper with identical accuracy; GPU acceleration enables ~20x realtime transcription. Supports standard and distilled models with word-level timestamps.
-version: 1.1.0
+version: 1.2.0
 author: ThePlasmak
 homepage: https://github.com/ThePlasmak/faster-whisper
 tags: ["audio", "transcription", "whisper", "speech-to-text", "ml", "cuda", "gpu"]
@@ -33,9 +33,9 @@ Use this skill when you need to:
 
 | Task | Command | Notes |
 |------|---------|-------|
-| **Basic transcription** | `./scripts/transcribe audio.mp3` | Batched inference, VAD on by default |
+| **Basic transcription** | `./scripts/transcribe audio.mp3` | Batched inference, VAD on, distil-large-v3.5 |
 | **Faster English** | `./scripts/transcribe audio.mp3 --model distil-medium.en --language en` | English-only, 6.8x faster |
-| **Maximum accuracy** | `./scripts/transcribe audio.mp3 --model distil-large-v3 --beam-size 10` | Preferred default; use large-v3 if accuracy critical |
+| **Maximum accuracy** | `./scripts/transcribe audio.mp3 --model large-v3 --beam-size 10` | Use large-v3 if accuracy critical |
 | **Word timestamps** | `./scripts/transcribe audio.mp3 --word-timestamps` | For subtitles/captions |
 | **JSON output** | `./scripts/transcribe audio.mp3 --json -o output.json` | Programmatic access |
 | **Multilingual** | `./scripts/transcribe audio.mp3 --model large-v3-turbo` | Auto-detects language |
@@ -59,7 +59,7 @@ digraph model_selection {
 
     large_v3 [label="large-v3\nor\nlarge-v3-turbo", style="rounded,filled", fillcolor=lightblue];
     large_turbo [label="large-v3-turbo", style="rounded,filled", fillcolor=lightblue];
-    distil_large [label="distil-large-v3\n(default)", style="rounded,filled", fillcolor=lightgreen];
+    distil_large [label="distil-large-v3.5\n(default)", style="rounded,filled", fillcolor=lightgreen];
     distil_medium [label="distil-medium.en", style="rounded,filled", fillcolor=lightyellow];
     distil_small [label="distil-small.en", style="rounded,filled", fillcolor=lightyellow];
 
@@ -89,7 +89,8 @@ digraph model_selection {
 #### Distilled Models (~6x Faster, ~1% WER difference)
 | Model | Size | Speed vs Standard | Accuracy | Use Case |
 |-------|------|-------------------|----------|----------|
-| **`distil-large-v3`** | 756M | ~6.3x faster | 9.7% WER | **Default, best balance** |
+| **`distil-large-v3.5`** | 756M | ~6.3x faster | 7.08% WER | **Default, best balance** |
+| `distil-large-v3` | 756M | ~6.3x faster | 7.53% WER | Previous default |
 | `distil-large-v2` | 756M | ~5.8x faster | 10.1% WER | Fallback |
 | `distil-medium.en` | 394M | ~6.8x faster | 11.1% WER | English-only, resource-constrained |
 | `distil-small.en` | 166M | ~5.6x faster | 12.1% WER | Mobile/edge devices |
@@ -162,7 +163,7 @@ uv pip install --python .venv/bin/python torch --index-url https://download.pyto
 ## Options
 
 ```
---model, -m        Model name (default: distil-large-v3)
+--model, -m        Model name (default: distil-large-v3.5)
 --language, -l     Language code (e.g., en, es, fr - auto-detect if omitted)
 --word-timestamps  Include word-level timestamps
 --beam-size        Beam search size (default: 5, higher = more accurate but slower)
@@ -207,8 +208,8 @@ done
 |---------|---------|----------|
 | **Using CPU when GPU available** | 10-20x slower transcription | Check `nvidia-smi`; verify CUDA installation |
 | **Not specifying language** | Wastes time auto-detecting on known content | Use `--language en` when you know the language |
-| **Using wrong model** | Unnecessary slowness or poor accuracy | Default `distil-large-v3` is excellent; only use `large-v3` if accuracy issues |
-| **Ignoring distilled models** | Missing 6x speedup with <1% accuracy loss | Try `distil-large-v3` before reaching for standard models |
+| **Using wrong model** | Unnecessary slowness or poor accuracy | Default `distil-large-v3.5` is excellent; only use `large-v3` if accuracy issues |
+| **Ignoring distilled models** | Missing 6x speedup with <1% accuracy loss | Try `distil-large-v3.5` before reaching for standard models |
 | **Forgetting ffmpeg** | Setup fails or audio can't be processed | Setup script handles this; manual installs need ffmpeg separately |
 | **Out of memory errors** | Model too large for available VRAM/RAM | Use smaller model or `--compute-type int8` |
 | **Over-engineering beam size** | Diminishing returns past beam-size 5-7 | Default 5 is fine; try 10 for critical transcripts |
@@ -219,7 +220,7 @@ done
 - **Batched inference**: Enabled by default via `BatchedInferencePipeline` — ~3x faster than standard mode; VAD on by default
 - **GPU**: Automatically uses CUDA if available
 - **Quantization**: INT8 used on CPU for ~4x speedup with minimal accuracy loss
-- **Benchmark** (RTX 3070, 21-min file, distil-large-v3): **~23s** with batched inference vs ~69s without
+- **Benchmark** (RTX 3070, 21-min file): **~24s** with batched inference (both distil-large-v3 and v3.5) vs ~69s without
 - **Memory**:
   - `distil-large-v3`: ~2GB RAM / ~1GB VRAM
   - `large-v3-turbo`: ~4GB RAM / ~2GB VRAM
