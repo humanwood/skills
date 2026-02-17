@@ -1,0 +1,11 @@
+{
+  "owner": "neldar",
+  "slug": "webchat-voice-proxy",
+  "displayName": "Webchat Voice Proxy",
+  "latest": {
+    "version": "0.1.11",
+    "publishedAt": 1771330352446,
+    "commit": null
+  },
+  "history": []
+}
