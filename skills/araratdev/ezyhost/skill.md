@@ -1,6 +1,6 @@
 ---
 name: ezyhost
-description: Deploy, manage, and monitor static websites via the EzyHost API. Upload files, build with AI, track analytics, and manage custom domains.
+description: Deploy, manage, and monitor static websites via the EzyHost API. Upload files, build with AI, track analytics, manage custom domains, QR codes, email capture, and team collaboration.
 homepage: https://ezyhost.io
 metadata:
   openclaw:
@@ -11,7 +11,7 @@ metadata:
     primaryEnv: EZYHOST_API_KEY
     permissions:
       version: 1
-      declared_purpose: "Deploy and manage static websites on EzyHost. Upload files, run SEO analysis, track analytics, generate sites with AI, and configure custom domains."
+      declared_purpose: "Deploy and manage static websites on EzyHost. Upload files, run SEO analysis, track analytics, generate sites with AI, configure custom domains, manage versions, teams, QR codes, and email capture."
       network:
         - "ezyhost.io"
       env:
@@ -43,7 +43,7 @@ x-api-key: $EZYHOST_API_KEY
 
 The key is loaded from the `EZYHOST_API_KEY` environment variable. Generate your API key at `https://ezyhost.io/dashboard/api-keys`.
 
-**Note:** API access requires the Solo plan or higher.
+**Note:** API access requires the Pro plan or higher.
 
 ---
 
@@ -65,7 +65,15 @@ Body: { "name": "my-site", "subdomain": "my-site" }
 ```
 Returns `{ project: { id, name, subdomain, s3Prefix, url, ... } }`
 
-The subdomain must be 3+ characters, lowercase alphanumeric with hyphens. Your site will be live at `https://{subdomain}.ezyhost.site`.
+The subdomain must be 3+ characters, lowercase alphanumeric with hyphens. Returns `409 SUBDOMAIN_TAKEN` if already in use. Your site will be live at `https://{subdomain}.ezyhost.site`.
+
+Optional fields: `displayMode` ("standard" | "presentation"), `hideFromSearch` (boolean), `password` (string).
+
+#### Check Subdomain Availability
+```
+GET /api/projects/check-subdomain/:subdomain
+```
+Returns `{ available: true/false, subdomain }`. Use this to validate before creating.
 
 #### Get Project
 ```
@@ -77,7 +85,7 @@ Returns `{ project: { id, name, subdomain, customDomain, status, storageUsed, se
 ```
 PATCH /api/projects/:id
 Content-Type: application/json
-Body: { "name": "new-name", "metaTitle": "...", "metaDescription": "..." }
+Body: { "name": "new-name", "metaTitle": "...", "metaDescription": "...", "password": "...", "removeBranding": true, "displayMode": "standard", "hideFromSearch": false, "emailCapture": true }
 ```
 
 #### Delete Project
@@ -125,6 +133,46 @@ Body: { "newPath": "assets/renamed-file.png" }
 
 ---
 
+### GitHub Import
+
+#### Import from GitHub
+```
+POST /api/github/:projectId
+Content-Type: application/json
+Body: { "owner": "username", "repo": "repo-name", "branch": "main", "subfolder": "dist" }
+```
+Returns `{ message, repo, branch, filesUploaded, filesSkipped, totalSize }`
+
+Imports files from a public GitHub repository. The `branch` defaults to "main" and automatically falls back to "master" if not found. The optional `subfolder` field lets you import only a subdirectory (e.g. "dist", "build").
+
+Requires Pro plan or higher.
+
+---
+
+### Version Rollback
+
+#### List Versions
+```
+GET /api/versions/:projectId
+```
+Returns `{ versions: [{ id, version, label, fileCount, totalSize, createdAt }] }`
+
+#### Create Version Snapshot
+```
+POST /api/versions/:projectId
+Content-Type: application/json
+Body: { "label": "v1.0" }
+```
+Snapshots the current state of all project files. Requires Pro plan or higher.
+
+#### Rollback to Version
+```
+POST /api/versions/:projectId/rollback/:version
+```
+Restores all files to the state captured in the specified version number.
+
+---
+
 ### SEO
 
 #### Get SEO Report
@@ -132,6 +180,8 @@ Body: { "newPath": "assets/renamed-file.png" }
 GET /api/seo/:projectId
 ```
 Returns `{ score, suggestions: [{ id, type, severity, message, resolved }] }`
+
+Requires Pro plan or higher.
 
 #### Run SEO Analysis
 ```
@@ -162,13 +212,124 @@ GET /api/analytics/:projectId?period=7d
 ```
 Periods: `24h`, `7d`, `30d`, `90d`
 
-Returns `{ totalVisits, visitsByDay: [{ date, visits }], topPages: [{ path, visits }], topReferrers: [{ referrer, visits }], topCountries: [{ country, visits }] }`
+**Basic analytics (all plans):**
+Returns `{ totalVisits, visitsByDay, topPages, isAdvanced }`
 
-#### Track Event (server-side)
+**Advanced analytics (Pro+ plans):**
+Additionally returns `{ uniqueVisitors, uniqueByDay, topReferrers, topCountries, devices, browsers }`
+
+Free plan users receive `isAdvanced: false` and advanced fields are empty.
+
+#### Track Event (public, no auth required)
 ```
 POST /api/analytics/track
 Content-Type: application/json
-Body: { "projectId": "...", "path": "/page", "referrer": "...", "userAgent": "..." }
+Body: { "projectId": "...", "path": "/page", "referrer": "..." }
+```
+
+---
+
+### QR Codes
+
+#### Generate QR Code
+```
+POST /api/qrcode/:projectId
+```
+Returns `{ qrCodeUrl: "data:image/png;base64,...", siteUrl: "https://..." }`
+
+Generates a QR code pointing to the project's live URL (subdomain or custom domain). Returns a base64 data URL. Available on all paid plans.
+
+#### Get QR Code
+```
+GET /api/qrcode/:projectId
+```
+Returns `{ qrCodeUrl: "data:image/..." | null }`
+
+---
+
+### Email Capture
+
+#### Toggle Email Capture on Project
+```
+PATCH /api/emails/:projectId/toggle
+```
+Returns `{ emailCapture: true/false }`. Requires Business plan.
+
+When enabled, visitors to the hosted site see a popup email collection form after 5 seconds.
+
+#### Submit Email (public, no auth)
+```
+POST /api/emails/submit
+Content-Type: application/json
+Body: { "email": "visitor@example.com", "projectId": "...", "source": "modal" }
+```
+Source options: `modal`, `inline`, `api`. Only works if the project has email capture enabled and the project owner has a Business plan.
+
+#### Get Captured Emails
+```
+GET /api/emails/:projectId?page=1&limit=50
+```
+Returns `{ emails: [{ id, email, source, createdAt }], total, page, totalPages }`
+
+Requires Business plan.
+
+#### Export Emails as CSV
+```
+GET /api/emails/:projectId/export
+```
+Returns a CSV file download. Requires Business plan.
+
+#### Delete a Captured Email
+```
+DELETE /api/emails/:projectId/:emailId
+```
+
+---
+
+### Teams
+
+#### List Teams
+```
+GET /api/teams
+```
+Returns `{ teams: [{ id, name, ownerId, members: [...] }] }`
+
+#### Create Team
+```
+POST /api/teams
+Content-Type: application/json
+Body: { "name": "My Team" }
+```
+Requires Business plan.
+
+#### Add Team Member
+```
+POST /api/teams/:teamId/members
+Content-Type: application/json
+Body: { "email": "user@example.com", "role": "editor" }
+```
+Roles: `editor`, `viewer`.
+
+#### Update Member Role
+```
+PATCH /api/teams/:teamId/members/:memberId
+Content-Type: application/json
+Body: { "role": "viewer" }
+```
+
+#### Remove Team Member
+```
+DELETE /api/teams/:teamId/members/:memberId
+```
+
+#### Leave Team
+```
+POST /api/teams/:teamId/leave
+```
+
+#### Delete Team
+```
+DELETE /api/teams/:teamId
 ```
 
 ---
@@ -183,7 +344,7 @@ Body: { "domain": "example.com" }
 ```
 Returns `{ dnsInstructions: { type, name, value } }` — DNS records you need to create.
 
-Requires Solo plan or higher.
+Requires Pro plan or higher.
 
 #### Verify Domain DNS
 ```
@@ -257,10 +418,22 @@ POST /api/apikey/generate
 ```
 Returns `{ apiKey: "ag_..." }` — full key shown only once. Store it securely. Revokes any previous key.
 
+Requires Pro plan or higher.
+
 #### Revoke Key
 ```
 DELETE /api/apikey
 ```
+
+---
+
+### Plans (Public)
+
+#### Get All Plans
+```
+GET /api/plans
+```
+No authentication required. Returns `{ plans: [{ plan, name, priceMonthly, maxProjects, maxStorageMB, ... }] }` with all feature flags and limits for each plan.
 
 ---
 
@@ -282,16 +455,28 @@ Returns `{ used, limit, remaining, resetsAt }`.
 
 ## Plan Limits
 
-| Feature | Free | Tiny ($5) | Solo ($13) | Pro ($31) | Pro Max ($74) |
-|---------|------|-----------|------------|-----------|---------------|
-| Projects | 1 | 1 | 5 | 15 | Unlimited |
-| Storage | 10 MB | 25 MB | 75 MB/project | 10 GB | 2 TB |
-| Visits/mo | 1K | 10K | 100K | 500K | Unlimited |
-| File types | Basic | All | All | All | All |
-| Custom domains | — | — | Yes | Yes | Yes |
-| API access | — | — | Yes | Yes | Yes |
-| AI generations | 3/mo | 15/mo | 50/mo | 150/mo | 500/mo |
-| Remove branding | — | Yes | Yes | Yes | Yes |
+| Feature | Free | Pro ($9/mo) | Business ($29/mo) |
+|---------|------|-------------|-------------------|
+| Projects | 2 | 15 | Unlimited |
+| Storage | 50 MB | 2 GB | 20 GB |
+| Max file size | 10 MB | 100 MB | 500 MB |
+| Custom domains | — | 3 | Unlimited |
+| API access | — | ✅ | ✅ |
+| GitHub import | — | ✅ | ✅ |
+| Version rollback | — | Up to 5 | Up to 30 |
+| Password protection | — | ✅ | ✅ |
+| Remove branding | — | ✅ | ✅ |
+| SEO tools | — | ✅ | ✅ |
+| Advanced analytics | — | ✅ | ✅ |
+| QR codes | ✅ | ✅ | ✅ |
+| Hide from search | — | ✅ | ✅ |
+| Email capture | — | — | ✅ |
+| Team members | — | — | Up to 5 |
+| Priority support | — | — | ✅ |
+| AI generations | 3/mo | 10/mo | 30/mo |
+| AI templates | 1 | 10 | Unlimited |
+| Presentation mode | — | ✅ | ✅ |
+| Basic analytics | ✅ | ✅ | ✅ |
 
 ---
 
@@ -299,9 +484,14 @@ Returns `{ used, limit, remaining, resetsAt }`.
 
 Sites are served at:
 - **Free subdomain:** `https://{subdomain}.ezyhost.site`
-- **Custom domain:** `https://{your-domain.com}` (Solo+ plans)
+- **Custom domain:** `https://{your-domain.com}` (Pro+ plans)
 
-All sites include HTTPS, CDN caching, and automatic file browser for non-HTML projects.
+All sites include HTTPS, CDN caching, automatic file browser for non-HTML projects, and optional presentation mode for PDF/PPTX files.
+
+**Injected features on served sites:**
+- **Branding badge:** "Hosted on ezyhost" badge shown on free plan sites. Removable on paid plans via `removeBranding` project setting.
+- **Email capture popup:** When enabled (Business plan), visitors see a subscribe popup after 5 seconds. Dismissible and stored in sessionStorage.
+- **Analytics tracking:** Pageviews are automatically tracked for HTML files.
 
 ---
 
@@ -312,13 +502,22 @@ All errors return JSON:
 { "error": "Description of the error" }
 ```
 
-Plan limit errors include `"upgrade": true` to indicate a higher plan is needed.
+Plan limit errors include `"upgrade": true` to indicate a higher plan is needed:
+```json
+{ "error": "GitHub import requires a Pro plan or higher", "upgrade": true }
+```
+
+Subdomain conflicts:
+```json
+{ "error": "The subdomain \"my-site\" is already taken.", "code": "SUBDOMAIN_TAKEN" }
+```
 
 Common HTTP status codes:
 - `400` — Bad request / validation error
 - `401` — Not authenticated
 - `403` — Plan limit reached or feature disabled
 - `404` — Resource not found
+- `409` — Conflict (subdomain taken)
 - `429` — Rate limited
 - `500` — Server error
 
@@ -329,6 +528,7 @@ Common HTTP status codes:
 - **General API:** 300 requests per 15 minutes per API key
 - **Upload:** 2 requests per second
 - **Analytics tracking:** 60 writes per minute per IP
+- **Email capture submit:** 10 per minute per IP
 - **AI Builder:** Subject to per-plan generation limits (1 concurrent request max)
 
 ---
@@ -336,22 +536,30 @@ Common HTTP status codes:
 ## Example: Deploy a Static Site
 
 ```bash
-# 1. Create a project
+# 1. Check subdomain availability
+curl https://ezyhost.io/api/projects/check-subdomain/my-site \
+  -H "x-api-key: $EZYHOST_API_KEY"
+
+# 2. Create a project
 curl -X POST https://ezyhost.io/api/projects \
   -H "x-api-key: $EZYHOST_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"name": "my-site", "subdomain": "my-site"}'
 
-# 2. Upload files (ZIP)
+# 3. Upload files (ZIP)
 curl -X POST https://ezyhost.io/api/upload/PROJECT_ID \
   -H "x-api-key: $EZYHOST_API_KEY" \
   -F "files=@site.zip"
 
-# 3. Check SEO
+# 4. Generate QR code
+curl -X POST https://ezyhost.io/api/qrcode/PROJECT_ID \
+  -H "x-api-key: $EZYHOST_API_KEY"
+
+# 5. Check SEO (Pro+)
 curl https://ezyhost.io/api/seo/PROJECT_ID \
   -H "x-api-key: $EZYHOST_API_KEY"
 
-# 4. Add custom domain (optional, Solo+)
+# 6. Add custom domain (Pro+)
 curl -X POST https://ezyhost.io/api/domains/PROJECT_ID \
   -H "x-api-key: $EZYHOST_API_KEY" \
   -H "Content-Type: application/json" \
@@ -359,6 +567,16 @@ curl -X POST https://ezyhost.io/api/domains/PROJECT_ID \
 ```
 
 Your site is now live at `https://my-site.ezyhost.site`
+
+## Example: Import from GitHub
+
+```bash
+# Import a public repo (auto-detects main/master branch)
+curl -X POST https://ezyhost.io/api/github/PROJECT_ID \
+  -H "x-api-key: $EZYHOST_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"owner": "emilbaehr", "repo": "automatic-app-landing-page"}'
+```
 
 ## Example: AI-Generate and Deploy
 
