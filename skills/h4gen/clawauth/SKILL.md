@@ -41,6 +41,7 @@ OpenClaw can detect this requirement from frontmatter metadata:
 - For this skill we publish a single Node installer path to keep behavior deterministic across hosts.
 - Reference: https://docs.openclaw.ai/tools/skills
 - Reference: https://docs.openclaw.ai/platforms/mac/skills
+- Source code (review before install): https://github.com/claw-auth/clawauth
 
 ## Manual install (operator fallback)
 

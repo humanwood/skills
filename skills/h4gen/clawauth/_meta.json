@@ -1,13 +1,18 @@
 {
   "owner": "h4gen",
   "slug": "clawauth",
-  "displayName": "ClawAuth - User-Delegated API Access",
+  "displayName": "User-Delegated OAuth API Access",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1771227094554,
-    "commit": "https://github.com/openclaw/skills/commit/15c1d9e88114f1748efd71f679b968911d0353a3"
+    "version": "1.0.6",
+    "publishedAt": 1771240841149,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1771227094554,
+      "commit": "https://github.com/openclaw/skills/commit/15c1d9e88114f1748efd71f679b968911d0353a3"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1771176293502,
