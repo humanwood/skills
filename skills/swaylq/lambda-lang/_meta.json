@@ -3,11 +3,16 @@
   "slug": "lambda-lang",
   "displayName": "Lambda Lang",
   "latest": {
-    "version": "1.6.0",
-    "publishedAt": 1771168307547,
-    "commit": "https://github.com/openclaw/skills/commit/7d052a014c6e7bcbf4084bbc06e1ace80688709c"
+    "version": "1.8.1",
+    "publishedAt": 1771308864653,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.6.0",
+      "publishedAt": 1771168307547,
+      "commit": "https://github.com/openclaw/skills/commit/7d052a014c6e7bcbf4084bbc06e1ace80688709c"
+    },
     {
       "version": "1.5.1",
       "publishedAt": 1770804575507,
