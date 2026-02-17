@@ -3,9 +3,15 @@
   "slug": "depo-bot",
   "displayName": "Depo Bot",
   "latest": {
-    "version": "2.0.1",
-    "publishedAt": 1771254907966,
-    "commit": "https://github.com/openclaw/skills/commit/0d04f271254e36a3dac38a01c28a9376f0d99e0c"
+    "version": "3.0.0",
+    "publishedAt": 1771335555521,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "2.0.1",
+      "publishedAt": 1771254907966,
+      "commit": "https://github.com/openclaw/skills/commit/0d04f271254e36a3dac38a01c28a9376f0d99e0c"
+    }
+  ]
 }
