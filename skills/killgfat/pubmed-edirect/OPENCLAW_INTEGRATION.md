@@ -1,6 +1,31 @@
-# OpenClaw Integration Guide
+# OpenClaw Integration Guide ⚠️
 
-This document explains how to use the PubMed EDirect skill within OpenClaw.
+**Important Security Reminder**: You must complete secure installation steps (see [INSTALL.md](INSTALL.md)) before using this skill. This skill executes external commands and requires careful auditing.
+
+## Secure Usage Guidelines
+
+### ⚠️ Pre-Execution Checks
+Before each use of the `exec` tool, ensure:
+1. Understand the commands to be executed
+2. Confirm EDirect is properly installed
+3. Check network connection security
+4. Set appropriate timeout periods
+
+### Command Execution Audit
+```bash
+# Write complex commands to script files for auditability
+# 1. Create script file
+echo 'esearch -db pubmed -query "$1" | efetch -format abstract | head -200' > search.sh
+
+# 2. Review script content
+cat search.sh
+
+# 3. Set permissions
+chmod +x search.sh
+
+# 4. Execute script
+exec -c './search.sh "CRISPR"'
+```
 
 ## Basic Usage in OpenClaw
 

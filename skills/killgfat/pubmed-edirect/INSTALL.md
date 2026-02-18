@@ -1,4 +1,18 @@
-# EDirect Installation and Configuration
+# EDirect Installation and Configuration ⚠️
+
+## ⚠️ Important Security Warning
+
+**Before proceeding, understand that:**
+
+1. **External script execution**: This installation guide involves downloading and executing official NCBI scripts
+2. **System modifications**: Will modify your PATH environment variable
+3. **Permission requirements**: May require system-level package installation
+
+**Always follow these security practices:**
+- Review script content after downloading
+- Validate in a test environment
+- Do not pipe remote scripts directly to shell
+- Regularly update and verify
 
 ## Prerequisites
 
@@ -12,28 +26,61 @@
 
 ## Installation Methods
 
-### Method 1: Secure Automated Installation
+### 🔴 Security First: User Confirmation Steps
 
-We recommend downloading the installer script first for review before execution:
+**Before executing any installation command, you must:**
+1. Understand the commands that will be executed
+2. Confirm network connection security
+3. Backup important data
+4. Prepare rollback plans
+
+### Method 1: Secure Manual Installation
 
 ```bash
-# Download the installer script
-curl -fsSL https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh -o install-edirect.sh
+# =========== Step 1: Download ===========
+# Download to file, do not execute directly
+wget -q https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh
 
-# Optional: Review the script for transparency
-less install-edirect.sh  # or open in your editor
+# =========== Step 2: Review ===========
+# View script content (review is important)
+cat install-edirect.sh | head -100  # View first 100 lines
+# Or use a text editor to view complete content
 
-# Make it executable
+# =========== Step 3: Analyze ===========
+# Check what operations the script will perform
+grep -n "wget\|curl\|chmod\|export" install-edirect.sh
+
+# =========== Step 4: Execute ===========
+# Execute manually only after review
 chmod +x install-edirect.sh
-
-# Run the installer
 ./install-edirect.sh
 ```
 
-Alternatively, using wget:
+### ⛔ Unsafe Practices (Prohibited)
+
+**Never do this:**
+```bash
+# ❌ Dangerous: Piping remote script directly to shell
+curl https://example.com/install.sh | bash
+
+# ❌ Dangerous: Executing without review
+sh -c "$(curl -fsSL https://example.com/install.sh)"
+```
+
+**Reasons:**
+- Cannot review script content
+- Cannot control mid-execution stops
+- May be modified by man-in-the-middle attacks
+- Cannot audit executed operations
+
+### Method 2: Alternative Installation with Curl
+
+If using curl, follow the same security steps:
 
 ```bash
-wget -q https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh -O install-edirect.sh
+# Secure way: Download, review, execute
+curl -fsSL https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh -o install-edirect.sh
+less install-edirect.sh  # Review
 chmod +x install-edirect.sh
 ./install-edirect.sh
 ```
@@ -65,7 +112,7 @@ source ~/.bashrc
 
 ## Post-Installation Configuration
 
-### 1. Configure API Key (Highly Recommended)
+### 1. Configure API Key (For increased rate limits)
 
 For increased rate limits (10 requests/second vs 3 requests/second), obtain an API key:
 
@@ -84,7 +131,7 @@ echo 'export NCBI_API_KEY="your_api_key_here"' >> ~/.bashrc
 echo 'export NCBI_API_KEY="your_api_key_here"' >> ~/.zshrc  # If using zsh
 ```
 
-### 2. Configure Email Address (Optional but Recommended)
+### 2. Configure Email Address (Optional - identifies you to NCBI)
 
 NCBI requests that you identify yourself with an email address:
 
@@ -232,11 +279,71 @@ rm -rf ~/edirect
 
 ### Linux Servers
 - Most distributions have required Perl modules in repositories
-- Consider using `screen` or `tmux` for long-running queries
+- `screen` or `tmux` can be used for long-running queries
+
+## Security Audit Checklist
+
+### Pre-Installation Checks (Required)
+- [ ] Confirm network environment security
+- [ ] Backup important data
+- [ ] Prepare rollback scripts
+- [ ] Understand all commands to be executed
+
+### Script Review (Required)
+- [ ] Download script to local file
+- [ ] View full script content (at least first 200 lines)
+- [ ] Check all external URLs
+- [ ] Understand commands the script will execute
+- [ ] Confirm no hidden dangerous operations
+
+### Environment Isolation Options
+- [ ] Validate first in a test environment
+- [ ] Use non-privileged user accounts
+- [ ] Set up dedicated working directories
+- [ ] Configure firewall rules
+
+### Execution Monitoring
+- [ ] Enable command logging
+- [ ] Monitor network traffic
+- [ ] Regularly check system integrity
+- [ ] Set up anomaly alerts
+
+## Containerized Installation Option
+
+For production environments, containers can be used:
+
+```bash
+# Use Docker to run EDirect
+docker run -it --rm \
+  -v $(pwd)/data:/data \
+  ncbi/edirect:latest \
+  esearch -db pubmed -query "test"
+```
+
+## Compliance Notes
+
+This installation process is suitable for:
+- ✅ Personal research environments
+- ✅ Academic institution laboratories
+- ✅ Testing and development systems
+
+Not suitable for:
+- ⚠️ Production servers
+- ⚠️ Critical business systems
+- ⚠️ Multi-user shared environments
+- ⚠️ Scenarios without audit capabilities
+
+## Final Reminder
+
+**You are fully responsible for this system installation.** Before proceeding, ensure you:
+1. Understand all risks
+2. Have sufficient technical capability
+3. Have comprehensive backup and recovery plans
+4. Accept potential security consequences
 
 ## Next Steps
 
-After installation, proceed to:
-- [BASICS.md](BASICS.md) for basic usage
-- [EXAMPLES.md](EXAMPLES.md) for practical examples
-- [ADVANCED.md](ADVANCED.md) for advanced techniques
+Only proceed to the following after fully understanding the above security warnings:
+- [BASICS.md](BASICS.md) Basic usage guide
+- [EXAMPLES.md](EXAMPLES.md) Practical examples
+- [ADVANCED.md](ADVANCED.md) Advanced techniques

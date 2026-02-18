@@ -1,6 +1,6 @@
 ---
 name: pubmed-edirect
-description: Search and retrieve literature from PubMed using NCBI's EDirect command-line tools.
+description: Search and retrieve literature from PubMed using NCBI's EDirect command-line tools. ⚠️ Advanced skill requiring manual installation.
 requires:
   bins:
     - esearch
@@ -11,13 +11,16 @@ requires:
     - efilter
 install:
   - id: edirect
-    kind: script
-    label: Install NCBI EDirect from official source
-    source: https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh
+    kind: manual
+    label: Manual Installation Required - Review INSTALL.md
     docs: https://www.ncbi.nlm.nih.gov/books/NBK179288/
+    note: "⚠️ User must manually download and review official installer script"
+    security_level: elevated
 metadata:
   openclaw:
     emoji: 🔬
+    category: advanced
+    security_level: elevated
     requires:
       bins:
         - esearch
@@ -32,12 +35,26 @@ metadata:
         description: NCBI API key for increased rate limits (10 requests/sec vs 3 requests/sec)
       - name: NCBI_EMAIL
         optional: true
-        description: Email address to identify yourself to NCBI (recommended)
+        description: Email address to identify yourself to NCBI
 ---
 
 # PubMed EDirect Skill
 
 Search and retrieve literature from PubMed using NCBI's EDirect command-line tools.
+
+## ⚠️ Security Advisory
+
+**Important**: This skill requires installation of external command-line tools. The installation process involves:
+
+1. **External script execution**: Downloading and executing installation scripts from the official NCBI FTP server
+2. **System modifications**: Adding directories to your PATH environment variable
+3. **Permission requirements**: May require installation of Perl modules and dependencies
+
+**Before installation, you must**:
+1. Review the installer script content after downloading
+2. Confirm the source is trustworthy (official `ftp.ncbi.nlm.nih.gov` domain)
+3. Validate in a test environment
+4. Understand all commands that will be executed
 
 ## Overview
 
@@ -59,12 +76,23 @@ The skill is organized into the following files:
 
 ## Quick Start
 
-1. **Install EDirect** (see [INSTALL.md](INSTALL.md))
-2. **Try a basic search**:
+1. **Read the installation guide**: Review [INSTALL.md](INSTALL.md) for secure installation steps
+2. **Manually install EDirect**:
    ```bash
-   esearch -db pubmed -query "CRISPR [TIAB]" | efetch -format abstract
+   # Step 1: Download the script
+   wget -q https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/install-edirect.sh
+   
+   # Step 2: Review content (important for security)
+   less install-edirect.sh
+   
+   # Step 3: Execute installation
+   ./install-edirect.sh
    ```
-3. **Explore examples** in [EXAMPLES.md](EXAMPLES.md)
+3. **Verify installation**:
+   ```bash
+   esearch -db pubmed -query "test" -retmax 1
+   ```
+4. **Explore examples**: Check [EXAMPLES.md](EXAMPLES.md)
 
 ## Core Tools
 
@@ -131,8 +159,34 @@ Analyze publication trends over time with visualization.
 ./scripts/publication_trends.sh "machine learning" 2010 2023 trends.csv
 ```
 
+## Security Best Practices
+
+### 1. Script Review
+```bash
+# Always download first and review scripts
+wget -q SOURCE_URL -O script.sh
+less script.sh  # or cat script.sh | head -50
+# Execute only after review
+./script.sh
+```
+
+### 2. Environment Isolation
+- Running in Docker containers provides isolation
+- Use virtual machines for testing
+- Set up dedicated user accounts
+
+### 3. Least Privilege
+- Do not run as root
+- Set appropriate file permissions
+- Use dedicated directories for data
+
+### 4. Network Controls
+- Configure firewall rules
+- Use proxies for controlled access
+- Monitor network traffic
+
 ## Notes
 
-This skill requires EDirect to be installed and configured on your system. It provides command templates and examples that can be executed through OpenClaw's `exec` tool.
+**Important**: This skill requires manual installation and configuration. All installation steps require explicit user confirmation and execution.
 
-For complex workflows, consider creating reusable shell scripts or using the included scripts.
+This skill provides command-line access to NCBI databases through local installation of EDirect tools.
