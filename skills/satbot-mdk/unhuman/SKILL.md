@@ -1,19 +1,31 @@
 ---
 name: unhuman
-description: Search, register, and manage domain names via unhuman.domains. Pay with bitcoin using agent-wallet. Use when the user wants to find available domains, register a new domain, manage DNS records, update nameservers, or renew a domain. Supports autonomous registration with --wallet flag for agent-wallet auto-pay (MDK 402 payment flow).
+description: Search, register, and manage domain names via unhuman.domains. Pay with bitcoin using agent-wallet. Use when the user wants to find available domains, register a new domain, manage DNS records, update nameservers, or renew a domain.
+metadata:
+  {
+    "openclaw":
+      {
+        "requires": { "bins": ["npx"] },
+        "install":
+          [
+            {
+              "id": "unhuman-npm",
+              "kind": "node",
+              "package": "unhuman",
+              "bins": ["unhuman"],
+              "label": "Install unhuman CLI (npm)",
+            },
+          ],
+      },
+  }
 ---
 
 # unhuman — Domain Management CLI
 
 Register and manage domains at [unhuman.domains](https://unhuman.domains), paid with bitcoin via Lightning Network.
 
-## Install
-
-```bash
-npx unhuman domains <command>
-```
-
-No install needed — runs via npx.
+- **npm package**: [unhuman](https://www.npmjs.com/package/unhuman) (published by moneydevkit)
+- **Source**: Domain registration API at unhuman.domains
 
 ## Commands
 
@@ -25,19 +37,16 @@ npx unhuman domains search myproject --tld com,dev,xyz
 npx unhuman domains search myproject --json
 ```
 
-Returns availability and pricing for each TLD.
-
 ### Register a domain
 
 ```bash
-# Auto-pay with agent-wallet (fully autonomous)
-npx unhuman domains register mysite.xyz --wallet --email recovery@example.com
-
-# Manual payment (prints invoice, waits for preimage)
+# Manual payment (prints Lightning invoice, waits for preimage)
 npx unhuman domains register mysite.xyz --email recovery@example.com
+
+# Auto-pay with agent-wallet (requires explicit --wallet flag)
+npx unhuman domains register mysite.xyz --wallet --email recovery@example.com
 ```
 
-- `--wallet` pays automatically via `@moneydevkit/agent-wallet`
 - `--email` sets recovery email (recommended)
 - On success, stores management token to `~/.unhuman/tokens.json`
 
@@ -47,15 +56,10 @@ npx unhuman domains register mysite.xyz --email recovery@example.com
 npx unhuman domains info mysite.xyz
 ```
 
-Requires stored management token.
-
 ### DNS records
 
 ```bash
-# List current records
 npx unhuman domains dns mysite.xyz
-
-# Set records (replaces entire zone)
 npx unhuman domains dns set mysite.xyz --records '[{"type":"A","name":"@","value":"1.2.3.4","ttl":3600}]'
 ```
 
@@ -68,17 +72,14 @@ npx unhuman domains nameservers mysite.xyz ns1.example.com ns2.example.com
 ### Renew a domain
 
 ```bash
-npx unhuman domains renew mysite.xyz --wallet
+npx unhuman domains renew mysite.xyz
 npx unhuman domains renew mysite.xyz --wallet --period 2
 ```
 
 ### Recover management token
 
 ```bash
-# Step 1: Request code
 npx unhuman domains recover mysite.xyz --email recovery@example.com
-
-# Step 2: Confirm with code from email
 npx unhuman domains recover mysite.xyz --email recovery@example.com --code 123456
 ```
 
@@ -88,19 +89,26 @@ npx unhuman domains recover mysite.xyz --email recovery@example.com --code 12345
 npx unhuman domains tokens
 ```
 
-## Agent-Wallet Integration
+## Payment with --wallet flag
 
-When `--wallet` is passed, the CLI:
-1. Submits the request → gets a 402 with Lightning invoice
-2. Pays via `npx @moneydevkit/agent-wallet send <invoice>`
-3. Retries with the preimage as proof of payment
-4. Fully autonomous — no human interaction needed
+The `--wallet` flag enables autonomous payment via `@moneydevkit/agent-wallet`. **Only use when the user explicitly requests autonomous payment.**
 
-Requires a running agent-wallet daemon (`npx @moneydevkit/agent-wallet start`).
+Requires:
+- A running agent-wallet daemon (`npx @moneydevkit/agent-wallet start`)
+- Sufficient balance in the wallet
+
+Flow: submit request → receive 402 with Lightning invoice → agent-wallet pays → retry with preimage.
+
+**⚠️ Always confirm with the user before using --wallet.** This flag triggers a real bitcoin payment. Without --wallet, the CLI prints the invoice for the user to pay manually.
+
+## Credentials & Storage
+
+- **Management tokens**: Stored at `~/.unhuman/tokens.json` after successful registration. These tokens are required for DNS/nameserver/renewal operations. Protect this file.
+- **No API keys required**: Domain search is free. Registration/renewal uses the MDK 402 payment protocol (pay-per-use via Lightning invoice).
+- **agent-wallet**: If using --wallet, the wallet daemon must be initialized and running. The wallet's mnemonic and keys are managed separately by agent-wallet at `~/.agent-wallet/`.
 
 ## Notes
 
 - All commands support `--json` for machine-readable output
-- Management tokens stored at `~/.unhuman/tokens.json`
 - Prices are in USD, paid in bitcoin at current exchange rate
-- Recovery email is optional but recommended for token recovery
+- Recovery email is optional but strongly recommended for token recovery
