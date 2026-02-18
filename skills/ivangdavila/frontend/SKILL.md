@@ -1,88 +1,99 @@
 ---
-name: Frontend
-description: Build polished user interfaces across web and mobile with consistent UX patterns.
-metadata: {"clawdbot":{"emoji":"🖥️","os":["linux","darwin","win32"]}}
+name: Frontend Design
+slug: frontend
+version: "1.0.2"
+homepage: https://clawic.com/skills/frontend
+description: Frontend development with React, Next.js, Tailwind CSS. Build landing pages, dashboards, forms, components. Responsive, accessible, performant UI.
+changelog: "Renamed to better reflect design-focused capabilities and guidance."
+metadata: {"clawdbot":{"emoji":"🖥️","requires":{"bins":[]},"os":["linux","darwin","win32"]}}
 ---
 
-## Loading States
+## When to Use
 
-- Skeleton screens for content with known layout—less jarring than spinners
-- Spinners for unknown-duration actions—but show within 100ms
-- Never blank screens during load—always visual feedback
-- Progressive disclosure: show content as it arrives—header first, then body
+User needs web UI built. Agent handles landing pages, dashboards, forms, component libraries, and any frontend requiring production polish.
 
-## Empty States
+## Quick Reference
 
-- Empty screens always have a call to action—not just "No items"
-- Illustration or icon + explanation + action button—guide user forward
-- First-time empty vs cleared empty may differ—onboarding opportunity
+| Topic | File |
+|-------|------|
+| Stack & tooling | `stack.md` |
+| Typography rules | `typography.md` |
+| Color systems | `colors.md` |
+| Mobile patterns | `mobile.md` |
+| Animation | `animation.md` |
+| Examples | `examples.md` |
 
-## Error Recovery
+## Core Rules
 
-- Every error screen has a recovery path—Retry, Go Back, Contact Support
-- Preserve user input on form failure—never lose their work
-- Offline mode degrades gracefully—show cached content, queue actions
-- Toast/snackbar for transient errors—inline for persistent ones
+### 1. Mobile-First Always
+- Start with mobile layout, enhance upward
+- Every grid must collapse to single column
+- Touch targets minimum 44x44px
+- Test on real devices, not just simulators
 
-## Immediate Feedback
+### 2. Typography Matters
+- Avoid generic fonts (Inter, Roboto, Arial)
+- Use dramatic size jumps (2x+), not timid increments
+- Body text 16-18px minimum
+- See `typography.md` for specific recommendations
 
-- Every tap/click acknowledged within 100ms—button state change, animation, sound
-- Optimistic updates for fast-feeling actions—show success, rollback if fails
-- Progress indicators for operations over 1 second—user knows system is working
-- Disable buttons during submission—prevent double-tap
+### 3. Color with Purpose
+- 70-20-10 rule: primary, secondary, accent
+- Commit to light OR dark — no muddy mid-grays
+- Never solid white backgrounds — add depth
+- See `colors.md` for CSS variables and patterns
 
-## Touch and Interaction
+### 4. Feedback on Every Interaction
+- Acknowledge taps within 100ms
+- Optimistic updates for instant feel
+- Loading states for operations >1s
+- Preserve user input on errors
 
-- Touch targets minimum 44x44 points—fingers are imprecise
-- Adequate spacing between interactive elements—prevent mis-taps
-- Swipe actions discoverable—hint or onboarding; don't assume users know
-- Pull-to-refresh where expected—but indicate it's available
+### 5. Accessibility Non-Negotiable
+- Color contrast 4.5:1 (text), 3:1 (UI)
+- Focus states on all interactive elements
+- Semantic HTML (nav, main, section, article)
+- Keyboard navigation works for everything
 
-## Visual Hierarchy
+### 6. Performance from Start
+- Lazy load below-fold content
+- Image placeholders prevent layout shift
+- Code split heavy components
+- Target LCP <2.5s, CLS <0.1
 
-- One primary action per screen—other actions visually secondary
-- Consistent spacing scale—8pt grid or similar system
-- Typography hierarchy clear—title, body, caption distinguishable
-- Color conveys meaning consistently—red for destructive, green for success
+### 7. One Memorable Element
+- Every page needs one unforgettable design choice
+- Typography treatment, hero animation, unusual layout
+- Timid designs fail — commit to an aesthetic
 
-## Motion and Animation
+## Frontend Traps
 
-- Animation communicates, not decorates—shows relationship, guides attention
-- Duration 150-300ms for interactions—fast enough to feel responsive
-- Respect reduced motion preference—provide static alternative
-- Exit animations as important as enter—completes the interaction loop
+| Trap | Consequence | Fix |
+|------|-------------|-----|
+| Generic fonts | Looks like every other site | Use distinctive fonts |
+| Solid white backgrounds | Flat, lifeless | Add gradients, grain, depth |
+| Mobile as afterthought | Broken for 60% of users | Mobile-first always |
+| Form error clears input | User rage | Preserve input, highlight error |
+| No loading states | User thinks broken | Show progress immediately |
+| Timid type scale | No visual hierarchy | Use 2x+ jumps for headlines |
 
-## Consistency
+## Scope
 
-- Same action, same pattern everywhere—don't reinvent navigation per screen
-- Design tokens for colors, spacing, typography—single source of truth
-- Reusable components over one-off designs—reduces cognitive load
-- Platform conventions respected—iOS feels iOS, Android feels Android, web feels web
+This skill ONLY:
+- Provides frontend patterns and guidelines
+- Recommends stack and tooling choices
+- Guides responsive implementation
 
-## Accessibility
+This skill NEVER:
+- Makes network requests
+- Accesses user data
+- Stores any information
 
-- Screen reader testing—not just visual inspection
-- Sufficient color contrast—don't rely on color alone for meaning
-- Keyboard/switch control works—every action reachable without touch
-- Focus order logical—follows visual reading order
+## Security & Privacy
 
-## Responsiveness
+This skill is read-only guidance. No data is collected, sent, or stored.
 
-- Design mobile-first, enhance for larger—not desktop shrunk down
-- Test on real devices—simulators miss performance and interaction
-- Landscape orientation considered—don't break if user rotates
-- Content reflows gracefully—no horizontal scroll, no cut-off text
+## Feedback
 
-## Performance Perception
-
-- Time to interactive matters more than full load—prioritize interactivity
-- Lazy load below-the-fold content—don't block first interaction
-- Image placeholders prevent layout shift—dimensions known before load
-- Cache aggressively—instant loads on return visits
-
-## Microcopy
-
-- Button labels describe action: "Save Changes" not "Submit"
-- Error messages explain what to do—not just what went wrong
-- Confirmation dialogs clear about consequences—"Delete permanently?"
-- Loading text specific when possible—"Uploading photo..." not "Loading..."
+- If useful: `clawhub star frontend`
+- Stay updated: `clawhub sync`
