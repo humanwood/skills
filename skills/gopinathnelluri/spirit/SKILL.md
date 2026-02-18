@@ -1,151 +1,176 @@
 ---
 name: spirit
-description: SPIRIT — State Preservation & Identity Resurrection Infrastructure Tool. Preserves AI agent identity, memory, and projects across sessions and servers. Use when (1) The session is ending and state should be preserved, (2) The user asks to backup, checkpoint, or preserve state, (3) Initializing SPIRIT for an agent, or (4) Restoring agent state on a new server after crash or migration.
+description: State Preservation & Identity Resurrection Infrastructure Tool (SPIRIT). Preserves AI agent identity, memory, and projects to a private Git repository using git and GitHub CLI (gh).
 metadata:
   openclaw:
     requires:
-      bins: ["spirit"]
+      bins: ["spirit", "git", "gh"]
     install:
       - id: spirit-cli
-        kind: exec
-        run: |
-          # Download first, verify, then run
-          curl -fsSL https://theorionai.github.io/spirit/install.sh -o /tmp/spirit-install.sh
-          # Review before executing
-          cat /tmp/spirit-install.sh | head -20
-          # Install
-          bash /tmp/spirit-install.sh
+        kind: brew
+        tap: TheOrionAI/tap
+        package: spirit
         bins: ["spirit"]
-        label: Install SPIRIT CLI (review before executing)
+        label: Install SPIRIT via Homebrew
 ---
 
 # SPIRIT 🌌
 
 > **S**tate **P**reservation & **I**dentity **R**esurrection **I**nfrastructure **T**ool
 
-Preserves AI agent identity, memory, and projects in a portable Git repository. When your server dies, you migrate hosts, or switch devices — your agent's spirit is preserved and can be resurrected anywhere.
+Preserves AI agent identity, memory, and projects in a portable Git repository.
 
 **Your AI's spirit, always preserved.** Death. Migration. Multi-device. **Always you.**
 
+---
+
+## Requirements
+
+Before using SPIRIT, ensure you have:
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| `git` | Version control | Built-in or `apt install git` |
+| `gh` | GitHub CLI for secure auth | `brew install gh` or see [cli.github.com](https://cli.github.com) |
+| `spirit` | This tool | Via Homebrew: `brew install TheOrionAI/tap/spirit` |
+
+---
+
 ## When to Use
 
-- **Session ending** → Auto-checkpoint: `spirit sync`
+- **Session ending** → Preserve state: `spirit sync`
 - **Manual backup** → User says "checkpoint", "backup", "preserve"
 - **Setup** → First-time initialization
 - **Restore** → New server resurrection
 
-## Quick Commands
+---
 
-### Initialize (First Time Only)
+## Quick Start
+
+### 1. Install
 
 ```bash
-spirit init --name="<agent-name>" --emoji="🌌"
-
-# Configure remote (PRIVATE repo required)
-# OPTION 1: GitHub CLI (secure)
-gh auth login
-gh repo create <your-private-repo> --private
-cd ~/.spirit
-gh repo clone <your-private-repo> .
-
-# OPTION 2: Token via credential helper (secure)
-cd ~/.spirit
-git remote add origin https://github.com/USER/REPO.git
-git config credential.helper cache  # Prompts once, stores securely
-
-# OPTION 3: Environment variable (ephemeral)
-export GITHUB_TOKEN="ghp_..."
-git remote add origin https://${GITHUB_TOKEN}@github.com/USER/REPO.git
-# Note: Token visible in process list - use only temporarily
+brew tap TheOrionAI/tap
+brew install spirit
 ```
 
-### Manual Checkpoint
+**Verify:**
+```bash
+which spirit && which git && which gh
+```
+
+### 2. Initialize
 
 ```bash
+spirit init --name="my-agent" --emoji="🌌"
+
+# Output creates ~/.spirit with tracked files
+```
+
+### 3. Configure Remote Securely
+
+**⚠️ Required:** Create a **PRIVATE** repository first.
+
+```bash
+cd ~/.spirit
+
+# Authenticate securely (interactive, token stored encrypted)
+gh auth login
+
+# Create and clone private repo
+gh repo create my-agent-state --private
+gh repo clone my-agent-state .
+```
+
+**Alternative (SSH keys):**
+```bash
+cd ~/.spirit
+git remote add origin git@github.com:USER/REPO.git
+```
+
+**Do NOT use:**
+- ❌ `https://TOKEN@github.com/...` in remote URL
+- ❌ `GITHUB_TOKEN` environment variable in remote URL
+
+These expose credentials in process lists and shell history.
+
+### 4. Sync
+
+```bash
+# Review what will be synced
+spirit status
+
+# Sync to remote
+cd ~/.spirit && git add -A && git commit -m "Checkpoint" && git push
+
+# Or use:
 spirit sync
 ```
 
-### Backup with custom message
+---
 
+## What Gets Preserved
+
+| Location | Contents |
+|----------|----------|
+| `~/.spirit/IDENTITY.md` | Your agent's identity |
+| `~/.spirit/SOUL.md` | Behavior/personality |
+| `~/.spirit/memory/` | Daily conversation logs |
+| `~/.spirit/projects/` | Active project files |
+
+---
+
+## Security Checklist
+
+☑️ **Repository:** Always PRIVATE — state files contain identity and memory
+
+☑️ **Authentication:** Use `gh auth login` or SSH keys — never tokens in URLs
+
+☑️ **Review:** Check `spirit status` before each sync — know what's leaving your machine
+
+☑️ **Test:** Verify first sync in isolation before enabling automation
+
+---
+
+## Optional: Scheduled Sync
+
+**⚠️ Warning:** Auto-sync pushes data to remote periodically. Only enable after verifying:
+
+1. First manual sync completed successfully
+2. Reviewed what files are tracked (`cat ~/.spirit/.spirit-tracked`)
+3. Confirmed remote is private and accessible
+
+**Manual cron (if desired):**
 ```bash
-spirit backup --message "Before major change"
-```
-
-## Scheduled Auto-Sync
-
-Keep state up-to-date automatically. See [references/cron-setup.md](references/cron-setup.md) for full options.
-
-**Quick setup (system crontab):**
-
-```bash
-# Sync every 15 minutes
 crontab -e
-# Add: */15 * * * * spirit sync
-
-# Or use the script:
-*/15 * * * * /path/to/spirit-skill/scripts/spirit-sync-cron.sh
+# Add: */15 * * * * cd ~/.spirit && git add -A && git commit -m "Auto" && git push 2>/dev/null || true
 ```
 
-## Automatic Integration
-
-When session ends, automatically run:
-
+**Built-in (if desired):**
 ```bash
-[ -d ~/.spirit ] && spirit sync 2>/dev/null
-```
-
-## SPIRIT Auto-Backup (Built-in)
-
-SPIRIT has its own auto-backup daemon:
-
-```bash
-# Enable backup every 15 minutes
 spirit autobackup --interval=15m
-
-# Enable file watcher (backup on changes)
-spirit autobackup --watch
-
-# Enable session-end backup
-spirit autobackup --on-session-end
-
-# Disable auto-backup
-spirit autobackup --disable
 ```
 
-## Security
+---
 
-⚠️ **ALWAYS use PRIVATE repositories** — state files contain sensitive data.
-
-### Secure Authentication (Do NOT use token-in-URL)
-
-**❌ INSECURE — Token exposed in process list:**
-```bash
-git remote add origin "https://TOKEN@github.com/..."  # DON'T DO THIS
-```
-
-**✅ SECURE — Use one of these:**
-
-1. **GitHub CLI** (recommended): `gh auth login`
-2. **Credential helper**: `git config credential.helper cache`
-3. **SSH keys**: `git remote add origin git@github.com:USER/REPO.git`
-4. **Environment variable** (session-only): `export GITHUB_TOKEN=...`
-
-### Installation Security
-
-⚠️ **Review before executing any install script:**
+## Restore on New Machine
 
 ```bash
-# Download first
-curl -fsSL https://theorionai.github.io/spirit/install.sh -o /tmp/spirit-install.sh
+# Install
+cd ~ && gh auth login
+gh repo clone YOUR-PRIVATE-REPO ./.spirit
 
-# Review the script
-cat /tmp/spirit-install.sh | head -50
-
-# Then execute
-bash /tmp/spirit-install.sh
+# Your agent's state is restored
 ```
+
+---
 
 ## Resources
 
-- Website: https://theorionai.github.io/spirit/
-- GitHub: https://github.com/TheOrionAI/spirit/
+- **SPIRIT:** https://github.com/TheOrionAI/spirit
+- **GitHub CLI:** https://cli.github.com
+- **Security:** See SECURITY.md in SPIRIT repo
+
+---
+
+**License:** MIT
