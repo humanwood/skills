@@ -3,9 +3,15 @@
   "slug": "prompt-engineering",
   "displayName": "Prompt Engineering",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1770363422805,
-    "commit": "https://github.com/openclaw/skills/commit/3abd4049c7ca3cb084a6eef92030fb044ac2f871"
+    "version": "0.1.5",
+    "publishedAt": 1771403334600,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1770363422805,
+      "commit": "https://github.com/openclaw/skills/commit/3abd4049c7ca3cb084a6eef92030fb044ac2f871"
+    }
+  ]
 }

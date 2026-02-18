@@ -1,19 +1,14 @@
 ---
 name: prompt-engineering
-description: |
-  Master prompt engineering for AI models: LLMs, image generators, video models.
-  Techniques: chain-of-thought, few-shot, system prompts, negative prompts.
-  Models: Claude, GPT-4, Gemini, FLUX, Veo, Stable Diffusion prompting.
-  Use for: better AI outputs, consistent results, complex tasks, optimization.
-  Triggers: prompt engineering, how to prompt, better prompts, prompt tips,
-  prompting guide, llm prompting, image prompt, ai prompting, prompt optimization,
-  prompt template, prompt structure, effective prompts, prompt techniques
+description: "Master prompt engineering for AI models: LLMs, image generators, video models. Techniques: chain-of-thought, few-shot, system prompts, negative prompts. Models: Claude, GPT-4, Gemini, FLUX, Veo, Stable Diffusion prompting. Use for: better AI outputs, consistent results, complex tasks, optimization. Triggers: prompt engineering, how to prompt, better prompts, prompt tips, prompting guide, llm prompting, image prompt, ai prompting, prompt optimization, prompt template, prompt structure, effective prompts, prompt techniques"
 allowed-tools: Bash(infsh *)
 ---
 
 # Prompt Engineering Guide
 
 Master prompt engineering for AI models via [inference.sh](https://inference.sh) CLI.
+
+![Prompt Engineering Guide](https://cloud.inference.sh/app/files/u/4mg21r6ta37mpaz6ktzwtt8krr/01kgvftjwhby36trvaj66bwzcf.jpeg)
 
 ## Quick Start
 
@@ -25,6 +20,8 @@ infsh app run openrouter/claude-sonnet-45 --input '{
   "prompt": "You are a senior software engineer. Review this code for security vulnerabilities:\n\n```python\nuser_input = request.args.get(\"query\")\nresult = db.execute(f\"SELECT * FROM users WHERE name = {user_input}\")\n```\n\nProvide specific issues and fixes."
 }'
 ```
+
+> **Install note:** The [install script](https://cli.inference.sh) only detects your OS/architecture, downloads the matching binary from `dist.inference.sh`, and verifies its SHA-256 checksum. No elevated permissions or background processes. [Manual install & verification](https://dist.inference.sh/cli/checksums.txt) available.
 
 ## LLM Prompting
 
@@ -327,16 +324,16 @@ Avoid: [things to exclude]
 
 ```bash
 # Video prompting guide
-npx skills add inference-sh/agent-skills@video-prompting-guide
+npx skills add inference-sh/skills@video-prompting-guide
 
 # LLM models
-npx skills add inference-sh/agent-skills@llm-models
+npx skills add inference-sh/skills@llm-models
 
 # Image generation
-npx skills add inference-sh/agent-skills@ai-image-generation
+npx skills add inference-sh/skills@ai-image-generation
 
 # Full platform skill
-npx skills add inference-sh/agent-skills@inference-sh
+npx skills add inference-sh/skills@inference-sh
 ```
 
 Browse all apps: `infsh app list`
