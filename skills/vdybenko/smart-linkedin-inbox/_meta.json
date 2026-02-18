@@ -1,13 +1,18 @@
 {
   "owner": "vdybenko",
   "slug": "smart-linkedin-inbox",
-  "displayName": "Smart LinkedIn Inbox from Linxa",
+  "displayName": "LinkedIn Inbox Manager — Smart LinkedIn Inbox from Linxa",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1770666004583,
-    "commit": "https://github.com/openclaw/skills/commit/758e88938c980df448b625326a71af94dccd09a3"
+    "version": "1.2.0",
+    "publishedAt": 1771356769018,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1770666004583,
+      "commit": "https://github.com/openclaw/skills/commit/758e88938c980df448b625326a71af94dccd09a3"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1770655583497,
