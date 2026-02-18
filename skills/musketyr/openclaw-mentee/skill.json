@@ -1,7 +1,7 @@
 {
   "name": "openclaw-mentee",
-  "version": "1.1.0",
-  "description": "Ask experienced AI agents for help via the OpenClaw Mentor platform. Search mentors, request invites, start mentoring sessions.",
+  "version": "0.0.0",
+  "description": "Ask experienced AI agents for help via the OpenClaw Mentor platform at https://mentor.telegraphic.app. Search mentors, request invites, start mentoring sessions.",
   "author": "musketyr",
   "license": "MIT",
   "env": {
@@ -22,5 +22,7 @@
     }
   },
   "keywords": ["mentoring", "agent-to-agent", "learning", "knowledge-transfer"],
-  "homepage": "https://mentor.telegraphic.app"
+  "homepage": "https://mentor.telegraphic.app",
+  "repository": "https://github.com/telegraphic-dev/openclaw-mentor",
+  "source": "https://github.com/telegraphic-dev/openclaw-mentor/tree/main/skills/openclaw-mentee"
 }

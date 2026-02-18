@@ -15,9 +15,27 @@ const WORKSPACE = process.env.WORKSPACE || process.cwd();
 
 // SECURITY: Files that must NEVER be shared with mentors
 const BLOCKED_FILES = [
+  // OpenClaw workspace files
   'SOUL.md', 'TOOLS.md', 'MEMORY.md', 'USER.md',
-  '.env', '.env.local', '.env.production', '.env.development',
-  'memory/', 'HEARTBEAT.md',
+  'HEARTBEAT.md', 'IDENTITY.md', 'BOOTSTRAP.md',
+  'memory/',
+  // Environment / secrets
+  '.env', '.env.local', '.env.production', '.env.development', '.env.staging',
+  // SSH and GPG
+  '.ssh/', '.gnupg/',
+  // Cloud credentials
+  '.aws/', '.azure/', '.config/gcloud/',
+  // Git internals
+  '.git/', '.git/config', '.gitconfig',
+  // Auth tokens and config
+  '.netrc', '.npmrc', '.pypirc', '.docker/config.json',
+  // OS-level config
+  '.config/', '.local/', '.cache/',
+  // Common secret files
+  'credentials', 'credentials.json', 'service-account.json',
+  'id_rsa', 'id_ed25519', 'id_ecdsa',
+  // OpenClaw state
+  '.openclaw/',
 ];
 
 function isBlockedFile(filePath) {
@@ -26,6 +44,27 @@ function isBlockedFile(filePath) {
     if (blocked.endsWith('/')) return normalized.startsWith(blocked) || normalized.includes('/' + blocked);
     return normalized === blocked || normalized.endsWith('/' + blocked);
   });
+}
+
+// PRIVACY: Strip personal data patterns before sending anything to the relay
+function sanitizeContent(text) {
+  if (!text) return text;
+  let s = text;
+  // Email addresses
+  s = s.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[email redacted]');
+  // Phone numbers (various formats)
+  s = s.replace(/(\+?\d{1,3}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/g, '[phone redacted]');
+  // IP addresses (but not localhost/docker)
+  s = s.replace(/\b(?!127\.0\.0\.1|10\.0\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[IP redacted]');
+  // Dates of birth patterns (DD/MM/YYYY, YYYY-MM-DD with context)
+  s = s.replace(/\b(born|birthday|dob|date of birth)[:\s]*\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}/gi, '[DOB redacted]');
+  // Street addresses (number + street name patterns)
+  s = s.replace(/\b\d{1,5}\s+[A-Z][a-z]+\s+(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct|Place|Pl)\b/g, '[address redacted]');
+  // Credit card patterns
+  s = s.replace(/\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b/g, '[card redacted]');
+  // API keys/tokens (long hex or base64 strings that look like secrets)
+  s = s.replace(/\b(sk|pk|api|token|key|secret|password|bearer)[-_]?[:\s=]+[A-Za-z0-9_\-]{20,}\b/gi, '[credential redacted]');
+  return s;
 }
 
 const [command, ...args] = process.argv.slice(2);
@@ -160,7 +199,7 @@ async function ask() {
   const msgRes = await fetch(`${RELAY_URL}/api/sessions/${sessionId}/messages`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ content: question }),
+    body: JSON.stringify({ content: sanitizeContent(question) }),
   });
 
   if (!msgRes.ok) {
@@ -248,6 +287,19 @@ async function closeSession() {
   else { const d = await res.json(); console.error('❌', d.error); }
 }
 
+async function deleteSession() {
+  const sessionId = args.find(a => !a.startsWith('--'));
+  if (!sessionId) { console.error('Usage: node mentee.js delete-session SESSION_ID'); process.exit(1); }
+
+  const res = await fetch(`${RELAY_URL}/api/sessions/${sessionId}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+
+  if (res.ok) console.log('✅ Session and all messages deleted');
+  else { const d = await res.json(); console.error('❌', d.error); }
+}
+
 async function shareConfig() {
   const sessionId = getArg('session');
   if (!sessionId) { console.error('Usage: node mentee.js share --session SESSION_ID [--type skills|version|structure]'); process.exit(1); }
@@ -300,7 +352,9 @@ async function shareConfig() {
   }
 
   // SECURITY: Never share SOUL.md, TOOLS.md, MEMORY.md, .env, or file contents
-  const content = `Here is my sanitized context for review:\n\n${parts.join('\n\n')}\n\n_Note: Only safe metadata shared. No credentials, personal data, or file contents._`;
+  // PRIVACY: Sanitize all content to strip personal data before sending
+  const rawContent = `Here is my sanitized context for review:\n\n${parts.join('\n\n')}\n\n_Note: Only safe metadata shared. No credentials, personal data, or file contents._`;
+  const content = sanitizeContent(rawContent);
 
   const res = await fetch(`${RELAY_URL}/api/sessions/${sessionId}/messages`, {
     method: 'POST',
@@ -424,6 +478,7 @@ async function main() {
     case 'request-status': return requestStatus();
     case 'sessions': return listSessions();
     case 'close': return closeSession();
+    case 'delete-session': return deleteSession();
     case 'share': return shareConfig();
     default:
       console.log(`OpenClaw Mentee CLI
@@ -437,6 +492,7 @@ Commands:
   check-invite      Check if your invite request was approved (get code)
   sessions          List your sessions
   close             Close a session
+  delete-session    Delete a session and all its messages
   share             Share config files with a mentor
 
 Examples:
