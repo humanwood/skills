@@ -3,9 +3,15 @@
   "slug": "weather-open-meteo",
   "displayName": "Weather Open‑Meteo",
   "latest": {
-    "version": "0.1.2",
-    "publishedAt": 1771449970579,
-    "commit": "https://github.com/openclaw/skills/commit/57414220233b90917c896f40cc52fee444621c15"
+    "version": "0.1.3",
+    "publishedAt": 1771454589717,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.2",
+      "publishedAt": 1771449970579,
+      "commit": "https://github.com/openclaw/skills/commit/57414220233b90917c896f40cc52fee444621c15"
+    }
+  ]
 }
