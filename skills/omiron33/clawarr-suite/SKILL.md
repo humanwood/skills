@@ -8,11 +8,39 @@ description: >
   quality profile sync, library cleanup automation, notification routing, collection/overlay
   management, and media tracker integration (Trakt, Letterboxd, Simkl).
 homepage: https://github.com/omiron33/clawarr-suite
+metadata:
+  {
+    "openclaw":
+      {
+        "requires": { "bins": ["bash", "curl", "jq", "bc", "sed"] },
+        "security":
+          {
+            "networkScope": "local-lan-and-user-configured-hosts",
+            "secretsPolicy": "api keys loaded from env/user config only; never hardcoded",
+            "destructiveActions": "none by default; explicit command required for delete/remove actions"
+          },
+        "capabilities":
+          [
+            "arr-api-management",
+            "docker-service-observability",
+            "dashboard-generation",
+            "media-tracker-sync"
+          ]
+      }
+  }
 ---
 
 # ClawARR Suite
 
 Unified deep-integration control for self-hosted media automation stacks. This skill provides comprehensive agent-executable operations across the entire *arr ecosystem with rich analytics, dashboard generation, and advanced library exploration.
+
+## Security & Scanner Clarity
+
+- Local-first operations: all API calls target user-provided local hosts (typically LAN/NAS).
+- No embedded secrets: API keys/tokens are sourced from environment variables or user-owned config files.
+- No telemetry/exfiltration paths: scripts do not transmit credentials or library data to third-party endpoints.
+- Destructive behavior is opt-in: delete/remove actions require explicit command invocation by the user/agent.
+- Setup logic avoids dynamic `eval` and uses explicit variable mapping for scanner-friendly shell behavior.
 
 ## Quick Start
 

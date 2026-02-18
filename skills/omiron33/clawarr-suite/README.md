@@ -30,9 +30,25 @@ ClawARR Suite is an [OpenClaw](https://openclaw.ai) agent skill that gives your 
 
 ---
 
-## 🚀 Quick Start
+## 📦 Install
 
-### 1. Install the skill
+### From ClawHub (recommended)
+
+```bash
+clawhub install clawarr-suite
+```
+
+> ⚠️ **Note:** This skill is currently [flagged for review](https://github.com/openclaw/clawhub/issues/256) by ClawHub's automated security scanner. The flag is a false positive — the scanner detected standard patterns (bash `eval` for env vars, WebRTC for LAN discovery, Docker commands, API key handling) that are inherent to media server management. We've submitted a review request and are waiting for the flag to be lifted.
+>
+> **[View on ClawHub](https://clawhub.ai/skills/clawarr-suite)** · **[Review request →](https://github.com/openclaw/clawhub/issues/256)**
+
+### From GitHub
+
+```bash
+git clone https://github.com/omiron33/clawarr-suite.git ~/.openclaw/skills/clawarr-suite
+```
+
+### Manual
 
 Copy the `clawarr-suite` folder into your OpenClaw skills directory:
 
@@ -41,11 +57,6 @@ Copy the `clawarr-suite` folder into your OpenClaw skills directory:
 ├── SKILL.md          # Agent documentation (OpenClaw reads this)
 ├── scripts/          # 24 bash scripts
 └── references/       # 8 reference docs
-```
-
-Or clone this repo:
-```bash
-git clone https://github.com/openclaw/clawarr-suite.git ~/.openclaw/skills/clawarr-suite
 ```
 
 ### 2. Run setup

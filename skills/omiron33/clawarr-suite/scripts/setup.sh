@@ -76,6 +76,45 @@ SONARR_PORT="" RADARR_PORT="" LIDARR_PORT="" READARR_PORT="" PROWLARR_PORT=""
 BAZARR_PORT="" OVERSEERR_PORT="" PLEX_PORT="" TAUTULLI_PORT="" SABNZBD_PORT=""
 SONARR_KEY="" RADARR_KEY="" LIDARR_KEY="" READARR_KEY="" PROWLARR_KEY=""
 
+set_port_var() {
+  local name=$1 port=$2
+  case "$name" in
+    Sonarr) SONARR_PORT="$port" ;;
+    Radarr) RADARR_PORT="$port" ;;
+    Lidarr) LIDARR_PORT="$port" ;;
+    Readarr) READARR_PORT="$port" ;;
+    Prowlarr) PROWLARR_PORT="$port" ;;
+    Bazarr) BAZARR_PORT="$port" ;;
+    Overseerr) OVERSEERR_PORT="$port" ;;
+    Plex) PLEX_PORT="$port" ;;
+    Tautulli) TAUTULLI_PORT="$port" ;;
+    SABnzbd) SABNZBD_PORT="$port" ;;
+  esac
+}
+
+set_key_var() {
+  local app=$1 key=$2
+  case "$app" in
+    Sonarr) SONARR_KEY="$key" ;;
+    Radarr) RADARR_KEY="$key" ;;
+    Lidarr) LIDARR_KEY="$key" ;;
+    Readarr) READARR_KEY="$key" ;;
+    Prowlarr) PROWLARR_KEY="$key" ;;
+  esac
+}
+
+get_port_var() {
+  local app=$1
+  case "$app" in
+    Sonarr) echo "$SONARR_PORT" ;;
+    Radarr) echo "$RADARR_PORT" ;;
+    Lidarr) echo "$LIDARR_PORT" ;;
+    Readarr) echo "$READARR_PORT" ;;
+    Prowlarr) echo "$PROWLARR_PORT" ;;
+    *) echo "" ;;
+  esac
+}
+
 check_service() {
   local name=$1 port=$2 path=$3
   local http_code
@@ -89,9 +128,7 @@ check_service() {
     fi
     FOUND_APPS="${FOUND_APPS} ${name}"
     # Store port in the app-specific variable (bash 3.2 compatible)
-    local upper_name
-    upper_name=$(echo "$name" | tr '[:lower:]' '[:upper:]')
-    eval "${upper_name}_PORT=$port"
+    set_port_var "$name" "$port"
     return 0
   else
     echo "  ·  $name — not found on port $port"
@@ -153,9 +190,7 @@ get_api_key() {
   if [[ -n "$key" ]]; then
     local masked="${key:0:4}...${key: -4}"
     echo "  ✅ $app API key: $masked"
-    local upper_app
-    upper_app=$(echo "$app" | tr '[:lower:]' '[:upper:]')
-    eval "${upper_app}_KEY=$key"
+    set_key_var "$app" "$key"
   else
     echo "  ⚠️  $app — couldn't auto-detect key"
     echo "     → Find it in $app: Settings → General → API Key"
@@ -163,9 +198,7 @@ get_api_key() {
 }
 
 for app in Sonarr Radarr Lidarr Readarr Prowlarr; do
-  upper_app=$(echo "$app" | tr '[:lower:]' '[:upper:]')
-  port_var="${upper_app}_PORT"
-  port="${!port_var:-}"
+  port=$(get_port_var "$app")
   if [[ -n "$port" ]]; then
     get_api_key "$app" "$port"
   fi
