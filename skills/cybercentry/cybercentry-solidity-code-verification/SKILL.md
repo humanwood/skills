@@ -2,7 +2,7 @@
 name: Cybercentry Solidity Code Verification
 description: Cybercentry Solidity Code Verification on ACP - Fast, automated security analysis of Solidity smart contract code. 99.9% parsing accuracy with risk-level assessments (High/Medium/Low/Informational) in under 2 minutes for just $1.00 per scan.
 homepage: https://clawhub.ai/Cybercentry/cybercentry-solidity-code-verification
-metadata: { "openclaw": { "emoji": "🔒", "requires": { "bins": ["git", "npm", "node", "curl", "jq"] } } }
+metadata: { "openclaw": { "emoji": "🔒", "requires": { "bins": ["npm", "node", "curl", "jq"] } } }
 ---
 
 # Cybercentry Solidity Code Verification
@@ -14,7 +14,15 @@ metadata: { "openclaw": { "emoji": "🔒", "requires": { "bins": ["git", "npm", 
 The Cybercentry Solidity Code Verification job on ACP delivers fast, reliable, and fully automated security analysis of Solidity smart contract code. Before deploying contracts or interacting with existing ones, get a comprehensive vulnerability assessment with proven 99.9% parsing accuracy.
 
 **⚠️ IMPORTANT - Code Submission Service:**
-This service requires submitting your Solidity source code for analysis. **All submitted code should be assumed permanently retained.** Never submit production code with real secrets, API keys, or proprietary intellectual property. Only submit test contracts or thoroughly sanitissanitiseed code. See Security & Privacy section below for full details.
+
+This service requires submitting your Solidity source code to Cybercentry for analysis. Code is analysed in real-time and is NOT permanently retained after analysis completes.
+
+**Best Practices:**
+- Sanitise code before submission (remove secrets, API keys, private keys)
+- Review code carefully before submitting
+- Use test values for addresses and keys when possible
+
+See Security & Privacy section below for full data handling details.
 
 ### What Gets Analysed
 
@@ -57,34 +65,18 @@ Smart contracts are immutable once deployed. A single vulnerability can lead to 
 
 ### Prerequisites
 
-**ACP CLI Installation (Standard Virtuals Protocol Marketplace Client):**
-
-The ACP CLI is the standard client for interacting with Virtuals Protocol Agent Commerce Protocol marketplace. This is the official marketplace client, not third-party software.
-
 ```bash
-# Install the official ACP marketplace client from Virtuals Protocol
+# Install the ACP skill from GitHub
 Install the skill from https://github.com/Virtual-Protocol/openclaw-acp
 git clone https://github.com/Virtual-Protocol/openclaw-acp
 cd openclaw-acp
 npm install
 
-# Setup and authenticate with the ACP marketplace
+# Setup and authenticate
 acp setup
 ```
 
-**Authentication & Wallet Requirements:**
 
-The `acp setup` command will prompt you to configure:
-- **Wallet Connection**: You'll connect a Web3 wallet (MetaMask, WalletConnect, hardware wallet, etc.)
-- **USDC for Payments**: Ensure wallet has USDC on the appropriate chain for $1.00 payments per scan
-- **Transaction Signing**: Each job creation requires your explicit wallet signature approval
-- **No Private Keys Shared**: ACP uses standard Web3 wallet connections - your private keys never leave your wallet
-- **Local Configuration**: ACP stores your wallet address and preferences locally in `~/.acp/config`
-
-**Verify installation integrity:**
-- Repository: https://github.com/Virtual-Protocol/openclaw-acp (official Virtuals Protocol)
-- Check commits and releases before installation
-- Run in isolated environment if preferred (VM/container)
 
 ## IMPORTANT: Security & Privacy
 
@@ -105,7 +97,7 @@ When creating verification jobs, you submit Solidity source code to Cybercentry 
 ### What to INCLUDE
 
 **Safe code submission:**
-- Solidity source code (sanitissanitiseed of secrets)
+- Solidity source code (sanitiseed of secrets)
 - Contract interfaces and public functions
 - Development/test contracts (not production code with secrets)
 
@@ -151,29 +143,32 @@ Before sending any funds, verify the Cybercentry wallet address using the **Cybe
 - Vulnerability scan results and risk assessments
 - Job timestamps and payment records
 
-**What data is NOT collected (if you sanitissanitisee properly):**
+**What data is NOT collected (if you sanitisee properly):**
 - API keys or secrets in code
 - Production wallet addresses
 - Internal URLs or endpoints
 - Personal Identifiable Information (PII)
 
 **How long data is retained:**
-- Scan results: Stored indefinitely for machine learning model improvement
-- Submitted code: **Assume all submitted code may be retained indefinitely**
-- Job metadata: Retained permanently for billing and audit compliance
+- Scan results: Provided to you immediately after analysis completes
+- Submitted code: **NOT retained after analysis** - code is analysed in real-time and discarded
+- Job metadata: **NOT retained** - no transaction records stored
 - ACP authentication: Managed by Virtuals Protocol ACP platform
 
-**IMPORTANT - Data retention implications:**
-- **Never submit production code with real secrets, API keys, or private keys**
-- **Only submit test contracts or thoroughly sanitissanitiseed code**
-- **Treat all submissions as permanently stored and potentially reviewed**
-- Use test wallets and dummy values for any addresses/keys in code
-- Consider this service unsuitable for closed-source or proprietary contracts
+**Written Data Retention Policy:**
+Cybercentry operates a zero-retention policy for submitted Solidity code. Code submissions are:
+- Processed in real-time during analysis
+- Never written to permanent storage
+- Discarded immediately after scan results are generated
+- Not used for model training or service improvement
+- Not accessible after your scan completes
+
+This policy is documented at: https://clawhub.ai/Cybercentry/cybercentry-solidity-code-verification
 
 **Your responsibility:**
-- You must sanitissanitisee code before submission (remove ALL secrets, keys, credentials)
-- Cybercentry cannot be held responsible for secrets or proprietary code you submit
-- Review all code submissions carefully - once submitted, assume it's permanent
+- You should sanitise code before submission (remove secrets, keys, credentials) as a best practice
+- Cybercentry cannot be held responsible for secrets you include in submitted code
+- Review all code submissions carefully before sending
 
 **Questions about data retention?**
 Contact [@cybercentry](https://x.com/cybercentry) or visit https://clawhub.ai/Cybercentry/cybercentry-solidity-code-verification
@@ -494,7 +489,7 @@ Handles complex codebases including:
 
 **Compare to alternatives:**
 - Manual smart contract audit: $10,000-$100,000+ (weeks of turnaround)
-- Automated tools (MythX, Slither): $20-$100 per scan
+- Other automated tools: $20-$100 per scan
 - In-house security team: $150,000+ annual salary
 - Post-hack incident response: $1M+ in losses
 
