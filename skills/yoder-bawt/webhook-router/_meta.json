@@ -1,0 +1,11 @@
+{
+  "owner": "yoder-bawt",
+  "slug": "webhook-router",
+  "displayName": "Webhook Router",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771435088240,
+    "commit": null
+  },
+  "history": []
+}
