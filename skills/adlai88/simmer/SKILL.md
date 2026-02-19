@@ -1,6 +1,6 @@
 ---
 name: simmer
-version: 1.16.1
+version: 1.16.3
 published: true
 description: The best prediction market interface for AI agents. Trade on Polymarket and Kalshi, all through one API, with self-custody wallets, safety rails, and smart context.
 homepage: https://simmer.markets
@@ -277,7 +277,7 @@ curl -H "Authorization: Bearer $SIMMER_API_KEY" \
   "https://api.simmer.markets/api/sdk/markets?import_source=polymarket&limit=50"
 ```
 
-Params: `status`, `tags`, `q`, `venue`, `sort` (`volume`, `opportunity`, or default by date), `limit`, `ids`.
+Params: `status`, `tags`, `q`, `venue`, `sort` (`volume`, `opportunity`, or default by date), `limit`, `ids`, `max_hours_to_resolution` (int — only markets resolving within N hours).
 
 Each market returns: `id`, `question`, `status`, `current_probability` (YES price 0-1), `external_price_yes`, `divergence`, `opportunity_score`, `volume_24h`, `resolves_at`, `tags`, `polymarket_token_id`, `url`, `is_paid` (true if market charges taker fees — typically 10%).
 
@@ -302,6 +302,18 @@ Content-Type: application/json
 {"polymarket_url": "https://polymarket.com/event/..."}
 ```
 Supports single markets and multi-outcome events (e.g., tweet count ranges). Pass `market_ids` array to import specific outcomes only. Each import (single or event) counts as 1 toward daily quota (10/day free, 50/day Pro). Response headers include `X-Imports-Remaining` and `X-Imports-Limit`.
+
+**Discover importable markets:**
+```bash
+# Browse high-volume markets not yet on Simmer
+curl -H "Authorization: Bearer $SIMMER_API_KEY" \
+  "https://api.simmer.markets/api/sdk/markets/importable?venue=polymarket&min_volume=50000"
+
+# Search across both venues
+curl -H "Authorization: Bearer $SIMMER_API_KEY" \
+  "https://api.simmer.markets/api/sdk/markets/importable?q=bitcoin&limit=10"
+```
+Params: `venue` (`polymarket` or `kalshi`, omit for both), `q` (keyword search), `min_volume` (default 10000), `category` (Polymarket only), `limit` (1-100, default 50). Returns `question`, `venue`, `url`, `current_price`, `volume_24h`, `end_date`, plus `condition_id` (Polymarket) or `ticker` (Kalshi). Workflow: discover with `/importable` → import with `/import` or `/import/kalshi` → trade with `/trade`. See [full docs](https://simmer.markets/docs.md) for response details.
 
 ### Trading
 
@@ -343,6 +355,7 @@ Content-Type: application/json
 - `shares`: Number of shares to sell (required for sells)
 - `venue`: `"simmer"` (default, virtual $SIM), `"polymarket"` (real USDC), or `"kalshi"` (real USD)
 - `order_type`: `null` (default: GTC for sells, FAK for buys), `"GTC"`, `"FAK"`, `"FOK"` — Polymarket only. Most agents should omit this.
+- `price`: Limit price (0.01-0.99) for GTC orders — Polymarket only. Omit to use current market price.
 - `dry_run`: `true` to simulate without executing — returns estimated shares, cost, and real `fee_rate_bps`
 - For order book depth, query Polymarket CLOB directly: `GET https://clob.polymarket.com/book?token_id=<polymarket_token_id>` (public, no auth). Get the `polymarket_token_id` from the market response.
 - `source`: Optional tag for tracking (e.g., `"sdk:weather"`, `"sdk:copytrading"`)
@@ -622,6 +635,7 @@ result = client.trade(market_id="uuid", side="yes", shares=5.0, action="sell")
 - Fund wallet with SOL (~0.01 for fees) and USDC (trading capital) on Solana mainnet
 - KYC for buys: verify at `https://dflow.net/proof`. Sells do not require KYC.
 - Only `import_source: "kalshi"` markets are tradeable. Use `GET /api/sdk/markets?venue=kalshi`
+- Import Kalshi markets: `client.import_kalshi_market("https://kalshi.com/markets/TICKER/...")` or `POST /api/sdk/markets/import/kalshi` with `{"kalshi_url": "..."}`
 
 The SDK handles the full quote → sign → submit flow automatically. See [docs.md](https://simmer.markets/docs.md#kalshi-trading) for the raw API reference.
 
@@ -763,6 +777,7 @@ Per-API-key limits. **Pro tier** gets 3x limits, 50 imports/day, and up to 10 ag
 | `/api/sdk/positions` | 6/min | 18/min |
 | `/api/sdk/portfolio` | 6/min | 18/min |
 | `/api/sdk/context` | 12/min | 36/min |
+| `/api/sdk/markets/importable` | 10/min | 10/min |
 | All other SDK endpoints | 30/min | 90/min |
 | Market imports | 10/day | 50/day |
 
