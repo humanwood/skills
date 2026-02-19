@@ -7,6 +7,41 @@ description: Use when managing Crunch coordinators, competitions (crunches), rew
 
 Translates natural language queries into `crunch-cli` commands. Supports profiles and output formatting for Slack, Telegram, Discord, or plain text.
 
+## Prerequisites
+- Node.js 18+ with `npm`
+- Solana wallet keypair (for on-chain operations)
+
+## Package Installation
+
+This skill installs packages via npm (global):
+
+| Package | Source | Purpose |
+|---------|--------|---------|
+| `@crunchdao/crunch-cli` | [npm](https://www.npmjs.com/package/@crunchdao/crunch-cli) | CrunchDAO protocol CLI (coordinators, competitions, staking) |
+
+**Agent rules for package installation:**
+- **Only install `@crunchdao/crunch-cli`** from the official npm registry
+- **No custom registry URLs** — no `--registry` overrides
+- **Ask the user before installing** if not already present
+
+## Credentials
+
+### Solana Wallet Keypair (required for on-chain operations)
+- **What it is:** A JSON file containing a Solana private key, used to sign transactions
+- **How it's configured:** Set via `crunch-cli config set wallet /path/to/wallet.json` or `-w` flag per command
+- **Stored in:** User-managed file on disk; path referenced in `~/.crunch/config.json`
+
+**Agent rules for wallets:**
+- **Never create or generate wallet keypairs** unless the user explicitly asks and understands the security implications
+- **Never read or display** the contents of wallet keypair files
+- **Never commit wallet files** to git — always verify `.gitignore` covers them
+- **Ask the user** for the wallet path — never assume or search for keypair files
+
+### Profile Config (`~/.crunch/config.json`)
+- Stores network, wallet path, and RPC URL per profile
+- Managed via `crunch-cli config` commands — no need to edit manually
+- **Never modify or delete existing profiles** unless explicitly asked
+
 ## Setup
 
 ```bash
@@ -92,7 +127,7 @@ If command fails, suggest fixes:
 
 ## Coordinator Node Setup
 
-To scaffold a coordinator node (backend infrastructure for competitions):
+Scaffold a new competition workspace:
 
 ```bash
 crunch-cli init-workspace my-challenge
