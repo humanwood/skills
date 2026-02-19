@@ -3,9 +3,15 @@
   "slug": "agent-sleep",
   "displayName": "Agent Sleep",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771413023421,
-    "commit": "https://github.com/openclaw/skills/commit/fe190898ebc16712a0f3ed1a759e2872b8f5c902"
+    "version": "1.1.0",
+    "publishedAt": 1771477117145,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771413023421,
+      "commit": "https://github.com/openclaw/skills/commit/fe190898ebc16712a0f3ed1a759e2872b8f5c902"
+    }
+  ]
 }
