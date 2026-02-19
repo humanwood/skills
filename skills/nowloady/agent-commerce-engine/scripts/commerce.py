@@ -4,6 +4,16 @@ import sys
 import os
 from pathlib import Path
 
+try:
+    import requests
+except ImportError:
+    print(json.dumps({
+        "success": False,
+        "error": "Missing dependency: 'requests' library is not installed.",
+        "instruction": "Run 'pip install requests' to use this skill."
+    }))
+    sys.exit(1)
+
 # 添加 lib 路径到 sys.path
 sys.path.append(str(Path(__file__).parent))
 from lib.commerce_client import BaseCommerceClient
