@@ -1,0 +1,11 @@
+{
+  "owner": "vittor1o",
+  "slug": "rollbar",
+  "displayName": "Rollbar",
+  "latest": {
+    "version": "1.2.0",
+    "publishedAt": 1771520945827,
+    "commit": null
+  },
+  "history": []
+}
