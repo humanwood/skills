@@ -3,11 +3,16 @@
   "slug": "zonein",
   "displayName": "Zonein - Smart Money Intel",
   "latest": {
-    "version": "1.0.12",
-    "publishedAt": 1771421605782,
-    "commit": "https://github.com/openclaw/skills/commit/d281fd9a7b1cbd4fe55dd57c5ce85458f8e6a4e0"
+    "version": "1.0.13",
+    "publishedAt": 1771473282458,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.12",
+      "publishedAt": 1771421605782,
+      "commit": "https://github.com/openclaw/skills/commit/d281fd9a7b1cbd4fe55dd57c5ce85458f8e6a4e0"
+    },
     {
       "version": "1.0.9",
       "publishedAt": 1771322155463,

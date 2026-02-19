@@ -79,10 +79,14 @@ export ZONEIN_API_KEY="zn_your_key_here"
 **Read-only commands (safe to run without asking):**
 `signals`, `leaderboard`, `consensus`, `trader`, `perp-signals`, `perp-traders`, `perp-top`, `perp-categories`, `perp-coins`, `perp-trader`, `agents`, `agent-get`, `agent-stats`, `agent-trades`, `agent-vault`, `agent-templates`, `agent-assets`, `agent-categories`, `agent-balance`, `agent-positions`, `agent-deposit`, `agent-orders`, `agent-backtests`, `status`
 
+**State-changing commands (ask user before running — no `--confirm` needed):**
+`agent-create`, `agent-update`, `agent-disable`, `agent-pause`, `agent-delete`
+
 **Financial commands (require `--confirm` flag — script refuses without it):**
 `agent-fund`, `agent-open`, `agent-close`, `agent-withdraw`, `agent-enable`, `agent-deploy`, `agent-backtest`
 
-You MUST ask the user for approval first. Only add `--confirm` after the user explicitly says yes.
+You MUST ask the user for approval before running any state-changing or financial command.
+For financial commands, only add `--confirm` after the user explicitly says yes.
 
 **Example — user deposits USDC and asks to check balance:**
 - You run: `agent-balance <id>` (read-only, safe — no `--confirm` needed)
@@ -94,6 +98,8 @@ You MUST ask the user for approval first. Only add `--confirm` after the user ex
 All commands use the bundled Python script. **Always use these commands — never write inline API calls.**
 
 Prefix: `python3 skills/zonein/scripts/zonein.py`
+
+**Polymarket (PM)**
 
 ### `signals` — PM smart money trading signals
 
@@ -123,6 +129,8 @@ Prefix: `python3 skills/zonein/scripts/zonein.py`
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
 | `wallet` | str | yes | Polymarket wallet address (0x...) |
+
+**Perpetuals (HyperLiquid)**
 
 ### `perp-signals` — Perp trading signals (HyperLiquid)
 
@@ -161,7 +169,7 @@ No parameters.
 |-------|------|----------|-------------|
 | `address` | str | yes | HyperLiquid wallet address (0x...) |
 
-### Agent Management
+**Agent Management**
 
 ### `agents` — List your trading agents
 
@@ -354,6 +362,8 @@ No parameters. Returns: BTC, ETH, SOL, HYPE.
 
 No parameters. Returns all categories with description and live trader counts.
 
+**Utility**
+
 ### `status` — Check API key status
 
 No parameters.
@@ -380,14 +390,14 @@ Run these commands to give user context:
 
 **Step 3: Create Agent**
 Based on collected preferences, create the agent:
-```bash
-python scripts/zonein/scripts/zonein.py agent-create --name "BTC Swing Trader" --type swing_trader --assets BTC,ETH --leverage 5 --risk-per-trade 1 --max-daily-loss 3 --risk-reward 1:2 --max-trades-per-day 3 --min-confidence 0.8 --min-consensus 0.7
+```
+agent-create --name "BTC Swing Trader" --type swing_trader --assets BTC,ETH --leverage 5 --risk-per-trade 1 --max-daily-loss 3 --risk-reward 1:2 --max-trades-per-day 3 --min-confidence 0.8 --min-consensus 0.7
 ```
 
 **Step 4: Configure Strategy**
 Update the agent with trading strategy prompts:
-```bash
-python scripts/zonein/scripts/zonein.py agent-update <agent_id> --methodology "Follow smart money signals..." --entry-strategy "Enter on SM consensus >70%..." --exit-framework "Take profit at +10%, stop loss at -5%..."
+```
+agent-update <agent_id> --methodology "Follow smart money signals..." --entry-strategy "Enter on SM consensus >70%..." --exit-framework "Take profit at +10%, stop loss at -5%..."
 ```
 
 **Step 5: Review & Deploy**
@@ -430,25 +440,16 @@ The vault (deposit address) is auto-created with the agent. The create response 
 When user wants to check positions or trade manually:
 
 **Check positions:**
-```bash
-python scripts/zonein/scripts/zonein.py agent-positions <agent_id>
-```
-Present each position: "BTC LONG — $500 at $95,432 entry — PnL: +$23.45 — 5x leverage"
+`agent-positions <agent_id>` — Present each position: "BTC LONG — $500 at $95,432 entry — PnL: +$23.45 — 5x leverage"
 
 **Open a position:**
-```bash
-python scripts/zonein/scripts/zonein.py agent-open <agent_id> --coin BTC --direction LONG --size 100 --leverage 5
-```
+`agent-open <agent_id> --coin BTC --direction LONG --size 100 --leverage 5 --confirm`
 
 **Close a position:**
-```bash
-python scripts/zonein/scripts/zonein.py agent-close <agent_id> --coin BTC
-```
+`agent-close <agent_id> --coin BTC --confirm`
 
 **Check order status:**
-```bash
-python scripts/zonein/scripts/zonein.py agent-orders <agent_id>
-```
+`agent-orders <agent_id>`
 
 ### Market Overview
 
@@ -524,8 +525,8 @@ Must sum to **1.0**. Three timeframes: 24h, 4h, 1h.
 
 ### Override command
 
-```bash
-python scripts/zonein/scripts/zonein.py agent-update <agent_id> --strength-thresholds '{"BTC": {"min_strength_buy": 70, "min_strength_sell": 65}, "ETH": {"min_strength_buy": 75, "min_strength_sell": 65}, "SOL": {"min_strength_buy": 80, "min_strength_sell": 65}, "OTHERS": {"min_strength_buy": 80, "min_strength_sell": 65}}' --timeframe-weights '{"24h": 0.5, "4h": 0.35, "1h": 0.15}'
+```
+agent-update <agent_id> --strength-thresholds '{"BTC": {"min_strength_buy": 70, "min_strength_sell": 65}, "ETH": {"min_strength_buy": 75, "min_strength_sell": 65}, "SOL": {"min_strength_buy": 80, "min_strength_sell": 65}, "OTHERS": {"min_strength_buy": 80, "min_strength_sell": 65}}' --timeframe-weights '{"24h": 0.5, "4h": 0.35, "1h": 0.15}'
 ```
 
 ## Output Fields
@@ -568,31 +569,24 @@ Smart money says: [LONG/SHORT] | Agreement: [X]%
 Long: $[X] | Short: $[X]
 ```
 
-## Important
+## Security & Privacy
 
+**Disclaimer:**
 - Signals show what smart money is doing — not guaranteed outcomes
 - Past performance does not predict future results
 - Never invest more than you can afford to lose
 - Always use the bundled script. Never construct raw API calls with curl or inline Python.
 
-## External Endpoints
+**External endpoint:** `https://mcp.zonein.xyz/api/v1/*` — API key (X-API-Key header) + query parameters.
 
-| URL | Data Sent |
-|-----|-----------|
-| `https://mcp.zonein.xyz/api/v1/*` | API key (X-API-Key header) + query parameters |
-
-## Security & Privacy
-
-- Only your API key leaves the machine (sent as `X-API-Key` header to `mcp.zonein.xyz`)
+**Data & access:**
+- Only your API key leaves the machine (sent as `X-API-Key` header)
 - No personal data is sent beyond the key and query parameters
-- **Local files read:** `~/.openclaw/openclaw.json` is read **only** as a fallback to locate `ZONEIN_API_KEY` if the environment variable is not set. No other local files are accessed.
+- **Local files read:** `~/.openclaw/openclaw.json` (API key fallback only). No other local files are accessed.
 - **Local files written:** none
-- **Read-only commands** (GET requests): signals, leaderboard, consensus, trader lookups, agent status, balance, positions, order history
-- **Write commands** (POST/PATCH/DELETE requests): agent creation, agent configuration updates, fund bridging, manual order placement, withdrawals, agent enable/disable/delete
-- **Confirmation policy:** Financial commands (`agent-fund`, `agent-open`, `agent-close`, `agent-withdraw`, `agent-deploy`, `agent-enable`) are **programmatically gated** — the script refuses to execute unless `--confirm` is explicitly passed. The agent must first ask the user for approval, then include `--confirm` only after the user agrees. This prevents prompt injection from bypassing confirmation. If you only need signals/data, use a read-only API key to prevent unintended financial actions.
 - The scripts connect **only** to `https://mcp.zonein.xyz/api/v1` — no other endpoints, no package installs, no filesystem writes
 
-## Trust Statement
+**Confirmation policy:** Financial commands (`agent-fund`, `agent-open`, `agent-close`, `agent-withdraw`, `agent-deploy`, `agent-enable`, `agent-backtest`) are **programmatically gated** — the script refuses to execute unless `--confirm` is explicitly passed. The agent must first ask the user for approval, then include `--confirm` only after the user agrees. This prevents prompt injection from bypassing confirmation.
 
 By using this skill, your API key and query parameters are sent to https://mcp.zonein.xyz. Only install if you trust Zonein.
 

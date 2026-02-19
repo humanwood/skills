@@ -62,6 +62,8 @@ except ImportError:
     pass
 
 API_BASE = "https://mcp.zonein.xyz/api/v1"
+CONTENT_JSON = "application/json"
+CONFIRM_HELP = "Required: confirms user approved this financial action"
 
 
 def get_api_key():
@@ -107,10 +109,10 @@ def _do_request(path, params=None, method="GET", body=None):
             url = f"{url}?{query}"
 
     data_bytes = None
-    headers = {"X-API-Key": key, "Accept": "application/json"}
+    headers = {"X-API-Key": key, "Accept": CONTENT_JSON}
     if body is not None:
         data_bytes = json.dumps(body).encode("utf-8")
-        headers["Content-Type"] = "application/json"
+        headers["Content-Type"] = CONTENT_JSON
 
     req = urllib.request.Request(url, data=data_bytes, headers=headers, method=method)
 
@@ -395,7 +397,7 @@ def cmd_agent_deposit(args):
 
 
 def cmd_agent_fund(args):
-    """Bridge USDC from Arbitrum to Hyperliquid (auto, gasless)."""
+    """Bridge USDC from Arbitrum to Hyperliquid."""
     _require_confirm(args, "Bridge USDC from Arbitrum to Hyperliquid")
     data = api_post(f"/agents/{args.agent_id}/fund", {})
     print(json.dumps(data, indent=2))
@@ -443,6 +445,50 @@ def cmd_agent_withdraw(args):
     print(json.dumps(data, indent=2))
 
 
+def _process_backtest_msg(msg):
+    """Handle a single NDJSON message from backtest stream.
+    Returns the report dict on 'complete', None otherwise. Exits on 'error'."""
+    t = msg.get("type")
+    if t == "status":
+        sys.stderr.write(f"  {msg.get('message')}\n")
+    elif t == "init":
+        sys.stderr.write(f"  Backtest {msg.get('backtest_id')}: {msg.get('total_steps')} steps\n")
+    elif t == "trade":
+        tr = msg["trade"]
+        pnl_s = f" pnl=${tr['pnl']:.2f}" if tr.get("pnl") is not None else ""
+        sys.stderr.write(f"  [trade] {tr['action']} @ ${tr['price']:.2f}{pnl_s}\n")
+    elif t == "complete":
+        return msg["report"]
+    elif t == "error":
+        print(json.dumps({"error": msg.get("message")}))
+        sys.exit(1)
+    return None
+
+
+def _build_backtest_result(backtest_id, dashboard_url, report):
+    """Assemble the final backtest JSON output."""
+    result = {
+        "backtest_id": backtest_id,
+        "dashboard_url": f"https://mcp.zonein.xyz{dashboard_url}" if dashboard_url else None,
+    }
+    if report:
+        s = report.get("stats", {})
+        result.update({
+            "symbol": report.get("symbol"),
+            "days": report.get("days"),
+            "initial_balance": report.get("initial_balance"),
+            "final_balance": report.get("final_balance"),
+            "pnl": report.get("pnl"),
+            "total_trades": report.get("total_trades"),
+            "win_rate": s.get("win_rate"),
+            "profit_factor": s.get("profit_factor"),
+            "sharpe_ratio": s.get("sharpe_ratio"),
+            "max_drawdown": report.get("max_drawdown"),
+            "max_consecutive_wins": s.get("max_consecutive_wins"),
+            "max_consecutive_losses": s.get("max_consecutive_losses"),
+        })
+    return result
+
 
 def cmd_agent_backtest(args):
     """Run a backtest on an agent. Streams NDJSON progress, prints dashboard link."""
@@ -457,7 +503,7 @@ def cmd_agent_backtest(args):
     }).encode("utf-8")
     headers = {
         "X-API-Key": key,
-        "Content-Type": "application/json",
+        "Content-Type": CONTENT_JSON,
         "Accept": "application/x-ndjson",
     }
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
@@ -470,42 +516,10 @@ def cmd_agent_backtest(args):
                 line = raw_line.decode("utf-8").strip()
                 if not line:
                     continue
-                msg = json.loads(line)
-                t = msg.get("type")
-                if t == "status":
-                    sys.stderr.write(f"  {msg.get('message')}\n")
-                elif t == "init":
-                    sys.stderr.write(f"  Backtest {msg.get('backtest_id')}: {msg.get('total_steps')} steps\n")
-                elif t == "trade":
-                    tr = msg["trade"]
-                    pnl_s = f" pnl=${tr['pnl']:.2f}" if tr.get("pnl") is not None else ""
-                    sys.stderr.write(f"  [trade] {tr['action']} @ ${tr['price']:.2f}{pnl_s}\n")
-                elif t == "complete":
-                    last_report = msg["report"]
-                elif t == "error":
-                    print(json.dumps({"error": msg.get("message")}))
-                    sys.exit(1)
-            result = {
-                "backtest_id": backtest_id,
-                "dashboard_url": f"https://mcp.zonein.xyz{dashboard_url}" if dashboard_url else None,
-            }
-            if last_report:
-                s = last_report.get("stats", {})
-                result.update({
-                    "symbol": last_report.get("symbol"),
-                    "days": last_report.get("days"),
-                    "initial_balance": last_report.get("initial_balance"),
-                    "final_balance": last_report.get("final_balance"),
-                    "pnl": last_report.get("pnl"),
-                    "total_trades": last_report.get("total_trades"),
-                    "win_rate": s.get("win_rate"),
-                    "profit_factor": s.get("profit_factor"),
-                    "sharpe_ratio": s.get("sharpe_ratio"),
-                    "max_drawdown": last_report.get("max_drawdown"),
-                    "max_consecutive_wins": s.get("max_consecutive_wins"),
-                    "max_consecutive_losses": s.get("max_consecutive_losses"),
-                })
-            print(json.dumps(result, indent=2))
+                report = _process_backtest_msg(json.loads(line))
+                if report is not None:
+                    last_report = report
+            print(json.dumps(_build_backtest_result(backtest_id, dashboard_url, last_report), indent=2))
     except urllib.error.HTTPError as e:
         raw = e.read().decode("utf-8", errors="replace")
         try:
@@ -641,13 +655,13 @@ def main():
     # --- Agent Deploy ---
     p = sub.add_parser("agent-deploy", help="Deploy agent (validate + enable)")
     p.add_argument("agent_id", type=str)
-    p.add_argument("--confirm", action="store_true", help="Required: confirms user approved this financial action")
+    p.add_argument("--confirm", action="store_true", help=CONFIRM_HELP)
     p.set_defaults(func=cmd_agent_deploy)
 
     # --- Agent Enable ---
     p = sub.add_parser("agent-enable", help="Enable agent")
     p.add_argument("agent_id", type=str)
-    p.add_argument("--confirm", action="store_true", help="Required: confirms user approved this financial action")
+    p.add_argument("--confirm", action="store_true", help=CONFIRM_HELP)
     p.set_defaults(func=cmd_agent_enable)
 
     # --- Agent Disable ---
@@ -711,7 +725,7 @@ def main():
     # --- Agent Fund (bridge Arb → HL) ---
     p = sub.add_parser("agent-fund", help="Bridge USDC from Arbitrum to Hyperliquid")
     p.add_argument("agent_id", type=str)
-    p.add_argument("--confirm", action="store_true", help="Required: confirms user approved this financial action")
+    p.add_argument("--confirm", action="store_true", help=CONFIRM_HELP)
     p.set_defaults(func=cmd_agent_fund)
 
     # --- Agent Open (manual order) ---
@@ -721,14 +735,14 @@ def main():
     p.add_argument("--direction", type=str, default="LONG", help="LONG or SHORT")
     p.add_argument("--size", type=float, required=True, help="Position size in USD")
     p.add_argument("--leverage", type=int, default=None, help="Leverage (1-20)")
-    p.add_argument("--confirm", action="store_true", help="Required: confirms user approved this financial action")
+    p.add_argument("--confirm", action="store_true", help=CONFIRM_HELP)
     p.set_defaults(func=cmd_agent_open)
 
     # --- Agent Close (manual order) ---
     p = sub.add_parser("agent-close", help="Close a position")
     p.add_argument("agent_id", type=str)
     p.add_argument("--coin", type=str, required=True, help="BTC, ETH, SOL, HYPE")
-    p.add_argument("--confirm", action="store_true", help="Required: confirms user approved this financial action")
+    p.add_argument("--confirm", action="store_true", help=CONFIRM_HELP)
     p.set_defaults(func=cmd_agent_close)
 
     # --- Agent Orders ---
@@ -741,9 +755,8 @@ def main():
     p = sub.add_parser("agent-withdraw", help="Withdraw funds from agent vault")
     p.add_argument("agent_id", type=str)
     p.add_argument("--to", type=str, required=True, help="Destination 0x... wallet address")
-    p.add_argument("--confirm", action="store_true", help="Required: confirms user approved this financial action")
+    p.add_argument("--confirm", action="store_true", help=CONFIRM_HELP)
     p.set_defaults(func=cmd_agent_withdraw)
-
 
     # --- Agent Backtest ---
     p = sub.add_parser("agent-backtest", help="Run backtest on agent (streaming)")
@@ -751,7 +764,7 @@ def main():
     p.add_argument("--symbol", type=str, default="BTC", help="Coin: BTC, ETH, SOL, HYPE")
     p.add_argument("--days", type=int, default=30, help="Period in days (7-90)")
     p.add_argument("--initial-balance", type=float, default=10000, help="Starting balance USD")
-    p.add_argument("--confirm", action="store_true", help="Required: confirms user approved this action")
+    p.add_argument("--confirm", action="store_true", help=CONFIRM_HELP)
     p.set_defaults(func=cmd_agent_backtest)
 
     # --- Agent Backtests (list) ---
