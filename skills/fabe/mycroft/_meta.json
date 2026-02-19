@@ -1,0 +1,11 @@
+{
+  "owner": "fabe",
+  "slug": "mycroft",
+  "displayName": "mycroft",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1771430192490,
+    "commit": null
+  },
+  "history": []
+}
