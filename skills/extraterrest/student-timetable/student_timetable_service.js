@@ -1,5 +1,6 @@
 const { loadProfileScheduleFiles } = require('./schedule_store.js');
 const { formatISODate, addDays, weekStartMonday, startOfDay } = require('./date_utils.js');
+const { resolveDayV2, resolveWeekV2 } = require('./resolver_v2.js');
 
 const DOW_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
@@ -135,7 +136,11 @@ function sortByTime(items) {
 }
 
 function dayScheduleForProfile(workspaceRoot, profileId, date) {
-  const { weekly, special } = loadProfileScheduleFiles(workspaceRoot, profileId);
+  const { weekly, special, scheduleV2 } = loadProfileScheduleFiles(workspaceRoot, profileId);
+  if (scheduleV2 && scheduleV2.version === 2) {
+    return resolveDayV2(scheduleV2, date);
+  }
+
   const weeklyItems = normalizeWeeklyEvents(weekly, date);
   const specialItems = specialEventsOnDate(special, date);
   const keptWeekly = applyCancelsWeekly(weeklyItems, specialItems);
@@ -143,6 +148,11 @@ function dayScheduleForProfile(workspaceRoot, profileId, date) {
 }
 
 function weekScheduleForProfile(workspaceRoot, profileId, anchorDate, which) {
+  const { scheduleV2 } = loadProfileScheduleFiles(workspaceRoot, profileId);
+  if (scheduleV2 && scheduleV2.version === 2) {
+    return resolveWeekV2(scheduleV2, anchorDate, which);
+  }
+
   const monday = weekStartMonday(anchorDate);
   const start = which === 'next' ? addDays(monday, 7) : monday;
   const days = [];

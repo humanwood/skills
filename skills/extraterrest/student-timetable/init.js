@@ -65,6 +65,18 @@ async function interactiveInit(workspaceRoot) {
 
     let profilesToCreate = [];
 
+    console.log('');
+    console.log('Base profile info (stored as metadata):');
+    const school = normalizeToken(await ask(rl, 'School (optional): '));
+    const grade = normalizeToken(await ask(rl, 'Grade (optional): '));
+    const klass = normalizeToken(await ask(rl, 'Class (optional): '));
+
+    console.log('');
+    console.log('Global wake keywords (optional):');
+    console.log('These are shared across all profiles and can be used for routing/triggering later.');
+    const wakeRaw = normalizeToken(await ask(rl, 'Wake keywords (comma-separated, optional): '));
+    const wakeKeywords = wakeRaw ? wakeRaw.split(',').map(a => normalizeToken(a)).filter(Boolean) : [];
+
     if (mode === '1') {
       const name = normalizeToken(await ask(rl, 'Your name (display name): '));
       const aliasesRaw = normalizeToken(await ask(rl, 'Aliases (optional, comma-separated): '));
@@ -117,6 +129,11 @@ async function interactiveInit(workspaceRoot) {
         type: p.type,
         display_name: p.display_name,
         aliases: p.aliases,
+        base_info: {
+          school: school || '',
+          grade: grade || '',
+          class: klass || ''
+        },
         created_at: createdAt,
         updated_at: createdAt
       };
@@ -156,6 +173,15 @@ async function interactiveInit(workspaceRoot) {
 
     registry.version = 1;
     registry.dataRoot = 'schedules/profiles';
+    registry.global = registry.global || {};
+    if (!Array.isArray(registry.global.wake_keywords)) {
+      registry.global.wake_keywords = [];
+    }
+    for (const kw of wakeKeywords) {
+      if (!registry.global.wake_keywords.includes(kw)) {
+        registry.global.wake_keywords.push(kw);
+      }
+    }
     writeJsonAtomic(registryPath, registry);
 
     console.log(`Registry written: schedules/profiles/registry.json`);

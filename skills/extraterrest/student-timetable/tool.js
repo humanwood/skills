@@ -2,6 +2,7 @@ const { resolveWorkspaceRoot } = require('./workspace_root.js');
 const { loadProfilesRegistry, resolveProfile, clarifyProfileMessage } = require('./profiles_registry.js');
 const { dayScheduleForProfile, weekScheduleForProfile, todayDate } = require('./student_timetable_service.js');
 const { addDays } = require('./date_utils.js');
+const { loadWakeKeywords, matchesWakeKeyword } = require('./wake_keywords.js');
 
 function parseIntent(input) {
   const s = String(input || '').toLowerCase();
@@ -31,6 +32,9 @@ function renderDay(items) {
 
 async function run(input) {
   const workspaceRoot = resolveWorkspaceRoot();
+  const wakeKeywords = loadWakeKeywords(workspaceRoot);
+  const wakeMatched = matchesWakeKeyword(input, wakeKeywords);
+
   const registry = loadProfilesRegistry(workspaceRoot);
 
   const ident = extractProfileIdent(input);
@@ -42,11 +46,16 @@ async function run(input) {
 
   const profile = resolved.profile;
   const intent = parseIntent(input);
+
+  if (wakeMatched && intent === 'today') {
+    // Wake keyword matched but no specific intent; default to today's schedule.
+  }
   const today = todayDate();
 
   if (intent === 'today') {
     const items = dayScheduleForProfile(workspaceRoot, profile.profile_id, today);
-    return { ok: true, message: `${profile.display_name || profile.profile_id} today\n${renderDay(items)}` };
+    const wakeNote = wakeMatched ? ` (wake matched)` : '';
+    return { ok: true, message: `${profile.display_name || profile.profile_id}${wakeNote} today\n${renderDay(items)}` };
   }
 
   if (intent === 'tomorrow') {

@@ -4,6 +4,8 @@ const path = require('path');
 
 const { loadProfilesRegistry, resolveProfile } = require('../profiles_registry.js');
 const { dayScheduleForProfile } = require('../student_timetable_service.js');
+const { migrateV2 } = require('../migrate_v2.js');
+const { resolveDayV2 } = require('../resolver_v2.js');
 
 function withTempDir(fn) {
   const tmpBase = fs.mkdtempSync(path.join(require('os').tmpdir(), 'student-timetable-'));
@@ -95,6 +97,65 @@ function writeJson(p, obj) {
     assert.equal(items.some(i => i.title === 'Math'), false);
     assert.equal(items.some(i => i.title === 'Holiday'), true);
   });
+})();
+
+(function testMigrateV2AddsGlobalWakeKeywordsAndBaseInfo() {
+  withTempDir((ws) => {
+    writeJson(path.join(ws, 'schedules/profiles/registry.json'), {
+      version: 1,
+      dataRoot: 'schedules/profiles',
+      profiles: [{ profile_id: 'z', type: 'child', display_name: 'Z', aliases: [] }]
+    });
+
+    const report = migrateV2(ws, { dryRun: false });
+    assert.equal(typeof report.changed, 'boolean');
+
+    const reg2 = JSON.parse(fs.readFileSync(path.join(ws, 'schedules/profiles/registry.json'), 'utf8'));
+    assert.equal(!!reg2.global, true);
+    assert.equal(Array.isArray(reg2.global.wake_keywords), true);
+    assert.equal(!!reg2.profiles[0].base_info, true);
+  });
+})();
+
+(function testResolverV2WeeklyRuleWithEffectiveDatesAndExceptionCancel() {
+  const schedule = {
+    version: 2,
+    profile_id: 'p',
+    timezone: 'Asia/Singapore',
+    rules: {
+      weekly_rules: [
+        {
+          id: 'wr1',
+          weekday: 'mon',
+          start_time: '09:00',
+          end_time: '10:00',
+          title: 'Math',
+          effective_from: '2026-01-01',
+          effective_to: '2026-03-31',
+          tags: ['math']
+        }
+      ],
+      dated_items: [],
+      weekly_exceptions: [
+        {
+          id: 'wx1',
+          date: '2026-02-23',
+          kind: 'cancel',
+          targets: { rule_ids: ['wr1'], time_windows: [] }
+        }
+      ]
+    },
+    special_events: []
+  };
+
+  const d1 = resolveDayV2(schedule, new Date('2026-02-16T00:00:00'));
+  assert.equal(d1.some(i => i.title === 'Math'), true);
+
+  const d2 = resolveDayV2(schedule, new Date('2026-02-23T00:00:00'));
+  assert.equal(d2.some(i => i.title === 'Math'), false);
+
+  const d3 = resolveDayV2(schedule, new Date('2026-04-06T00:00:00'));
+  assert.equal(d3.some(i => i.title === 'Math'), false);
 })();
 
 console.log('student-timetable tests: OK');
