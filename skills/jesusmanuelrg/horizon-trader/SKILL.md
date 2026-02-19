@@ -1,6 +1,7 @@
 ---
 name: horizon-trader
-description: Trade prediction markets (Polymarket, Kalshi) - check positions, submit orders, manage risk, discover markets, and compute Kelly-optimal sizing.
+version: 0.4.7
+description: Trade prediction markets (Polymarket, Kalshi) - positions, orders, risk management, Kelly sizing, wallet analytics, Monte Carlo, arbitrage, quantitative analytics (entropy, Hurst, VaR, Greeks, stress testing), and market discovery.
 emoji: "\U0001F4C8"
 metadata:
   openclaw:
@@ -62,15 +63,19 @@ python3 {baseDir}/scripts/horizon.py fills
 
 ### Trading
 ```bash
-# Submit a limit order: quote <market_id> <side> <price> <size>
-# side: buy or sell, price: 0-1 (probability)
+# Submit a limit order: quote <market_id> <side> <price> <size> [market_side]
+# side: buy or sell, price: 0-1 (probability), market_side: yes or no (default: yes)
 python3 {baseDir}/scripts/horizon.py quote <market_id> buy 0.55 10
+python3 {baseDir}/scripts/horizon.py quote <market_id> sell 0.40 5 no
 
 # Cancel a single order
 python3 {baseDir}/scripts/horizon.py cancel <order_id>
 
 # Cancel all orders
 python3 {baseDir}/scripts/horizon.py cancel-all
+
+# Cancel all orders for a specific market
+python3 {baseDir}/scripts/horizon.py cancel-market <market_id>
 ```
 
 ### Market Discovery
@@ -97,6 +102,13 @@ python3 {baseDir}/scripts/horizon.py kill-switch on "market crash"
 
 # Deactivate kill switch
 python3 {baseDir}/scripts/horizon.py kill-switch off
+
+# Add stop-loss: stop-loss <market_id> <side> <order_side> <size> <trigger_price>
+# side: yes or no, order_side: buy or sell
+python3 {baseDir}/scripts/horizon.py stop-loss <market_id> yes sell 10 0.40
+
+# Add take-profit: take-profit <market_id> <side> <order_side> <size> <trigger_price>
+python3 {baseDir}/scripts/horizon.py take-profit <market_id> yes sell 10 0.80
 ```
 
 ### Feed Data & Health
@@ -107,8 +119,19 @@ python3 {baseDir}/scripts/horizon.py feed <feed_name>
 # List all feeds
 python3 {baseDir}/scripts/horizon.py feeds
 
+# Start a live data feed: start-feed <name> <feed_type> [config_json]
+# feed_type: binance_ws, polymarket_book, kalshi_book, predictit, manifold, espn, nws
+python3 {baseDir}/scripts/horizon.py start-feed mf manifold '{"slug":"will-btc-hit-100k"}'
+python3 {baseDir}/scripts/horizon.py start-feed nba espn '{"sport":"basketball","league":"nba"}'
+
 # Check feed staleness and health (optional threshold in seconds, default 30)
 python3 {baseDir}/scripts/horizon.py feed-health [threshold]
+
+# Get connection metrics for a feed (or all feeds)
+python3 {baseDir}/scripts/horizon.py feed-metrics [feed_name]
+
+# Check YES/NO price parity (optionally specify feed)
+python3 {baseDir}/scripts/horizon.py parity <market_id> [feed_name]
 ```
 
 ### Contingent Orders
@@ -166,10 +189,117 @@ python3 {baseDir}/scripts/horizon.py simulate 10000 42
 python3 {baseDir}/scripts/horizon.py arb will-btc-hit-100k kalshi polymarket 0.48 0.52 10
 ```
 
-## Pipeline Features (v0.3.0)
+### Quantitative Analytics
+```bash
+# Shannon entropy for a probability
+python3 {baseDir}/scripts/horizon.py entropy 0.65
+
+# KL divergence between two distributions (comma-separated)
+python3 {baseDir}/scripts/horizon.py kl-divergence 0.3,0.7 0.5,0.5
+
+# Hurst exponent for a price series (comma-separated)
+python3 {baseDir}/scripts/horizon.py hurst 0.50,0.52,0.48,0.55,0.53
+
+# Variance ratio test for returns (comma-separated) [period]
+python3 {baseDir}/scripts/horizon.py variance-ratio 0.01,-0.02,0.03,-0.01,0.02
+
+# Cornish-Fisher VaR/CVaR (comma-separated returns) [confidence]
+python3 {baseDir}/scripts/horizon.py cf-var 0.01,-0.02,0.03,-0.05,0.02 0.95
+
+# Prediction Greeks: greeks <price> <size> [is_yes] [t_hours] [vol]
+python3 {baseDir}/scripts/horizon.py greeks 0.55 100 true 24 0.2
+
+# Deflated Sharpe ratio: deflated-sharpe <sharpe> <n_obs> <n_trials> [skew] [kurt]
+python3 {baseDir}/scripts/horizon.py deflated-sharpe 1.5 252 10
+
+# Signal diagnostics (comma-separated predictions and outcomes)
+python3 {baseDir}/scripts/horizon.py signal-diagnostics 0.6,0.3,0.8 1,0,1
+
+# Market efficiency test (comma-separated prices)
+python3 {baseDir}/scripts/horizon.py market-efficiency 0.50,0.52,0.48,0.55,0.53,0.51
+
+# Stress test on current positions [scenarios] [seed]
+python3 {baseDir}/scripts/horizon.py stress-test 10000
+```
+
+## Maker/Taker Fees (v0.4.6)
+
+Split fees by liquidity role for more realistic paper trading and backtesting:
+
+```python
+from horizon import Engine
+
+# Flat fee (backward compatible)
+engine = Engine(paper_fee_rate=0.001)
+
+# Split maker/taker fees
+engine = Engine(
+    paper_maker_fee_rate=0.0002,  # 2 bps for makers
+    paper_taker_fee_rate=0.002,   # 20 bps for takers
+)
+```
+
+Each `Fill` now includes an `is_maker` field (`True`/`False`) indicating whether the order was a maker or taker. Works with both the paper exchange and BookSim (L2 backtesting).
+
+## Chainlink On-Chain Oracle Feed (v0.4.7)
+
+Read prices directly from Chainlink aggregator contracts on any EVM chain:
+
+```python
+import horizon as hz
+
+hz.run(
+    feeds={
+        "eth_usd": hz.ChainlinkFeed(
+            contract_address="0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            rpc_url="https://eth.llamarpc.com",
+        ),
+    },
+    ...
+)
+```
+
+Common contract addresses (Ethereum mainnet):
+- ETH/USD: `0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419`
+- BTC/USD: `0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c`
+- LINK/USD: `0x2c1d072e956AFFC0D435Cb7AC38EF18d24d9127c`
+
+Works with Ethereum, Arbitrum, Polygon, BSC — just change `rpc_url`.
+
+## New Data Feeds (v0.4.5)
+
+Five new feed types for cross-market signals beyond crypto:
+
+- **PredictItFeed** - PredictIt market prices (lastTradePrice, bestBuyYesCost, bestSellYesCost)
+- **ManifoldFeed** - Manifold Markets probability and volume
+- **ESPNFeed** - Live sports scores (home/away score, period, game status)
+- **NWSFeed** - National Weather Service forecasts (temperature, wind, precip) and alerts
+- **RESTJsonPathFeed** - Flexible JSON path extraction from any REST API
+
+Setup in `hz.run()`:
+```python
+import horizon as hz
+
+hz.run(
+    feeds={
+        "pi": hz.PredictItFeed(market_id=7456, contract_id=28562),
+        "manifold": hz.ManifoldFeed("will-btc-hit-100k-by-2026"),
+        "nba": hz.ESPNFeed("basketball", "nba"),
+        "weather": hz.NWSFeed(state="FL", mode="alerts"),
+        "custom": hz.RESTJsonPathFeed(
+            url="https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+            price_path="bitcoin.usd",
+        ),
+    },
+    ...
+)
+```
+
+## Pipeline Features (v0.4.4)
 
 The Horizon SDK also includes advanced pipeline components for automated strategies:
 
+- **Markov Regime Detection** (`markov_regime`) - Rust HMM (Hidden Markov Model) for real-time regime classification. Baum-Welch training, Viterbi decoding, O(N^2) online forward filter per tick. Supports pre-trained models or auto-train with warmup.
 - **Regime Detection** (`regime_signal`) - volatility/trend regime classification (0=calm, 1=volatile)
 - **Feed Guard** (`feed_guard`) - auto-activates kill switch when feeds go stale
 - **Inventory Skew** (`inventory_skewer`) - shifts quotes to reduce position risk
@@ -178,7 +308,29 @@ The Horizon SDK also includes advanced pipeline components for automated strateg
 - **Multi-Strategy** - run different pipelines per market via dict config
 - **Cross-Market Hedging** (`cross_hedger`) - generates hedge quotes when portfolio delta exceeds threshold
 
-These are Python pipeline functions used with `hz.run()`. See the SDK documentation for usage.
+### Quantitative Analytics (v0.4.4)
+
+- **Information Theory** - Shannon entropy, joint entropy, KL divergence, mutual information, transfer entropy
+- **Microstructure** - Kyle's lambda, Amihud ratio, Roll spread, effective/realized spread, LOB imbalance, microprice
+- **Risk Analytics** - Cornish-Fisher VaR/CVaR, prediction Greeks (delta, gamma, theta, vega for binary markets)
+- **Signal Analysis** - information coefficient (Spearman), signal half-life, Hurst exponent, variance ratio test
+- **Statistical Testing** - deflated Sharpe ratio, Bonferroni correction, Benjamini-Hochberg FDR control
+- **Streaming Detectors** - VPIN toxic flow, CUSUM change-point, order flow imbalance (OFI) tracker
+- **Pipeline Functions** - `toxic_flow()`, `microstructure()`, `change_detector()` for real-time analytics in `hz.run()`
+- **Stress Testing** - Monte Carlo under adverse scenarios (correlation spike, all-resolve-no, liquidity shock, tail risk)
+- **CPCV** - Combinatorial Purged Cross-Validation with Probability of Backtest Overfitting (PBO)
+
+### Backtesting (v0.4.4)
+
+- **L2 Book Simulation** - replay historical orderbook snapshots with `book_data` parameter
+- **Fill Models** - `deterministic`, `probabilistic` (queue position), `glft` (Gueant-Lehalle-Fernandez-Tapia)
+- **Market Impact** - temporary + permanent price impact simulation
+- **Latency Simulation** - configurable order-to-fill delay in ticks
+- **Calibration Analytics** - Rust-powered calibration curve, Brier score, log-loss, ECE
+- **Edge Decay** - measure how edge decays vs time-to-resolution
+- **Walk-Forward Optimization** - rolling/expanding window parameter optimization with purge gap
+
+These are Python pipeline functions used with `hz.run()` and `hz.backtest()`. See the SDK documentation for usage.
 
 ## Output format
 
