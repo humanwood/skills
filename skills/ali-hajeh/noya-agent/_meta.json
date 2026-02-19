@@ -3,11 +3,16 @@
   "slug": "noya-agent",
   "displayName": "Noya Agent",
   "latest": {
-    "version": "1.0.12",
-    "publishedAt": 1771440385844,
-    "commit": "https://github.com/openclaw/skills/commit/7603dc2c2c992d32014dc314a20d2ba541250bbb"
+    "version": "1.0.13",
+    "publishedAt": 1771442470871,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.12",
+      "publishedAt": 1771440385844,
+      "commit": "https://github.com/openclaw/skills/commit/7603dc2c2c992d32014dc314a20d2ba541250bbb"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1771322613632,
