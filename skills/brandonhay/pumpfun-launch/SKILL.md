@@ -1,6 +1,6 @@
 ---
 name: pumpfun-launch
-description: Launch a token on pump.fun (Solana memecoin platform). Use when the user wants to create/launch/deploy a new token on pump.fun. Handles wallet setup, metadata upload to IPFS, and on-chain token creation. Direct on-chain via pumpdotfun-sdk — no PumpPortal middleware, no extra fees.
+description: Launch tokens on pump.fun directly from your agent. Zero middleware fees — direct on-chain via pumpdotfun-sdk. Use when the user wants to create, launch, deploy, or mint a new token or memecoin on pump.fun (Solana). Handles wallet generation, IPFS metadata upload, and on-chain token creation in one command. Supports dry-run mode, encrypted wallet storage, custom images, and optional initial buy. No PumpPortal, no third-party fees. Just provide a name, ticker, description, and image.
 ---
 
 # Pump.fun Token Launcher

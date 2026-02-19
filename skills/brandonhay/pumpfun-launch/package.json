@@ -1,8 +1,8 @@
 {
   "name": "pumpfun-launch",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
-  "description": "Launch tokens on pump.fun from your AI agent. Zero middleware fees. Direct on-chain. OpenClaw skill.",
+  "description": "Launch tokens on pump.fun directly from your AI agent. Zero middleware fees — direct on-chain. No PumpPortal, no third-party costs. Wallet generation, IPFS upload, token creation in one command. OpenClaw skill.",
   "keywords": [
     "pump.fun",
     "pumpfun",

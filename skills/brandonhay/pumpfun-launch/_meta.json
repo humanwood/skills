@@ -1,11 +1,17 @@
 {
   "owner": "brandonhay",
   "slug": "pumpfun-launch",
-  "displayName": "PumpfunLauncher",
+  "displayName": "Pump.fun Token Launcher",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771376652437,
-    "commit": "https://github.com/openclaw/skills/commit/14261be994300b5ef7f680695ac4c7946d498d94"
+    "version": "1.0.1",
+    "publishedAt": 1771423208677,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771376652437,
+      "commit": "https://github.com/openclaw/skills/commit/14261be994300b5ef7f680695ac4c7946d498d94"
+    }
+  ]
 }
