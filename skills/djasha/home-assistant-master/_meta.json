@@ -1,0 +1,11 @@
+{
+  "owner": "djasha",
+  "slug": "home-assistant-master",
+  "displayName": "Home Assistant Master",
+  "latest": {
+    "version": "1.0.3",
+    "publishedAt": 1771429643199,
+    "commit": null
+  },
+  "history": []
+}
