@@ -1,0 +1,11 @@
+{
+  "owner": "jason-c-child",
+  "slug": "bind-protocol-mcp",
+  "displayName": "Bind Protocol MCP Server Use",
+  "latest": {
+    "version": "2.0.0",
+    "publishedAt": 1771397936277,
+    "commit": null
+  },
+  "history": []
+}
