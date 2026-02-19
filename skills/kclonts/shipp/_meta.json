@@ -3,11 +3,16 @@
   "slug": "shipp",
   "displayName": "Shipp enables a faster way to create connections to real-time data. It's cost-effective, fast to run, and easy to start.",
   "latest": {
-    "version": "0.1.2",
-    "publishedAt": 1771277387314,
-    "commit": "https://github.com/openclaw/skills/commit/361c2b5fc83fac1ac31eda26109f36a0d1c8d479"
+    "version": "0.1.4",
+    "publishedAt": 1771442490013,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.2",
+      "publishedAt": 1771277387314,
+      "commit": "https://github.com/openclaw/skills/commit/361c2b5fc83fac1ac31eda26109f36a0d1c8d479"
+    },
     {
       "version": "0.1.0",
       "publishedAt": 1770904023043,
