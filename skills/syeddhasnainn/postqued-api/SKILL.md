@@ -77,6 +77,7 @@ curl -X POST https://api.postqued.com/v1/content/upload/complete \
 ```bash
 curl -X POST https://api.postqued.com/v1/content/upload-image \
   -H "Authorization: Bearer $POSTQUED_API_KEY" \
+  -H "Content-Type: multipart/form-data" \
   -F "file=@image.jpg"
 ```
 
@@ -98,7 +99,7 @@ curl -X POST https://api.postqued.com/v1/content/publish \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: unique-uuid-per-request" \
   -d '{
-    "contentId": "content-uuid",
+    "contentIds": ["content-uuid"],
     "targets": [{
       "platform": "tiktok",
       "accountId": "account-uuid",
@@ -143,7 +144,7 @@ See [references/api.md](references/api.md) for complete endpoint documentation.
 ## Intent Values
 
 - `draft` - Send to TikTok inbox as draft (user publishes manually)
-- `publish` - Direct publish (currently disabled, requires API approval)
+- `publish` - Direct publish to user's TikTok profile
 
 ## Status Values
 
