@@ -43,8 +43,54 @@ _VALID_ORDER_SIDES = {"buy", "sell"}
 # Allowed sort-by values for wallet-positions.
 _VALID_SORT_BY = {"TOKENS", "CURRENT", "INITIAL", "CASHPNL", "PERCENTPNL", "PRICE", "AVGPRICE"}
 
-# Allowed feed types for start-feed (no arbitrary-URL feeds to prevent SSRF).
-_SAFE_FEED_TYPES = {"binance_ws", "polymarket_book", "kalshi_book", "predictit", "manifold", "espn", "nws"}
+# Feed types that accept URLs in config_json (require SSRF validation).
+_URL_FEED_TYPES = {"chainlink": "rpc_url", "rest_json_path": "url", "rest": "url"}
+
+# All allowed feed types.
+_VALID_FEED_TYPES = {
+    "binance_ws", "polymarket_book", "kalshi_book", "predictit",
+    "manifold", "espn", "nws", "chainlink", "rest_json_path", "rest",
+}
+
+# Blocked hostnames / IP patterns for SSRF prevention.
+_BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "[::1]", "metadata.google.internal"}
+
+
+def _is_private_ip(hostname: str) -> bool:
+    """Check if hostname looks like a private/internal IP address."""
+    parts = hostname.split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        octets = [int(p) for p in parts]
+    except ValueError:
+        return False
+    if octets[0] == 10:
+        return True
+    if octets[0] == 172 and 16 <= octets[1] <= 31:
+        return True
+    if octets[0] == 192 and octets[1] == 168:
+        return True
+    if octets[0] == 169 and octets[1] == 254:
+        return True
+    return False
+
+
+def _validate_public_url(url_str: str, label: str) -> str:
+    """Validate that a URL is HTTPS and targets a public host (not internal/private)."""
+    from urllib.parse import urlparse
+    parsed = urlparse(url_str)
+    if parsed.scheme not in ("https",):
+        _print({"error": f"{label} must use HTTPS"})
+        sys.exit(1)
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        _print({"error": f"{label} has no hostname"})
+        sys.exit(1)
+    if hostname in _BLOCKED_HOSTS or _is_private_ip(hostname):
+        _print({"error": f"{label} cannot target private/internal addresses"})
+        sys.exit(1)
+    return url_str
 
 
 def _validate_id(value: str, label: str) -> str:
@@ -154,7 +200,7 @@ def _print(data: object) -> None:
 def main() -> None:
     args = sys.argv[1:]
     if not args:
-        _print({"error": "no command. try: status, positions, orders, fills, quote, cancel, cancel-all, cancel-market, discover, discover-events, top-markets, kelly, kill-switch, stop-loss, take-profit, feed, feeds, feed-health, feed-metrics, parity, contingent, wallet-trades, market-trades, wallet-positions, wallet-value, wallet-profile, top-holders, market-flow, simulate, arb, entropy, kl-divergence, hurst, variance-ratio, cf-var, greeks, deflated-sharpe, signal-diagnostics, market-efficiency, stress-test, start-feed"})
+        _print({"error": "no command. try: status, positions, orders, fills, quote, cancel, cancel-all, cancel-market, discover, market-detail, discover-events, top-markets, kelly, kill-switch, stop-loss, take-profit, feed, feeds, feed-health, feed-metrics, parity, contingent, wallet-trades, market-trades, wallet-positions, wallet-value, wallet-profile, top-holders, market-flow, simulate, arb, entropy, kl-divergence, hurst, variance-ratio, cf-var, greeks, deflated-sharpe, signal-diagnostics, market-efficiency, stress-test, start-feed"})
         sys.exit(1)
 
     cmd = args[0]
@@ -205,7 +251,23 @@ def main() -> None:
         exchange = _validate_exchange(args[1]) if len(args) > 1 else "polymarket"
         query = _validate_text(args[2], "query") if len(args) > 2 else ""
         limit = _safe_int(args[3], "limit") if len(args) > 3 else 10
-        _print(tools.discover(exchange, query, limit))
+        market_type = "all"
+        if len(args) > 4:
+            mt = args[4].lower()
+            if mt not in ("all", "binary", "multi"):
+                _print({"error": f"invalid market_type: {mt!r}. Must be 'all', 'binary', or 'multi'"})
+                sys.exit(1)
+            market_type = mt
+        category = _validate_text(args[5], "category", 100) if len(args) > 5 else ""
+        _print(tools.discover(exchange, query, limit, market_type, category))
+
+    elif cmd == "market-detail":
+        if len(args) < 2:
+            _print({"error": "usage: market-detail <slug_or_id> [exchange]"})
+            sys.exit(1)
+        slug_or_id = _validate_id(args[1], "slug_or_id")
+        exchange = _validate_exchange(args[2]) if len(args) > 2 else "polymarket"
+        _print(tools.market_detail(slug_or_id, exchange))
 
     elif cmd == "kelly":
         if len(args) < 4:
@@ -367,19 +429,22 @@ def main() -> None:
             sys.exit(1)
         name = _validate_id(args[1], "feed_name")
         feed_type = _validate_id(args[2], "feed_type")
-        # Block feed types that accept arbitrary URLs (SSRF prevention).
-        # Use the Python SDK directly for chainlink, rest, rest_json_path feeds.
-        if feed_type not in _SAFE_FEED_TYPES:
-            _print({"error": f"feed type {feed_type!r} not allowed via CLI. Allowed: {', '.join(sorted(_SAFE_FEED_TYPES))}. Use the Python SDK for URL-based feeds."})
+        if feed_type not in _VALID_FEED_TYPES:
+            _print({"error": f"unknown feed type {feed_type!r}. Allowed: {', '.join(sorted(_VALID_FEED_TYPES))}"})
             sys.exit(1)
         config_json = args[3] if len(args) > 3 else None
         # Validate config_json is valid JSON if provided
         if config_json is not None:
             try:
-                json.loads(config_json)
+                cfg = json.loads(config_json)
             except json.JSONDecodeError:
                 _print({"error": "config_json must be valid JSON"})
                 sys.exit(1)
+            # SSRF prevention: validate URLs in feed types that accept them
+            if feed_type in _URL_FEED_TYPES:
+                url_key = _URL_FEED_TYPES[feed_type]
+                if url_key in cfg:
+                    _validate_public_url(cfg[url_key], url_key)
         _print(tools.start_feed(name, feed_type, config_json=config_json))
 
     # --- Simulation ---

@@ -1,6 +1,6 @@
 ---
 name: horizon-trader
-version: 0.4.7
+version: 0.4.13
 description: Trade prediction markets (Polymarket, Kalshi) - positions, orders, risk management, Kelly sizing, wallet analytics, Monte Carlo, arbitrage, quantitative analytics (entropy, Hurst, VaR, Greeks, stress testing), and market discovery.
 emoji: "\U0001F4C8"
 metadata:
@@ -81,11 +81,23 @@ python3 {baseDir}/scripts/horizon.py cancel-market <market_id>
 ### Market Discovery
 ```bash
 # Search for markets on an exchange
-python3 {baseDir}/scripts/horizon.py discover <exchange> [query] [limit]
+python3 {baseDir}/scripts/horizon.py discover <exchange> [query] [limit] [market_type] [category]
+# market_type: "all" (default), "binary", or "multi"
+# category: tag filter (e.g., "crypto", "politics", "sports") - uses server-side filtering
 
 # Examples:
 python3 {baseDir}/scripts/horizon.py discover polymarket "bitcoin"
 python3 {baseDir}/scripts/horizon.py discover kalshi "election" 5
+python3 {baseDir}/scripts/horizon.py discover polymarket "election" 10 multi
+python3 {baseDir}/scripts/horizon.py discover polymarket "" 10 binary
+python3 {baseDir}/scripts/horizon.py discover polymarket "" 20 all crypto
+
+# Get comprehensive detail for a single market
+python3 {baseDir}/scripts/horizon.py market-detail <slug_or_id> [exchange]
+
+# Examples:
+python3 {baseDir}/scripts/horizon.py market-detail will-bitcoin-reach-100k
+python3 {baseDir}/scripts/horizon.py market-detail KXBTC-25FEB28 kalshi
 ```
 
 ### Kelly Sizing
@@ -120,9 +132,11 @@ python3 {baseDir}/scripts/horizon.py feed <feed_name>
 python3 {baseDir}/scripts/horizon.py feeds
 
 # Start a live data feed: start-feed <name> <feed_type> [config_json]
-# feed_type: binance_ws, polymarket_book, kalshi_book, predictit, manifold, espn, nws
+# feed_type: binance_ws, polymarket_book, kalshi_book, predictit,
+#            manifold, espn, nws, chainlink, rest_json_path, rest
+# Note: URL-based feeds (chainlink, rest_json_path, rest) require HTTPS public URLs.
+python3 {baseDir}/scripts/horizon.py start-feed eth_usd chainlink '{"contract_address":"0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419","rpc_url":"https://eth.llamarpc.com"}'
 python3 {baseDir}/scripts/horizon.py start-feed mf manifold '{"slug":"will-btc-hit-100k"}'
-python3 {baseDir}/scripts/horizon.py start-feed nba espn '{"sport":"basketball","league":"nba"}'
 
 # Check feed staleness and health (optional threshold in seconds, default 30)
 python3 {baseDir}/scripts/horizon.py feed-health [threshold]
@@ -294,6 +308,36 @@ hz.run(
     ...
 )
 ```
+
+## Execution Algorithms (v0.4.4)
+
+Three execution algorithms for splitting large orders with minimal market impact:
+
+- **TWAP** (`hz.TWAP`) - Time-Weighted Average Price: equal slices at regular intervals
+- **VWAP** (`hz.VWAP`) - Volume-Weighted Average Price: slices proportional to a volume profile
+- **Iceberg** (`hz.Iceberg`) - Shows only a small visible portion, auto-replenishes on fill
+
+All use the same interface: `algo.start(request)`, `algo.on_tick(price, time)`, `algo.is_complete`, `algo.total_filled`.
+
+## Signal Combiner + Market Maker (v0.4.8)
+
+Compose multi-signal strategies with automatic pipeline chaining:
+
+```python
+hz.run(
+    pipeline=[
+        hz.signal_combiner([
+            hz.price_signal("book", weight=0.5),
+            hz.imbalance_signal("book", levels=5, weight=0.3),
+            hz.flow_signal("book", window=30, weight=0.2),
+        ]),
+        hz.market_maker(feed_name="book", gamma=0.5, size=5.0),
+    ],
+    ...
+)
+```
+
+Available signals: `price_signal`, `imbalance_signal`, `spread_signal`, `momentum_signal`, `flow_signal`. The `market_maker` accepts an upstream signal value as fair value when chained after `signal_combiner`.
 
 ## Pipeline Features (v0.4.4)
 
