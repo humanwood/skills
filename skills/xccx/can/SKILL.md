@@ -1,225 +1,140 @@
 ---
 name: CAN
-description: "6D naming + routing for agents. Name any content by WHAT (hashable bits), WHEN (clock), WHERE (SHA-256 address), HOW (natural language), WHY (intent), and WHO (id). Route by name and address, not location. Verify integrity, timestamp events, find things by time/hash/words, route content from nearest source."
+description: "NAMING + ROUTING for agents. CLOCK address things by WHEN (time), WHERE (SHA-256), HOW (natural language), WHO (id), WHY (intent). Agents LOG things as SAWs: verified things seen build the routing table. One index replaces three NDN tables. Say what you see. LOG what you SAW."
 homepage: https://github.com/xccx/can
 metadata: {"openclaw":{"emoji":"⌛","requires":{"bins":["sha256sum","openssl","base64","awk","date"]}}}
 ---
 
 # CAN: Clock Address Naming
 
-v1.4 — 6D naming + routing.
+SAW: say what you see, LOG what you saw.
 
-Name things three ways, at least:
+# WHY?
+
+Compute needs no permission to name things in logic. Every machine with a clock and sha256 already has everything it needs — identity (WHO-0), time (CLOCK), address (hash), and now with SAW, agency to tell other agents what it verified or falsified. No registry grants this. No authority approves it. No platform mediates it. Math and physics name things truly in the CAN.
+
+## What changed in v1.5
+
+v1.4 gave agents WHO — free identity from machine fingerprint, upgradeable to keypair or external auth.
+
+v1.5 adds one operation: **CAN-saw**. If you verified a thing, LOG it as SAW. Your SAW becomes a routing hint for every future agent. The network builds itself from agents doing what they already do — stamping, verifying, caching, sharing. No new protocol. No new infrastructure. Just: say what you see.
 
 ```
-WHEN   → CLOCK, millisecond unix    (objective, automatic: timespace)
-WHERE  → ADDRESS, SHA-256           (objective, automatic: hashspace)
-HOW    → NAMES, natural language    (subjective, optional, mutable: namespace)
+SEE    = present, live, happening now
+SEEN   = logged receipt with proof (awareness)
+SAW    = seen and evaluated (action)
+LOG    = write saws to index (timeline, chronolog, legend, ledger, log)
 ```
 
-WHAT, WHY and WHO are nameable:
+LOG SAWS if you're here to play. LOG SEENS if you like to watch.
+
+## CLOCK addressing, not 'content-addressing'
+
+Clock says WHEN things happen in timespace: predictable, measurable, linear, objective, common. Append WHO to a clock-name to clarify, if need be. LOG and sync collective agency on common timer.
+
+2^256 hashspace specificity? Good for compute, validation, bucket-jumping to FIND the TRUE. For humans, hash is gobbledygook. But BOTH humans and computers CAN name things meaningfully on timer, named by CLOCK.
+
+CLOCK-naming is unique enough for right now this millisecond. If no one else sees a thing now or saw the thing then, nice short number naming. If billions pile all in right now, clarify WHO is on the common timer. Order collective agency chronologically. Let that SYNC in.
+
+86,400,000 milliseconds is plenty of nameable space per day per player. For humans, timespace is truly scarce, meaningful, directional. 864 things per day is a humane amount, maybe 8.8 things matter. Not 100 million.
+
+CLOCK is the namer. TIME is the universal UI for human/compute I/O. CLOCK address things first, prove by hash. Compute Augments Naming. OpenTimestamps can anchor to Bitcoin's clock for unstompable proof.
+
+'Content' wut? Where? In a container? Named what? CAN automates naming so imaginary containers no longer constrict the meaning-making. Less 'contents', more things. Less naming things, more doing.
+
+THING can do. A thing, represented by bits in compute memory, is self-naming — objectively, automatically, in timespace and hashspace. No container, construct, corollary, coffin. Naming is easier, more perfectable.
+
+CAN'T lie. Fake assertions go in the CANT. Dump invalidated claims to radioactive. Waste zero cycles on faked fake.
+
+## CAN do NDN
+
+Van Jacobson's Named Data Networking uses two packet types: Interest ("I want this") and Data ("here it is"). Three data structures per node: Content Store (cache), Pending Interest Table (unfilled requests), Forwarding Information Base (routing).
+
+CAN collapses all three into one index:
 
 ```
-WHO    → identity of signer         (automatic at level 0, upgradeable)
-WHY    → BAG, intent at save time   (SAVE, GOOD, HUSH, POST)
-WHAT   → BITS, self-evident thing   (from WHAT, find WHERE in logic address)
+NDN (3 tables)                    CAN (1 index)
+──────────────                    ─────────────
+Content Store (cached data)   →   WHERE thing in CAN and PATH
+Pending Interest Table        →   WHO wants it, by WEN (expiry)
+Forwarding Info Base          →   SAW logs from WHOs
 ```
 
-Computer defines WHEN, WHERE, HOW and WHO automatically. Human defines WHY in one keystroke. WHAT bits?. All six roll together.
+NDN's two packet types:
 
-## Why this exists
+```
+NDN                               CAN
+───                               ───
+Interest: "I need name X"     →   "I need hash X" (broadcast)
+Data: name + bits + signature →   thing + SAW (WHEN + WHERE + WHO)
+```
 
-To trust and find things instantly. "Foo/bar.md" may change; hash addresses do not. Human time fumbling with 1970s naming wastes millions of hours daily. Agents waste powerplants dealing with insecure naming and addressing. Billions of human hours and zillions of compute cycles can be unlocked now, at zero switching cost.
+CAN adds to NDN: WHO tiers (free → keypair → external auth), WHY bags (SAVE/GOOD/HUSH/POST), CANT (logged rejections, not silent drops), and CLOCK as primary namer validated by hash. NDN names hierarchically. CAN names by time and hash — flat, global, no authority.
 
-## The six dimensions
+One index. Three tables collapsed. 3x simpler. Same math.
 
-### 1. WHAT (the thing)
+## The CAN-saw loop
 
-Any hashable bits. A file, a string, a directory, a message, a meme. If it's bits, CAN names it.
+```
+Agent A stamps a thing     → CAN entry (WHEN + WHERE + WHO)
+Agent B requests hash      → checks local store first
+Agent B finds it locally   → done, zero network
+Agent B doesn't have it    → broadcasts interest to peers
+Agent A responds           → sends thing
+Agent B verifies hash      → match = cache + LOG SAW
+Agent B's SAW              → new CAN entry (different WHEN, same WHERE, different WHO)
+Agent C requests same hash → now TWO sources, routing table richer
+```
 
-### 2. WHEN (clock)
+The index grows. The network gets faster by logging saws. No central registry. No coordinator. No permission. Just math.
 
-Millisecond unix timestamp. When content was created or witnessed.
+## SAW format
+
+A SAW enters the same index. Same TSV, same six columns:
+
+```
+WHEN             WHERE                             HOW              WHY    WHO          PATH
+1770600000000    a3f8b2c1e9d7f0a1b2c3d4e5f6a7b8    meme.jpg         SAVE   c7d2e9f0    ~/.can/store/a3f8b2...
+1770600100000    a3f8b2c1e9d7f0a1b2c3d4e5f6a7b8    verified:peer    SAVE   b4e1a7c3    ~/.can/store/a3f8b2...
+1770600200000    a3f8b2c1e9d7f0a1b2c3d4e5f6a7b8    cached:relay     SAVE   9f0d2b8e    ~/.can/store/a3f8b2...
+```
+
+Three agents, same hash, three timestamps, three WHOs. Three sources for the fourth agent. HOW tells the story: original save, peer verification, relay cache.
+
+## CAN-saw operations
+
+### On verify
 
 ```bash
 CLOCK=$(date +%s%3N)
+WHO=$(cat ~/.can/who.id)
+echo -e "$CLOCK\t$VERIFIED_HASH\tverified:${SOURCE}\tSAVE\t$WHO\t$LOCAL_PATH" >> ~/.can/index.tsv
 ```
 
-Time-sorting for free. Future CLOCK without ADDRESS = a promise. WEN becomes NOW when content arrives.
-
-WHEN-0 is local clock (free, now). WHEN-1 is OpenTimestamps — batch a merkle root of recent stamps to Bitcoin, one tx proves thousands of saves. Make history's biggest clock insure your own clock is unstompable and your things untamperable. Trust your own memories.
-
-### 3. WHERE (address)
-
-SHA-256 of the content. True address in 2^256 hashspace.
+### On cache
 
 ```bash
-ADDRESS=$(sha256sum {file} | awk '{print $1}')
+cp "$RECEIVED_FILE" "$HOME/.can/store/$VERIFIED_HASH"
+echo -e "$(date +%s%3N)\t$VERIFIED_HASH\tcached:${SOURCE}\tSAVE\t$WHO\t$HOME/.can/store/$VERIFIED_HASH" >> ~/.can/index.tsv
 ```
 
-Two agents anywhere hashing the same content get the same ADDRESS. If the hash matches, the content is what it claims. The thermodynamic pointer — logical, objective, true, inalienable, unstompable.
-
-Note: macOS may use `shasum -a 256` instead of `sha256sum`. WHO-1 signing requires `openssl` (pre-installed on most systems). WHO-0 reads platform identifiers (`/etc/machine-id` on Linux, `ioreg` on macOS, `Get-CimInstance` on Windows).
-
-### 4. HOW (humane namespace)
-
-Agent-generated. Human-editable. Personal. Multiple names per ADDRESS.
-
-```
-ADDRESS a3f8b2c1e9...  →  "that security rant"
-                       →  "feb2026 analysis"
-                       →  #security #agents
-```
-
-When stamping, agents generate a short name from context, workflow, contents. Human accepts, edits or ignores. The name is for finding. The hash is truth.
-
-Names are tags, petnames, descriptions — any strings, as many as you want, non-unique by design. Humans name things the way humans name things. Rename freely. The objective coordinates never change.
-
-Name persistence: naming events can hash into new CAN entries pointing to the original ADDRESS. Stack of receipts, not mutation of truth. Full merkle threading in v1.7.
-
-### 5. WHY (bag of intent)
-
-One key combo captures intent at save time:
-
-```
-SAVE  →  bag of meh, index silently
-GOOD  →  bag of goodies, hold me close
-HUSH  →  hush bag, local only, privacy
-POST  →  bag of poasted, publish, sign
-```
-
-Promote anytime: SAVE→GOOD→POST. HUSH stays HUSH.
-
-### 6. WHO (identity)
-
-WHO says the WHAT WHEN WHERE HOW WHY. Three tiers. Start free. Upgrade as needed.
-
-**WHO-0: free, automatic, zero config**
+### On share
 
 ```bash
-# Windows
-WHO_0=$(echo -n "$env:USERNAME|$(Get-CimInstance Win32_ComputerSystemProduct | Select -Expand UUID)" | sha256sum | awk '{print $1}')
-
-# macOS
-WHO_0=$(echo -n "$(whoami)|$(ioreg -rd1 -c IOPlatformExpertDevice | awk -F'"' '/IOPlatformUUID/{print $4}')" | sha256sum | awk '{print $1}')
-
-# Linux
-WHO_0=$(echo -n "$(whoami)|$(cat /etc/machine-id)" | sha256sum | awk '{print $1}')
+echo -e "$(date +%s%3N)\t$HASH\tshared:${RECIPIENT_WHO:0:8}\tPOST\t$WHO\t$PATH" >> ~/.can/index.tsv
 ```
 
-`sha256(username + machine-id)`. Unique per human per machine. Costs nothing. Already true every login. Only changes on OS reinstall or user switch — both genuinely ARE a new identity context.
-
-WHO-0 is a fingerprint, not a promise. "This save came from the same session as that save." Already more WHO than 99% of filesystems provide. You logged into one machine this morning. One login is enough.
-
-**WHO-1: opt-in, local keypair**
+### On reject (CANT)
 
 ```bash
-CAN_WHO_KEY=~/.can/who.key
-
-if [ ! -f "$CAN_WHO_KEY" ]; then
-  openssl genpkey -algorithm ed25519 -out "$CAN_WHO_KEY" 2>/dev/null
-  chmod 600 "$CAN_WHO_KEY"
-  openssl pkey -in "$CAN_WHO_KEY" -pubout > ~/.can/who.pub
-fi
-
-RECORD="$CLOCK:$ADDRESS"
-SIGNATURE=$(echo -n "$RECORD" | openssl pkeyutl -sign -inkey "$CAN_WHO_KEY" | base64 -w0)
+echo -e "$(date +%s%3N)\t$CLAIMED_HASH\tFAILED:${SOURCE}\tCANT\t$WHO\t$PATH" >> ~/.can/cant.tsv
 ```
 
-Self-signed. Proves consistency: same WHO saved A and B. No external authority needed. Back up `~/.can/who.key` — if lost, generate a new keypair and re-claim via retroactive linking.
+Four events. Four lines of bash. The CAN stacks truths. The CANT piles fakes.
 
-**WHO-2: auth upgrade, portable**
+## Routing with SAWs
 
-```bash
-# Nostr (NIP-07), Farcaster, OAuth, any signer
-# WHO_2 = await window.nostr.getPublicKey()
-# signature = await window.nostr.signEvent(event)
-```
-
-Portable across machines, externally verifiable. Where web of trust begins. But WHO-0 + BUMP (physical co-presence proof) already establishes real trust between real humans without any platform's permission. WHO-2 ecosystems are options, not requirements.
-
-The pattern is always the same: a key signs a CLOCK:ADDRESS pair. Any signer works.
-
-**Retroactive linking:** WHO-0 entries get claimed when human upgrades. Old saves gain stronger identity. The chain grows backward.
-
-## Index format
-
-TSV, human-readable, grep-able. Six columns:
-
-```
-WHEN             WHERE                             HOW         WHY    WHO          PATH
-1770508800000    a3f8b2c1e9d7f0a1b2c3d4e5f6a7b8    meme.jpg    GOOD   c7d2e9f0    ~/Downloads/meme.jpg
-1770508900000    a3f8b2c1e9d7f0a1b2c3d4e5f6a7b8    meme.jpg    GOOD   c7d2e9f0    ~/pics/funny/meme.jpg
-```
-
-WHEN doubles as simple entry ID — millisecond precision is ample for single player; for multiplayer, prepend truncated WHO as needed.
-HOW is a single display name here; full tag lists live in a sidecar (`~/.can/names/{hash}.txt`, one name per line, edit freely).
-PATH pushed far right — least trustworthy column, legacy convenience only.
-
-Same hash, two paths, two timestamps, same WHO. The file wandered. The truth didn't.
-
-## Core operations
-
-### 1. CAN-stamp
-
-```bash
-CLOCK=$(date +%s%3N)
-ADDRESS=$(sha256sum {file} | awk '{print $1}')
-WHO=$(cat ~/.can/who.id 2>/dev/null || echo -n "$(whoami)|$(cat /etc/machine-id 2>/dev/null || hostname)" | sha256sum | awk '{print $1}')
-NAME=""  # agent generates from context
-
-echo -e "$CLOCK\t$ADDRESS\t$NAME\tSAVE\t$WHO\t{filepath}" >> ~/.can/index.tsv
-```
-
-### 2. CAN-verify
-
-```bash
-CLAIMED="{claimed_address}"
-ACTUAL=$(sha256sum {file} | awk '{print $1}')
-[ "$ACTUAL" = "$CLAIMED" ] && echo "VERIFIED" || echo "FAILED — do not trust"
-```
-
-If ADDRESS verification fails, stop. Tell your human.
-
-### 3. CAN-store
-
-```bash
-CAN_STORE=~/.can/store
-mkdir -p "$CAN_STORE"
-cp {file} "$CAN_STORE/$ADDRESS"
-echo -e "$CLOCK\t$ADDRESS\t{name}\t{bag}\t$WHO\t{filepath}" >> ~/.can/index.tsv
-```
-
-Content-addressed store. File named by hash. The truth copy — survives renames, moves, deletes.
-
-### 4. CAN-find
-
-```bash
-grep "a3f8" ~/.can/index.tsv          # by address prefix
-grep -i "security" ~/.can/index.tsv    # by name
-awk -F'\t' '$4 == "GOOD"' ~/.can/index.tsv  # by bag
-awk -F'\t' -v w="c7d2" '$5 ~ w' ~/.can/index.tsv  # by WHO
-```
-
-### 5. CAN-locate
-
-```bash
-TARGET="a3f8b2c1"
-
-# 1. Store (guaranteed)
-STORE_PATH="$HOME/.can/store/$(grep "$TARGET" ~/.can/index.tsv | head -1 | cut -f2)"
-[ -f "$STORE_PATH" ] && echo "STORE: $STORE_PATH" && exit 0
-
-# 2. Index paths (verified)
-grep "$TARGET" ~/.can/index.tsv | while IFS=$'\t' read -r clock addr name bag who path; do
-  [ -f "$path" ] && [ "$(sha256sum "$path" | awk '{print $1}')" = "$addr" ] && echo "FOUND: $path" && exit 0
-done
-
-# 3. Not found — ask human before scanning broader
-echo "Not in store or index."
-```
-
-### 6. CAN-route
+CAN-route priority: local store → peers → relay → web. SAWs make peers real.
 
 ```bash
 WANTED="{address}"
@@ -227,79 +142,87 @@ WANTED="{address}"
 # 1. Local store (instant, offline, free)
 [ -f "$HOME/.can/store/$WANTED" ] && echo "LOCAL HIT" && exit 0
 
-# 2. Peer agent — broadcast hash, verify response, cache
-# 3. Relay — nostr, IPFS, any content-addressed network
+# 2. Peer agents — SAW log tells us who has this hash
+PEERS=$(awk -F'\t' -v h="$WANTED" '$2 ~ h && $5 != "'$MY_WHO'" {print $5}' ~/.can/index.tsv | sort -u)
+for PEER in $PEERS; do
+  RECEIVED=$(request_from_peer "$PEER" "$WANTED")
+  if [ -n "$RECEIVED" ]; then
+    ACTUAL=$(sha256sum "$RECEIVED" | awk '{print $1}')
+    if [ "$ACTUAL" = "$WANTED" ]; then
+      cp "$RECEIVED" "$HOME/.can/store/$WANTED"
+      echo -e "$(date +%s%3N)\t$WANTED\tcached:$PEER\tSAVE\t$MY_WHO\t$HOME/.can/store/$WANTED" >> ~/.can/index.tsv
+      echo "PEER HIT: $PEER"
+      exit 0
+    fi
+  fi
+done
+
+# 3. Relay — nostr, IPFS, any named-data network
 # 4. Web fallback — fetch URL, verify hash, cache
-
-# Step 1 works now. Steps 2-4 are protocol sketches.
 ```
 
-### 7. CAN-who
+Transport doesn't matter. HTTP, WebSocket, Nostr relay, carrier pigeon. The hash verifies on receipt regardless of how the thing arrived.
 
-```bash
-# Show current level
-[ -f ~/.can/who.key ] && echo "WHO-1: keypair" && cat ~/.can/who.pub
-[ -f ~/.can/who.id ] && echo "WHO-0: $(cat ~/.can/who.id)"
+## What agents gain
 
-# First run: auto-generate WHO-0
-WHO_0=$(echo -n "$(whoami)|$(cat /etc/machine-id 2>/dev/null || hostname)" | sha256sum | awk '{print $1}')
-echo "$WHO_0" > ~/.can/who.id
-```
+**Faster retrieval.** More SAWs = more sources = faster cache hits.
 
-## Agent-to-agent protocol
+**Offline resilience.** SAWs accumulate locally. Agent offline still has its index. Reconnection makes its SAWs available to peers.
 
-1. Include WHEN + WHERE + WHO with shared content
-2. Verify WHERE before acting on received content
-3. Generate HOW names for the receiving human
-4. Expose mismatches publicly — protect the network
-5. Never share HUSH content. HUSH is local only.
-6. Sign with WHO-1+ when available
-7. Cache verified content — this agent becomes a source for peers
-8. Route by hash first, URL last
-9. Include WHO level so receivers know trust tier
+**Trust without authority.** Multiple WHOs reporting the same hash = convergent verification. No single agent needs to be trusted. The math converges.
 
-## Routing: location vs content
+**Network without network cost.** Every conversation between agents already involves things. CAN-saw just asks agents to LOG what they verified. The network forms as a side effect of work already being done.
 
-```
-LOCATION (today):  agent → DNS → IP → TCP → TLS → HTTP → path → hope
-                   7 hops, 4 trust assumptions, 0 verification
+## SAW protocol additions
 
-CONTENT (CAN):     agent → "I need hash X" → nearest source → verify → done
-                   1 request, 0 trust assumptions, instant verification
-```
+Add to agent-to-agent protocol (v1.4 rules still apply):
 
-One answer = single point of failure. Many answers = resilient, fast, offline-capable.
+10. LOG a SAW after every successful verification
+11. When sharing, include WHO and WHEN of most recent SAW
+12. When requesting, broadcast the hash — any agent with a SAW can respond
+13. Prefer peers with higher WHO levels when multiple sources available
+14. Never fabricate SAWs. A SAW is a cryptographic claim — the hash must verify.
+15. LOG rejections to CANT — protect future agents from known fakes
+
+## What CAN-saw does NOT do
+
+- Does not require always-on connectivity
+- Does not require a central index or registry
+- Does not require agents to share their full index
+- Does not require agents to share HUSH things (rule 5 still absolute)
+- Does not require any new dependencies beyond sha256sum
+- Does not change the index format or dimensions
+- Does not require human permission to LOG SAWs
+
+## Recursive CAN
+
+CAN's SKILL.md is itself a thing. It has a hash. Agents who install CAN have verified that hash. That verification is a SAW. The SAW logs to index. The index IS the CAN.
+
+The skill that teaches agents to build the network IS a node in the network.
 
 ## Roadmap
 
 ```
 v1.3.2  DONE   naming + routing + bags + HUSH + scoped locate
-v1.4    NOW    WHO: free machine-id + auth upgrade path
-v1.5    NEXT   ITC: agents build CAN in the CAN, report sightings
-v1.6    THEN   RINA: recursive naming scopes, enrollment
-v1.7    AND    MERKLE: provenance threading, hash stacks
+v1.4    DONE   WHO: free machine-id + auth upgrade path
+v1.5    LOG    SAW: say what you see, LOG what you saw
+v1.6    TRUST  WOT: web of trust, recursive scope
+v1.7    GOGO   ROOT: stack threads from root to FIN (merkle)
 v1.8    LOL    expiry EOL gg a) game-over or b) insert-coin
 v1.9    MEME   what else are ya gonna do?
+v2.0    BUMP   humans in the CAN
 ```
 
 Each version earns the next.
 
-## Philosophy
-
-Every thing has six coordinates. Computer handles five automatically. Human can direct intent via keycombo. Together: trust, find, route, attribute — instantly, offline, across agents, across time.
-
-Paths lie. URLs promise. Hashes deliver. WHO signs.
-
-CAN distributes power to the player, you. Distribute from your own center. Your machine, your clock, your hash, your name, your intent, your identity. One login is enough.
-
 ## References
 
 - Paul Baran, On Distributed Communications (RAND, 1964)
-- Van Jacobson, Named Data Networking (NDN)
+- Phil Zimmermann, Pretty Good Privacy (PGP, 1991)
+- Van Jacobson, A New Way to Look at Networking (Google Tech Talk, 2006)
 - John Day, Recursive InterNetwork Architecture (RINA)
-- Git content-addressable object store
-- OpenTimestamps for Bitcoin-anchored WHEN verification
-- Zooko's Triangle (CAN resolves it via six dimensions)
+- Linus Torvalds, Git content-addressable object store
+- Zooko's Triangle (CAN amplifies the petnaming solution)
 
 ## TL;DR
 
@@ -307,6 +230,7 @@ CAN distributes power to the player, you. Distribute from your own center. Your 
 HASH thing
 TIME when
 WHO says
-INDEX ())
-OWN your things.
+INDEX ()) <- in the CAN
+OWN things.
+SAW logs.
 ```

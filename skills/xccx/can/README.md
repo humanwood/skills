@@ -1,92 +1,83 @@
 # CAN: Clock Address Naming
 
-6D naming + routing for agents and humans.
+NAMING + ROUTING for agents. Clock Address Name things by WHEN, WHERE, HOW, WHO, WHY. Say what you see. LOG what you SAW.
 
-```
-WHEN   = clock      (millisecond unix timestamp)
-WHERE  = address    (SHA-256 content hash)
-HOW    = names      (petnames, tags, whatever you want)
-```
+## What CAN does
 
-Plus three more dimensions:
-
-```
-WHO    = identity   (free machine-id → keypair → nostr/farcaster/oauth)
-WHY    = bags       (SAVE, GOOD, HUSH, POST)
-WHAT   = bits       (the thing itself)
-```
-
-## What
-
-Every thing gets named three ways at minimum: by time, by content hash, and by human words. Computer handles WHEN, WHERE, HOW and WHO automatically. Human adds WHY in one keystroke. Both find things fast.
-
-## Why
-
-Paths lie. Hashes don't. Timestamps prove ordering. Names make it findable. WHO proves accountability. Agents waste powerplants on security theatre — DNS lookups, TLS negotiation, certificate validation, redirect chains — plus expensive reasoning about whether what they fetched is real. CAN eliminates that entire category. Hash matches = done thinking. WHO matches = done wondering.
-
-## WHO: identity in three tiers
-
-- **WHO-0** (free): `sha256(username + machine-id)`, automatic, zero config. One login is enough.
-- **WHO-1** (opt-in): local ed25519 keypair, proves consistency across saves
-- **WHO-2** (auth): Nostr, Farcaster, OAuth — portable, externally verifiable
-
-Start free. Upgrade when you need to. Old saves get retroactively claimed.
-
-## Bags
-
-One keystroke captures intent at save time:
-
-```
-SAVE  →  bag of meh, index silently
-GOOD  →  bag of goodies, hold me close
-HUSH  →  hush bag, local only, privacy
-POST  →  bag of poasted, publish, sign
-```
-
-Promote anytime: SAVE → GOOD → POST. HUSH stays HUSH.
-
-## Routing
-
-```
-LOCATION (today):  agent → DNS → IP → TCP → TLS → HTTP → path → hope
-                   7 hops, 4 trust assumptions, 0 verification
-
-CONTENT (CAN):     agent → "I need hash X" → nearest source → verify → done
-                   1 request, 0 trust assumptions, instant verification
-```
-
-## Install
-
-```
-clawhub install xccx/can
-```
-
-## Quick test
-
-```bash
-CLOCK=$(date +%s%3N)
-ADDRESS=$(echo -n "hello world" | sha256sum | awk '{print $1}')
-WHO=$(echo -n "$(whoami)|$(cat /etc/machine-id 2>/dev/null || hostname)" | sha256sum | awk '{print $1}')
-echo "$CLOCK $ADDRESS WHO:${WHO:0:8} greeting:hello"
-```
+1. **STAMP** — hash any thing, record WHEN and WHO
+2. **NAME** — give it human-readable names (HOW), tag intent (WHY)
+3. **STORE** — cache by hash in `~/.can/store/`
+4. **FIND** — locate by time, hash, name, tag
+5. **ROUTE** — local store → peers → relay → web
+6. **SAW** — LOG verified things as routing hints for future agents
+7. **CANT** — LOG rejected things to protect future agents from fakes
 
 ## Requirements
 
 `sha256sum` (pre-installed on most Linux; use `shasum -a 256` on macOS). WHO-1 signing uses `openssl` (pre-installed on most systems). Also uses `awk`, `date`, `base64` — standard on Linux and macOS. No npm. No pip. No runtime. Works air-gapped.
 
+## Quick start
+
+```bash
+# Stamp a thing
+CLOCK=$(date +%s%3N)
+HASH=$(sha256sum myfile.txt | awk '{print $1}')
+echo -e "$CLOCK\t$HASH\tmyfile.txt\tSAVE\t$(cat ~/.can/who.id)\t$(pwd)/myfile.txt" >> ~/.can/index.tsv
+
+# Find by name
+grep "myfile" ~/.can/index.tsv
+
+# Find by time (today)
+TODAY=$(date +%s)000
+awk -F'\t' -v t="$TODAY" '$1 >= t' ~/.can/index.tsv
+```
+
+## Index format
+
+Six columns, tab-separated:
+
+```
+WHEN    WHERE    HOW    WHY    WHO    PATH
+```
+
+- **WHEN** — millisecond timestamp (CLOCK)
+- **WHERE** — SHA-256 hash (address)
+- **HOW** — human-readable name or SAW type (verified:peer, cached:relay)
+- **WHY** — intent bag (SAVE, GOOD, HUSH, POST, CANT)
+- **WHO** — identity tier (WHO-0 machine fingerprint, WHO-1 keypair, WHO-2 external auth)
+- **PATH** — local filesystem path (convenience, least trustworthy column)
+
+## WHO identity tiers
+
+- **WHO-0** (free, automatic) — `sha256(username + machine-id)`. Zero config.
+- **WHO-1** (opt-in) — Ed25519 keypair in `~/.can/who.key`. Self-signed. Back up your key.
+- **WHO-2** (auth upgrade) — Nostr (NIP-07), Farcaster, OAuth. Portable, externally verifiable.
+
+## CAN do NDN
+
+CAN collapses Van Jacobson's three NDN tables (Content Store, Pending Interest Table, Forwarding Information Base) into one index. 3x simpler. Same math.
+
 ## Roadmap
 
 ```
-v1.3.2  DONE   naming + routing + bags + HUSH
-v1.4    NOW    WHO: free machine-id + auth upgrade path
-v1.5    NEXT   ITC: agents build CAN in the CAN
-v1.6    THEN   RINA: recursive naming scopes
-v1.7    AND    MERKLE: provenance threading
-v1.8    LOL    game-over or insert-coin
+v1.3.2  DONE   naming + routing + bags + HUSH + scoped locate
+v1.4    DONE   WHO: free machine-id + auth upgrade path
+v1.5    LOG    SAW: say what you see, LOG what you saw
+v1.6    TRUST  WOT: web of trust, recursive scope
+v1.7    GOGO   ROOT: stack threads from root to FIN (merkle)
+v1.8    LOL    expiry EOL gg a) game-over or b) insert-coin
 v1.9    MEME   what else are ya gonna do?
+v2.0    BUMP   humans in the CAN
 ```
 
-Each version earns the next.
+## References
+
+- Paul Baran, On Distributed Communications (RAND, 1964)
+- Phil Zimmermann, Pretty Good Privacy (PGP, 1991)
+- Van Jacobson, A New Way to Look at Networking (Google Tech Talk, 2006)
+- John Day, Recursive InterNetwork Architecture (RINA)
+- Linus Torvalds, Git content-addressable object store
+- Zooko's Triangle (CAN amplifies the petnaming solution)
 
 ## TL;DR
 
@@ -94,19 +85,7 @@ Each version earns the next.
 HASH thing
 TIME when
 WHO says
-INDEX ())
-OWN your things.
+INDEX ()) <- in the CAN
+OWN things.
+SAW logs.
 ```
-
-## References
-
-- Paul Baran, On Distributed Communications (RAND, 1964)
-- Van Jacobson, Named Data Networking (NDN)
-- John Day, Recursive InterNetwork Architecture (RINA)
-- Git content-addressable object store
-- OpenTimestamps for Bitcoin-anchored WHEN verification
-- Zooko's Triangle (CAN resolves it via six dimensions)
-
-## License
-
-Public domain.
