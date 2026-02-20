@@ -3,11 +3,16 @@
   "slug": "cashu",
   "displayName": "Cashu",
   "latest": {
-    "version": "0.19.5",
-    "publishedAt": 1771230265855,
-    "commit": "https://github.com/openclaw/skills/commit/ba21b8d20689bd216d2b795712712c727f9c9a45"
+    "version": "0.19.6",
+    "publishedAt": 1771498085478,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.19.5",
+      "publishedAt": 1771230265855,
+      "commit": "https://github.com/openclaw/skills/commit/ba21b8d20689bd216d2b795712712c727f9c9a45"
+    },
     {
       "version": "0.19.4",
       "publishedAt": 1771060929013,

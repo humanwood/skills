@@ -134,6 +134,40 @@ CASHU_DIR=~/.cashu MINT_URL=<url> cashu --yes lnurl check
 CASHU_DIR=~/.cashu MINT_URL=<url> cashu --yes lnurl mint
 ```
 
+### Paying Cashu 402s (Agentic Pattern)
+
+Cashu-enabled APIs may return a **402 Payment Required** error with a payment request in the `X-Cashu` header. This is common for metered APIs or paid endpoints.
+
+**The flow:**
+1. Make your HTTP request
+2. If you get a 402 with `X-Cashu: creqA...` header, extract the payment request
+3. (Optional) Decode it to check accepted mints: `cashu decode <payment_request>`
+4. Pay it: `cashu --yes pay <payment_request>`
+5. Get the token from the response
+6. Retry the original request, including the token in the `X-Cashu` header
+
+**Mint compatibility:** Payment requests may encode specific mints from which ecash is accepted. If you try to pay with a wallet backed by a mint not in the allowed list, it will error. Use `cashu decode <creq>` to see which mints are accepted before attempting payment.
+
+**Example:**
+```bash
+# 1. Initial request (returns 402)
+curl -s -i https://api.example.com/data
+
+# Response includes:
+# HTTP/1.1 402 Payment Required
+# X-Cashu: creqA1...
+
+# 2. Pay the payment request
+CASHU_DIR=~/.cashu MINT_URL=<url> cashu --yes pay "creqA1..."
+
+# Returns a token like: cashuA...
+
+# 3. Retry with token
+curl -s -H "X-Cashu: cashuA..." https://api.example.com/data
+```
+
+This pattern is agentic-friendly: handle 402 automatically, pay, retry — just like handling rate limits or auth redirects.
+
 ### Advanced
 
 ```bash
