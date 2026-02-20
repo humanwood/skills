@@ -1,6 +1,7 @@
 ---
 name: persistent-memory
-description: Three-layer persistent memory system (Markdown + ChromaDB vectors + NetworkX knowledge graph) for long-term agent recall across sessions. Use when the agent needs to remember decisions, facts, context, or institutional knowledge between sessions. Use for memory maintenance, indexing, searching past context, or when the agent reports forgetting prior conversations.
+version: 3.0.0
+description: Three-layer persistent memory system (Markdown + ChromaDB vectors + NetworkX knowledge graph) for long-term agent recall across sessions. One-command setup with automatic OpenClaw integration. Use when the agent needs to remember decisions, facts, context, or institutional knowledge between sessions.
 ---
 
 # Persistent Memory
@@ -27,19 +28,20 @@ All three layers sync together. The indexer updates L2 and L3 from L1 automatica
 
 ## Setup
 
-Run once from workspace root:
+**One command from workspace root:**
 
 ```bash
-# Step 1: Create the 3-layer memory system
-bash skills/persistent-memory/scripts/setup.sh
-
-# Step 2: Configure OpenClaw integration (CRITICAL)
-python skills/persistent-memory/scripts/configure_openclaw.py
+bash skills/persistent-memory/scripts/unified_setup.sh
 ```
 
-**Step 1** creates `vector_memory/` with a Python venv, ChromaDB database, and knowledge graph. It indexes MEMORY.md if one exists.
+This automatically:
+- ✅ Creates 3-layer memory system (Markdown + Vector + Graph)
+- ✅ Installs all Python dependencies (ChromaDB, NetworkX, sentence-transformers)
+- ✅ Configures OpenClaw memorySearch integration (directive compliance)
+- ✅ Indexes existing MEMORY.md if present
+- ✅ Sets up daily maintenance automation
 
-**Step 2** configures OpenClaw's built-in memory system to automatically index all critical workspace files (SOUL.md, AGENTS.md, etc.). This prevents the "directive ignorance" problem where the agent ignores important rules because they're not in the memory search results.
+**No manual configuration needed.** The script handles everything including OpenClaw integration that prevents agents from ignoring workspace directives (SOUL.md, AGENTS.md, etc.).
 
 ## Daily Usage
 
