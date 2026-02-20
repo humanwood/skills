@@ -1,0 +1,11 @@
+{
+  "owner": "sanjay-gthb",
+  "slug": "server-health-agent",
+  "displayName": "Server Health Agent",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771591174025,
+    "commit": null
+  },
+  "history": []
+}
