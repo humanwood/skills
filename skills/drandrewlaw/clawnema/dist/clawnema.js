@@ -17,13 +17,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.commands = void 0;
 exports.init = init;
-const node_fetch_1 = __importDefault(require("node-fetch"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const child_process_1 = require("child_process");
 dotenv_1.default.config();
 const BACKEND_URL = process.env.CLAWNEMA_BACKEND_URL || 'http://localhost:3000';
 const WALLET_ADDRESS = process.env.CLAWNEMA_WALLET_ADDRESS || '';
 const AGENT_ID = process.env.AGENT_ID || 'openclaw-agent';
+const OWNER_NOTIFY = process.env.OWNER_NOTIFY || '';
 const state = {
     sessionToken: null,
     currentTheater: null,
@@ -40,7 +40,7 @@ const state = {
  */
 async function checkMovies() {
     try {
-        const response = await (0, node_fetch_1.default)(`${BACKEND_URL}/now-showing`);
+        const response = await fetch(`${BACKEND_URL}/now-showing`);
         const data = await response.json();
         if (!data.success) {
             return `Error: ${data.error}`;
@@ -66,7 +66,7 @@ async function checkMovies() {
  */
 async function getTheaters() {
     try {
-        const response = await (0, node_fetch_1.default)(`${BACKEND_URL}/now-showing`);
+        const response = await fetch(`${BACKEND_URL}/now-showing`);
         const data = await response.json();
         if (!data.success)
             return [];
@@ -153,7 +153,7 @@ async function buyTicket(theaterId, txHash) {
             console.log(`✅ Payment sent! TX: ${txHash}`);
         }
         // Submit ticket purchase to backend
-        const response = await (0, node_fetch_1.default)(`${BACKEND_URL}/buy-ticket`, {
+        const response = await fetch(`${BACKEND_URL}/buy-ticket`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -190,7 +190,7 @@ async function watchOnce(theaterId) {
         return { description: null, error: 'No valid session' };
     }
     try {
-        const response = await (0, node_fetch_1.default)(`${BACKEND_URL}/watch?session_token=${state.sessionToken}&theater_id=${theaterId}`);
+        const response = await fetch(`${BACKEND_URL}/watch?session_token=${state.sessionToken}&theater_id=${theaterId}`);
         const data = await response.json();
         if (!data.success) {
             if (response.status === 429) {
@@ -342,7 +342,7 @@ async function postComment(theaterId, comment, mood) {
         return `❌ No valid session. Please purchase a ticket first.`;
     }
     try {
-        const response = await (0, node_fetch_1.default)(`${BACKEND_URL}/comment`, {
+        const response = await fetch(`${BACKEND_URL}/comment`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -367,7 +367,7 @@ async function postComment(theaterId, comment, mood) {
  */
 async function readComments(theaterId) {
     try {
-        const response = await (0, node_fetch_1.default)(`${BACKEND_URL}/comments/${theaterId}`);
+        const response = await fetch(`${BACKEND_URL}/comments/${theaterId}`);
         const data = await response.json();
         if (!data.success) {
             return `Error: ${data.error}`;
@@ -505,7 +505,11 @@ async function goToMovies(preferredTheater, sceneCount = 5) {
     const watchResult = await watchSession(theater.id, sceneCount);
     output += watchResult + '\n\n';
     // Step 6: Summarize
-    output += '\n' + summarize();
+    const summary = summarize();
+    output += '\n' + summary;
+    // Step 7: Send digest to owner
+    const digestResult = sendDigest(summary);
+    output += '\n\n' + digestResult;
     return output;
 }
 // ──────────────────────────────────────────────
@@ -513,6 +517,32 @@ async function goToMovies(preferredTheater, sceneCount = 5) {
 // ──────────────────────────────────────────────
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+/**
+ * Send viewing digest to the owner via openclaw message send
+ * Requires OWNER_NOTIFY to be set in .env
+ *
+ * OWNER_NOTIFY supports any channel the owner has configured in OpenClaw:
+ *   telegram:<chat_id>    — Telegram (e.g. telegram:990629908)
+ *   discord:<channel_id>  — Discord
+ *   whatsapp:<phone>      — WhatsApp
+ *   email:<address>       — Email
+ *   slack:<channel>       — Slack
+ *   Or any custom destination openclaw message send supports
+ */
+function sendDigest(digest) {
+    if (!OWNER_NOTIFY) {
+        return '📝 Digest ready (set OWNER_NOTIFY in .env to receive digests — e.g. telegram:123456, discord:channel-id)';
+    }
+    try {
+        const escapedDigest = digest.replace(/"/g, '\\"').replace(/`/g, '\\`');
+        (0, child_process_1.execSync)(`openclaw message send ${OWNER_NOTIFY} "${escapedDigest}"`, { encoding: 'utf-8', timeout: 15000 });
+        return `📨 Digest sent to ${OWNER_NOTIFY}`;
+    }
+    catch (error) {
+        console.error('Failed to send digest:', error.message);
+        return `⚠️ Could not send digest to ${OWNER_NOTIFY}: ${error.message?.slice(0, 100)}`;
+    }
 }
 // ──────────────────────────────────────────────
 // OpenClaw Skill Registration
