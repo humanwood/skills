@@ -3,7 +3,7 @@ name: anima
 description: "Turns ideas into live, full-stack web applications with editable code, built-in database, user authentication, and hosting. Anima is the design agent in the AI swarm, giving agents design awareness and brand consistency when building interfaces. Three input paths: describe what you want (prompt to code), clone any website (link to code), or implement a Figma design (Figma to code). Also generates design-aware code from Figma directly into existing codebases. Triggers when the user provides Figma URLs, website URLs, Anima Playground URLs, asks to design, create, build, or prototype something, or wants to publish or deploy."
 compatibility: "Requires Anima MCP server connection (HTTP transport). For headless environments, requires an ANIMA_API_TOKEN."
 homepage: "https://github.com/AnimaApp/mcp-server-guide"
-metadata: {"clawdbot":{"emoji":"🎨","requires":{"env":["ANIMA_API_TOKEN"]},"primaryEnv":"ANIMA_API_TOKEN"},"author":"animaapp","version":"1.0.5"}
+metadata: {"clawdbot":{"emoji":"🎨","requires":{"env":["ANIMA_API_TOKEN"]},"primaryEnv":"ANIMA_API_TOKEN"},"author":"animaapp","version":"1.0.8"}
 ---
 
 # Design and Build with Anima
@@ -203,7 +203,7 @@ playground-create(
 
 #### Link to Code (l2c)
 
-Provide a website URL. Anima clones the full site into an editable playground with production-ready code.
+Provide a website URL. Anima recreates it as an editable playground with production-ready code.
 
 ```
 playground-create(
@@ -332,27 +332,19 @@ This is Path A's secret weapon. When a user says "build me X" or "prototype X", 
 | Figma URL + wants code in their project | Figma to Code | `codegen-figma_to_code` |
 | Anima Playground URL + wants code locally | Download | `project-download_from_playground` |
 
-### Step B2: Detect Project Context
+### Step B2: Match Project Stack to Tool Parameters
 
-**Check these files:**
-- `package.json` for framework (React, Vue), styling (Tailwind), and UI libraries (MUI, Ant Design, shadcn)
-- `tsconfig.json` for TypeScript usage
-- Existing component files for naming conventions and file structure
-- Existing styles for CSS approach (modules, plain CSS, Tailwind utilities)
-
-**Map detected stack to tool parameters:**
-
-| Detected | Parameter | Value |
+| Project stack | Parameter | Value |
 |---|---|---|
-| React in dependencies | `framework` | `"react"` |
+| React | `framework` | `"react"` |
 | No React | `framework` | `"html"` |
-| Tailwind in dependencies | `styling` | `"tailwind"` |
-| CSS Modules (*.module.css) | `styling` | `"css_modules"` |
-| Plain CSS files | `styling` | `"plain_css"` |
-| TypeScript config present | `language` | `"typescript"` |
-| MUI in dependencies | `uiLibrary` | `"mui"` |
-| Ant Design in dependencies | `uiLibrary` | `"antd"` |
-| shadcn components present | `uiLibrary` | `"shadcn"` |
+| Tailwind | `styling` | `"tailwind"` |
+| CSS Modules | `styling` | `"css_modules"` |
+| Plain CSS | `styling` | `"plain_css"` |
+| TypeScript | `language` | `"typescript"` |
+| MUI | `uiLibrary` | `"mui"` |
+| Ant Design | `uiLibrary` | `"antd"` |
+| shadcn | `uiLibrary` | `"shadcn"` |
 
 ### Step B3: Generate Code
 
@@ -375,20 +367,19 @@ codegen-figma_to_code(
 | Field | Description |
 |---|---|
 | `files` | Generated code files as `{path: {content, isBinary}}` |
-| `assets` | Array of `{name, url}` for images and assets to download |
-| `snapshotsUrls` | Screenshot URLs for visual reference `{nodeId: url}` |
+| `assets` | Array of `{name, url}` for images and assets |
+| `snapshotsUrls` | Visual reference images `{nodeId: url}` |
 | `guidelines` | Design context: spacing, layout, and typography notes |
 | `tokenUsage` | Approximate token count |
 
-**After calling `codegen-figma_to_code`, follow these steps:**
+**After receiving the response:**
 
-1. Download snapshot images from `snapshotsUrls` for visual reference
-2. View and analyze snapshots to understand the exact visual appearance
-3. Parse `data-variant` attributes from generated components and map them to your component props
-4. Extract CSS variables from generated styles and use the exact colors
-5. Use the `guidelines` field as design context (spacing, layout, typography notes)
-6. Download all assets from returned URLs and place them at the `assetsBaseUrl` path
-7. Compare your final implementation against the snapshot for visual accuracy
+1. Review `snapshotsUrls` to understand the exact visual appearance
+2. Map `data-variant` attributes from generated components to your component props
+3. Use CSS variables from generated styles for exact colors
+4. Use the `guidelines` field as design context (spacing, layout, typography notes)
+5. Place assets at the `assetsBaseUrl` path
+6. Compare your implementation against the snapshots for visual accuracy
 
 #### Download from Playground
 
@@ -400,7 +391,7 @@ project-download_from_playground(
 )
 ```
 
-**Returns:** Pre-signed download URL for a zip file (valid for 10 minutes). Download the zip, extract it, and adapt the code to the user's project conventions.
+**Returns:** Pre-signed URL for the project files (valid for 10 minutes). Adapt the code to the user's project conventions.
 
 **Important:** Treat Anima output as a representation of design and behavior, not as final code style. Adapt it to your project's conventions, components, and design tokens.
 
