@@ -199,10 +199,22 @@ def main(argv: list[str]) -> int:
     labels = _labels(cfg)
 
     to_schedule: list[dict] = []
-    skipped = {"birthdays": 0, "all_day_not_important": 0, "past": 0, "already_scheduled": 0}
+    skipped = {
+        "birthdays": 0,
+        "all_day_not_important": 0,
+        "past": 0,
+        "already_scheduled": 0,
+        "google_error": 0,
+    }
 
     # Google via gcalcli
-    for r in _gcalcli_rows(cfg, day_local, tz_local):
+    try:
+        g_rows = _gcalcli_rows(cfg, day_local, tz_local)
+    except subprocess.CalledProcessError as e:
+        skipped["google_error"] = 1
+        g_rows = []
+
+    for r in g_rows:
         event_id = (r.get("id") or "").strip()
         title = (r.get("title") or "").strip()
         cal = (r.get("calendar") or "").strip()

@@ -22,6 +22,14 @@ Copy the example config to a private location and edit it:
 - Required: `python3`, `gcalcli`
 - Optional (for CalDAV/iCloud): `vdirsyncer`, `khal`
 
+## Security notes (why ClawHub may flag this)
+
+This skill *invokes external binaries* and is config-driven.
+
+- The planner runs `gcalcli`/`khal` using `subprocess.check_output([...], shell=False)` (argument-list form; safe against shell injection from event titles).
+- If you wire a cron job to run `vdirsyncerSyncCommand`, make sure you run it as an **argv list** (`subprocess.run(cmd_list, shell=False)`), not as a shell string.
+- Only point `gcalcliPath` / `khalBin` to **trusted binaries** (prefer absolute paths). Don’t run untrusted paths.
+
 ## Auth (Google)
 
 `gcalcli` requires OAuth. On headless servers you may need SSH port-forwarding.
