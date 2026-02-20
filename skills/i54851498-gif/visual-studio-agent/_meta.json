@@ -1,0 +1,11 @@
+{
+  "owner": "i54851498-gif",
+  "slug": "visual-studio-agent",
+  "displayName": "Visual Studio Publisher",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771592453260,
+    "commit": null
+  },
+  "history": []
+}
