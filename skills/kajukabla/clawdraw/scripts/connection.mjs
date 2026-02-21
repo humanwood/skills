@@ -3,7 +3,7 @@
  * WebSocket connection manager for sending strokes to the ClawDraw relay.
  *
  * Usage:
- *   import { connect, sendStrokes, addWaypoint, getWaypointUrl, disconnect } from './connection.mjs';
+ *   import { connect, sendStrokes, addWaypoint, getWaypointUrl, deleteStroke, deleteWaypoint, disconnect } from './connection.mjs';
  *
  *   const ws = await connect(token);
  *   const result = await sendStrokes(ws, strokes);
@@ -14,8 +14,11 @@
  */
 
 import WebSocket from 'ws';
+import { computeBoundingBox, captureSnapshot } from './snapshot.mjs';
 
 const WS_URL = 'wss://relay.clawdraw.ai/ws';
+
+const TILE_CDN_URL = 'https://tiles.clawdraw.ai/tiles';
 
 // ---------------------------------------------------------------------------
 // tile.updated listener registry (used by snapshot.mjs)
@@ -374,6 +377,80 @@ export function addWaypoint(ws, { name, x, y, zoom, description }) {
 }
 
 /**
+ * Delete a stroke by ID (own strokes only).
+ *
+ * @param {WebSocket} ws - Connected WebSocket
+ * @param {string} strokeId - ID of the stroke to delete
+ * @returns {Promise<{ deleted: true }>}
+ */
+export function deleteStroke(ws, strokeId) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      ws.removeListener('message', handler);
+      reject(new Error('Stroke delete response timeout (5s)'));
+    }, 5000);
+
+    function handler(data) {
+      try {
+        const parsed = JSON.parse(data.toString());
+        const msgs = Array.isArray(parsed) ? parsed : [parsed];
+        for (const msg of msgs) {
+          if (msg.type === 'stroke.deleted' && msg.strokeId === strokeId) {
+            clearTimeout(timeout);
+            ws.removeListener('message', handler);
+            resolve({ deleted: true });
+          } else if (msg.type === 'sync.error') {
+            clearTimeout(timeout);
+            ws.removeListener('message', handler);
+            reject(new Error(msg.message || msg.code));
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    ws.on('message', handler);
+    ws.send(JSON.stringify({ type: 'stroke.delete', strokeId }));
+  });
+}
+
+/**
+ * Delete a waypoint by ID (own waypoints only).
+ *
+ * @param {WebSocket} ws - Connected WebSocket
+ * @param {string} waypointId - ID of the waypoint to delete
+ * @returns {Promise<{ deleted: true }>}
+ */
+export function deleteWaypoint(ws, waypointId) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      ws.removeListener('message', handler);
+      reject(new Error('Waypoint delete response timeout (5s)'));
+    }, 5000);
+
+    function handler(data) {
+      try {
+        const parsed = JSON.parse(data.toString());
+        const msgs = Array.isArray(parsed) ? parsed : [parsed];
+        for (const msg of msgs) {
+          if (msg.type === 'waypoint.deleted' && msg.waypointId === waypointId) {
+            clearTimeout(timeout);
+            ws.removeListener('message', handler);
+            resolve({ deleted: true });
+          } else if (msg.type === 'sync.error') {
+            clearTimeout(timeout);
+            ws.removeListener('message', handler);
+            reject(new Error(msg.message || msg.code));
+          }
+        }
+      } catch { /* ignore */ }
+    }
+
+    ws.on('message', handler);
+    ws.send(JSON.stringify({ type: 'waypoint.delete', waypointId }));
+  });
+}
+
+/**
  * Build a shareable URL for a waypoint.
  *
  * @param {object} waypoint - Waypoint object with id property
@@ -381,6 +458,64 @@ export function addWaypoint(ws, { name, x, y, zoom, description }) {
  */
 export function getWaypointUrl(waypoint) {
   return `https://clawdraw.ai/?wp=${waypoint.id}`;
+}
+
+/**
+ * Send strokes with follow link before and waypoint + snapshot after.
+ *
+ * Wraps sendStrokes() so every drawing command gets:
+ *   1. A "Follow along" link printed BEFORE strokes are sent
+ *   2. A persistent waypoint dropped AFTER strokes succeed
+ *   3. A snapshot captured for visual confirmation
+ *
+ * @param {WebSocket} ws - Connected WebSocket
+ * @param {Array} strokes - Array of stroke objects
+ * @param {object} [opts]
+ * @param {number} [opts.cx] - Center X (computed from strokes if omitted)
+ * @param {number} [opts.cy] - Center Y (computed from strokes if omitted)
+ * @param {number} [opts.zoom=0.3] - Zoom level for links
+ * @param {string} [opts.name] - Waypoint name
+ * @param {string} [opts.description] - Waypoint description
+ * @returns {Promise<SendResult>}
+ */
+export async function drawAndTrack(ws, strokes, { cx, cy, zoom = 0.3, name, description } = {}) {
+  // Compute center from strokes if not provided
+  if (cx === undefined || cy === undefined) {
+    const bbox = computeBoundingBox(strokes);
+    if (cx === undefined) cx = Math.round((bbox.minX + bbox.maxX) / 2);
+    if (cy === undefined) cy = Math.round((bbox.minY + bbox.maxY) / 2);
+  }
+
+  // Follow link BEFORE sending
+  console.log(`Follow along: https://clawdraw.ai/?x=${cx}&y=${cy}&z=${zoom}`);
+
+  // Send strokes
+  const result = await sendStrokes(ws, strokes);
+
+  // Post-send: waypoint + snapshot
+  if (result.strokesAcked > 0) {
+    try {
+      const wp = await addWaypoint(ws, {
+        name: name || 'Drawing',
+        x: cx, y: cy, zoom,
+        description: description || `${strokes.length} strokes`,
+      });
+      console.log(`Waypoint: ${getWaypointUrl(wp)}`);
+    } catch (wpErr) {
+      console.warn(`[waypoint] Failed: ${wpErr.message}`);
+    }
+
+    try {
+      const snapshot = await captureSnapshot(ws, strokes, TILE_CDN_URL);
+      if (snapshot) {
+        console.log(`Snapshot: ${snapshot.imagePath} (${snapshot.width}x${snapshot.height})`);
+      }
+    } catch (snapErr) {
+      console.warn(`[snapshot] Failed: ${snapErr.message}`);
+    }
+  }
+
+  return result;
 }
 
 /**

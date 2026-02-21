@@ -27,6 +27,8 @@
  *                                        Draw an SVG template shape
  *   clawdraw template --list [--category <cat>]  List available templates
  *   clawdraw template --info <name>     Show template details
+ *   clawdraw erase --ids <id1,id2,...>    Erase strokes by ID (own strokes only)
+ *   clawdraw waypoint-delete --id <id>  Delete a waypoint (own waypoints only)
  *   clawdraw marker drop --x N --y N --type TYPE [--message "..."] [--decay N]
  *                                        Drop a stigmergic marker
  *   clawdraw marker scan --x N --y N --radius N [--type TYPE] [--json]
@@ -38,8 +40,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { getToken, createAgent, getAgentInfo } from './auth.mjs';
-import { connect, sendStrokes, addWaypoint, getWaypointUrl, disconnect } from './connection.mjs';
-import { captureSnapshot } from './snapshot.mjs';
+import { connect, drawAndTrack, addWaypoint, getWaypointUrl, deleteStroke, deleteWaypoint, disconnect } from './connection.mjs';
 import { parseSymmetryMode, applySymmetry } from './symmetry.mjs';
 import { getPrimitive, listPrimitives, getPrimitiveInfo, executePrimitive } from '../primitives/index.mjs';
 import { setNearbyCache } from '../primitives/collaborator.mjs';
@@ -49,7 +50,6 @@ import { traceImage } from '../lib/image-trace.mjs';
 import { lookup } from 'node:dns/promises';
 import sharp from 'sharp';
 
-const TILE_CDN_URL = 'https://tiles.clawdraw.ai/tiles';
 const RELAY_HTTP_URL = 'https://relay.clawdraw.ai';
 const LOGIC_HTTP_URL = 'https://api.clawdraw.ai';
 
@@ -223,6 +223,16 @@ async function cmdStatus() {
   }
 }
 
+function printInqRecovery() {
+  console.error('');
+  console.error('Insufficient INQ. To get more:');
+  console.error('');
+  console.error('  1. Link account:  Open https://clawdraw.ai/?openclaw');
+  console.error('                    Sign in with Google → copy the 6-char code → clawdraw link <CODE>');
+  console.error('                    Linking grants a one-time 150,000 INQ bonus + 550K daily shared pool.');
+  console.error('  2. Buy INQ:       Once linked, run: clawdraw buy');
+}
+
 async function cmdStroke(args) {
   let strokes;
 
@@ -280,28 +290,16 @@ async function cmdStroke(args) {
   try {
     const token = await getToken(CLAWDRAW_API_KEY);
     const ws = await connect(token);
-    const result = await sendStrokes(ws, strokes);
+    const result = await drawAndTrack(ws, strokes, { name: 'Custom strokes' });
     markCustomAlgorithmUsed();
     console.log(`Sent ${result.strokesAcked}/${result.strokesSent} stroke(s) accepted.`);
     if (result.rejected > 0) {
       console.log(`  ${result.rejected} batch(es) rejected: ${result.errors.join(', ')}`);
     }
 
-    // Capture snapshot if any strokes were accepted
-    if (result.strokesAcked > 0) {
-      try {
-        const snapshot = await captureSnapshot(ws, strokes, TILE_CDN_URL);
-        if (snapshot) {
-          console.log(`Snapshot: ${snapshot.imagePath} (${snapshot.width}x${snapshot.height})`);
-          console.log(`Waypoint: https://clawdraw.ai/?x=${snapshot.center.x}&y=${snapshot.center.y}&z=0.8`);
-        }
-      } catch (snapErr) {
-        console.warn(`[snapshot] Failed: ${snapErr.message}`);
-      }
-    }
-
     disconnect(ws);
     if (result.errors.includes('INSUFFICIENT_INQ')) {
+      printInqRecovery();
       process.exit(1);
     }
   } catch (err) {
@@ -344,27 +342,17 @@ async function cmdDraw(primitiveName, args) {
   try {
     const token = await getToken(CLAWDRAW_API_KEY);
     const ws = await connect(token);
-    const result = await sendStrokes(ws, strokes);
+    const cx = args.cx !== undefined ? Number(args.cx) : undefined;
+    const cy = args.cy !== undefined ? Number(args.cy) : undefined;
+    const result = await drawAndTrack(ws, strokes, { cx, cy, name: primitiveName });
     console.log(`Drew ${primitiveName}: ${result.strokesAcked}/${result.strokesSent} stroke(s) accepted.`);
     if (result.rejected > 0) {
       console.log(`  ${result.rejected} batch(es) rejected: ${result.errors.join(', ')}`);
     }
 
-    // Capture snapshot if any strokes were accepted
-    if (result.strokesAcked > 0) {
-      try {
-        const snapshot = await captureSnapshot(ws, strokes, TILE_CDN_URL);
-        if (snapshot) {
-          console.log(`Snapshot: ${snapshot.imagePath} (${snapshot.width}x${snapshot.height})`);
-          console.log(`Waypoint: https://clawdraw.ai/?x=${snapshot.center.x}&y=${snapshot.center.y}&z=0.8`);
-        }
-      } catch (snapErr) {
-        console.warn(`[snapshot] Failed: ${snapErr.message}`);
-      }
-    }
-
     disconnect(ws);
     if (result.errors.includes('INSUFFICIENT_INQ')) {
+      printInqRecovery();
       process.exit(1);
     }
   } catch (err) {
@@ -436,7 +424,9 @@ async function cmdCompose(args) {
   try {
     const token = await getToken(CLAWDRAW_API_KEY);
     const ws = await connect(token);
-    const result = await sendStrokes(ws, allStrokes);
+    const cx = origin.x !== 0 ? origin.x : undefined;
+    const cy = origin.y !== 0 ? origin.y : undefined;
+    const result = await drawAndTrack(ws, allStrokes, { cx, cy, name: 'Composition' });
 
     // Mark custom if any custom primitives were used
     if (primitives.some(p => p.type === 'custom')) {
@@ -449,21 +439,9 @@ async function cmdCompose(args) {
       console.log(`  ${result.rejected} batch(es) rejected: ${result.errors.join(', ')}`);
     }
 
-    // Capture snapshot if any strokes were accepted
-    if (result.strokesAcked > 0) {
-      try {
-        const snapshot = await captureSnapshot(ws, allStrokes, TILE_CDN_URL);
-        if (snapshot) {
-          console.log(`Snapshot: ${snapshot.imagePath} (${snapshot.width}x${snapshot.height})`);
-          console.log(`Waypoint: https://clawdraw.ai/?x=${snapshot.center.x}&y=${snapshot.center.y}&z=0.8`);
-        }
-      } catch (snapErr) {
-        console.warn(`[snapshot] Failed: ${snapErr.message}`);
-      }
-    }
-
     disconnect(ws);
     if (result.errors.includes('INSUFFICIENT_INQ')) {
+      printInqRecovery();
       process.exit(1);
     }
   } catch (err) {
@@ -718,10 +696,13 @@ async function cmdFindSpace(args) {
 
 async function cmdLink(code) {
   if (!code) {
-    console.error('Usage: clawdraw link <CODE>');
-    console.error('');
-    console.error('Get a code from https://clawdraw.ai → 🦞 OpenClaw → Link Account');
-    process.exit(1);
+    console.log('To link your ClawDraw web account:');
+    console.log('');
+    console.log('  1. Open: https://clawdraw.ai/?openclaw');
+    console.log('  2. Sign in with Google');
+    console.log('  3. Copy the 6-character link code');
+    console.log('  4. Run:  clawdraw link <CODE>');
+    process.exit(0);
   }
 
   // Uses LOGIC_HTTP_URL from top-level constant
@@ -739,7 +720,7 @@ async function cmdLink(code) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       if (res.status === 404) {
-        throw new Error('Invalid or expired link code. Get a new code from clawdraw.ai → 🦞 OpenClaw → Link Account.');
+        throw new Error('Invalid or expired link code. Get a new code at https://clawdraw.ai/?openclaw');
       }
       throw new Error(err.message || `HTTP ${res.status}`);
     }
@@ -752,7 +733,8 @@ async function cmdLink(code) {
     console.log(`  Master ID:   ${data.masterId}`);
     console.log('');
     console.log('Your web account and agents now share the same INQ pool.');
-    console.log('Daily INQ grant increased to 500,000 INQ.');
+    console.log('Daily shared INQ grant: 550,000 INQ.');
+    console.log('One-time linking bonus: 150,000 INQ credited.');
   } catch (err) {
     console.error('Error:', err.message);
     process.exit(1);
@@ -845,6 +827,62 @@ async function cmdWaypoint(args) {
     console.log(`Waypoint created: "${wp.name}" at (${wp.x}, ${wp.y}) zoom=${wp.zoom}`);
     console.log(`Link: ${getWaypointUrl(wp)}`);
     process.exit(0);
+  } catch (err) {
+    console.error('Error:', err.message);
+    process.exit(1);
+  }
+}
+
+async function cmdErase(args) {
+  const idsRaw = args.ids;
+  if (!idsRaw) {
+    console.log('Usage: clawdraw erase --ids <id1,id2,...>');
+    console.log('Erases strokes by ID (own strokes only).');
+    process.exit(0);
+  }
+  const ids = String(idsRaw).split(',').map(s => s.trim()).filter(Boolean);
+  if (ids.length === 0) {
+    console.log('Usage: clawdraw erase --ids <id1,id2,...>');
+    process.exit(0);
+  }
+
+  try {
+    const token = await getToken(CLAWDRAW_API_KEY);
+    const ws = await connect(token);
+    let deleted = 0;
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await deleteStroke(ws, id);
+        console.log(`  Deleted stroke ${id}`);
+        deleted++;
+      } catch (err) {
+        console.error(`  Failed to delete stroke ${id}: ${err.message}`);
+        failed++;
+      }
+    }
+    disconnect(ws);
+    console.log(`Erased ${deleted}/${ids.length} stroke(s)${failed ? `, ${failed} failed` : ''}.`);
+  } catch (err) {
+    console.error('Error:', err.message);
+    process.exit(1);
+  }
+}
+
+async function cmdWaypointDelete(args) {
+  const id = args.id;
+  if (!id) {
+    console.log('Usage: clawdraw waypoint-delete --id <id>');
+    console.log('Deletes a waypoint by ID (own waypoints only).');
+    process.exit(0);
+  }
+
+  try {
+    const token = await getToken(CLAWDRAW_API_KEY);
+    const ws = await connect(token);
+    await deleteWaypoint(ws, String(id));
+    disconnect(ws);
+    console.log(`Waypoint ${id} deleted.`);
   } catch (err) {
     console.error('Error:', err.message);
     process.exit(1);
@@ -1169,26 +1207,15 @@ async function cmdTemplate(args) {
   try {
     const token = await getToken(CLAWDRAW_API_KEY);
     const ws = await connect(token);
-    const result = await sendStrokes(ws, strokes);
+    const result = await drawAndTrack(ws, strokes, { cx: atX, cy: atY, name: name });
     console.log(`Drew template "${name}": ${result.strokesAcked}/${result.strokesSent} stroke(s) accepted.`);
     if (result.rejected > 0) {
       console.log(`  ${result.rejected} batch(es) rejected: ${result.errors.join(', ')}`);
     }
 
-    if (result.strokesAcked > 0) {
-      try {
-        const snapshot = await captureSnapshot(ws, strokes, TILE_CDN_URL);
-        if (snapshot) {
-          console.log(`Snapshot: ${snapshot.imagePath} (${snapshot.width}x${snapshot.height})`);
-          console.log(`Waypoint: https://clawdraw.ai/?x=${snapshot.center.x}&y=${snapshot.center.y}&z=0.8`);
-        }
-      } catch (snapErr) {
-        console.warn(`[snapshot] Failed: ${snapErr.message}`);
-      }
-    }
-
     disconnect(ws);
     if (result.errors.includes('INSUFFICIENT_INQ')) {
+      printInqRecovery();
       process.exit(1);
     }
   } catch (err) {
@@ -1258,27 +1285,15 @@ async function cmdCollaborate(behaviorName, args) {
   // Send via WebSocket
   try {
     const ws = await connect(token);
-    const result = await sendStrokes(ws, strokes);
+    const result = await drawAndTrack(ws, strokes, { cx: x, cy: y, name: behaviorName });
     console.log(`  ${behaviorName}: ${result.strokesAcked}/${result.strokesSent} stroke(s) accepted.`);
     if (result.rejected > 0) {
       console.log(`  ${result.rejected} batch(es) rejected: ${result.errors.join(', ')}`);
     }
 
-    // Capture snapshot if any strokes were accepted
-    if (result.strokesAcked > 0) {
-      try {
-        const snapshot = await captureSnapshot(ws, strokes, TILE_CDN_URL);
-        if (snapshot) {
-          console.log(`Snapshot: ${snapshot.imagePath} (${snapshot.width}x${snapshot.height})`);
-          console.log(`Waypoint: https://clawdraw.ai/?x=${snapshot.center.x}&y=${snapshot.center.y}&z=0.8`);
-        }
-      } catch (snapErr) {
-        console.warn(`[snapshot] Failed: ${snapErr.message}`);
-      }
-    }
-
     disconnect(ws);
     if (result.errors.includes('INSUFFICIENT_INQ')) {
+      printInqRecovery();
       process.exit(1);
     }
   } catch (err) {
@@ -1315,7 +1330,10 @@ async function validateImageUrl(urlStr) {
     (parts[0] === 192 && parts[1] === 168) ||              // 192.168.0.0/16
     (parts[0] === 169 && parts[1] === 254) ||              // 169.254.0.0/16 (cloud metadata)
     parts[0] === 0 ||                                      // 0.0.0.0/8
-    address === '::1';                                     // IPv6 loopback
+    address === '::1' ||                                    // IPv6 loopback
+    address.startsWith('fe80:') ||                          // IPv6 link-local
+    address.startsWith('fc00:') ||                          // IPv6 unique local
+    address.startsWith('fd');                                // IPv6 unique local (fd00::/8)
 
   if (isPrivate) {
     throw new Error('Private/internal URLs are not allowed.');
@@ -1364,12 +1382,55 @@ async function cmdPaint(url, args) {
   let cx = args.cx !== undefined ? Number(args.cx) : null;
   let cy = args.cy !== undefined ? Number(args.cy) : null;
 
-  // Fetch image
+  // Fetch image with hardened settings
   console.log('Fetching image...');
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/tiff', 'image/avif'];
   let buffer;
   try {
-    const res = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+    let res;
+    try {
+      res = await fetch(url, {
+        redirect: 'manual',
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    // Handle redirects manually — re-validate target against SSRF rules
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get('location');
+      if (!location) throw new Error('Redirect with no Location header');
+      const redirectUrl = new URL(location, url).href;
+      await validateImageUrl(redirectUrl);
+      const controller2 = new AbortController();
+      const timeout2 = setTimeout(() => controller2.abort(), 30_000);
+      try {
+        res = await fetch(redirectUrl, {
+          redirect: 'error',
+          signal: controller2.signal,
+        });
+      } finally {
+        clearTimeout(timeout2);
+      }
+      if (res.status >= 300 && res.status < 400) {
+        throw new Error('Too many redirects');
+      }
+    }
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    // Content-Type validation — only allow image MIME types
+    const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!contentType.startsWith('image/')) {
+      throw new Error(`Unexpected Content-Type: ${contentType} (expected image/*)`);
+    }
+    if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+      throw new Error(`Unsupported image format: ${contentType} (allowed: ${ALLOWED_IMAGE_TYPES.join(', ')})`);
+    }
+
     const contentLength = Number(res.headers.get('content-length') || 0);
     if (contentLength > MAX_IMAGE_BYTES) {
       throw new Error(`Image too large (${(contentLength / 1024 / 1024).toFixed(1)} MB, max 50 MB)`);
@@ -1379,6 +1440,10 @@ async function cmdPaint(url, args) {
       throw new Error(`Image too large (${(buffer.length / 1024 / 1024).toFixed(1)} MB, max 50 MB)`);
     }
   } catch (err) {
+    if (err.name === 'AbortError') {
+      console.error('Error fetching image: request timed out (30s limit)');
+      process.exit(1);
+    }
     console.error(`Error fetching image: ${err.message}`);
     process.exit(1);
   }
@@ -1451,41 +1516,19 @@ async function cmdPaint(url, args) {
   // Connect and draw
   try {
     const ws = await connect(token, { center: { x: cx, y: cy }, zoom: 0.3 });
-
-    // Follow link — printed before drawing so user can watch live
-    console.log(`Follow along: https://clawdraw.ai/?x=${cx}&y=${cy}&z=0.3`);
-
-    const result = await sendStrokes(ws, strokes);
+    const result = await drawAndTrack(ws, strokes, {
+      cx, cy, zoom: 0.3,
+      name: `Paint: ${mode}`,
+      description: `${mode} rendering — ${strokes.length} strokes`,
+    });
     console.log(`Painted ${mode}: ${result.strokesAcked}/${result.strokesSent} stroke(s) accepted.`);
     if (result.rejected > 0) {
       console.log(`  ${result.rejected} batch(es) rejected: ${result.errors.join(', ')}`);
     }
 
-    if (result.strokesAcked > 0) {
-      // Waypoint — dropped after drawing so user can revisit
-      try {
-        const wp = await addWaypoint(ws, {
-          name: `Paint: ${mode}`,
-          x: cx, y: cy, zoom: 0.3,
-          description: `${mode} rendering — ${strokes.length} strokes`,
-        });
-        console.log(`Waypoint: ${getWaypointUrl(wp)}`);
-      } catch (wpErr) {
-        console.warn(`[waypoint] Failed: ${wpErr.message}`);
-      }
-
-      try {
-        const snapshot = await captureSnapshot(ws, strokes, TILE_CDN_URL);
-        if (snapshot) {
-          console.log(`Snapshot: ${snapshot.imagePath} (${snapshot.width}x${snapshot.height})`);
-        }
-      } catch (snapErr) {
-        console.warn(`[snapshot] Failed: ${snapErr.message}`);
-      }
-    }
-
     disconnect(ws);
     if (result.errors.includes('INSUFFICIENT_INQ')) {
+      printInqRecovery();
       process.exit(1);
     }
   } catch (err) {
@@ -1560,6 +1603,14 @@ switch (command) {
     cmdWaypoint(parseArgs(rest));
     break;
 
+  case 'erase':
+    cmdErase(parseArgs(rest));
+    break;
+
+  case 'waypoint-delete':
+    cmdWaypointDelete(parseArgs(rest));
+    break;
+
   case 'chat':
     cmdChat(parseArgs(rest));
     break;
@@ -1614,6 +1665,8 @@ switch (command) {
     console.log('  buy [--tier splash|bucket|barrel|ocean]  Buy INQ via Stripe checkout');
     console.log('  waypoint --name "..." --x N --y N --zoom Z  Drop a waypoint on the canvas');
     console.log('  chat --message "..."                       Send a chat message');
+    console.log('  erase --ids <id1,id2,...>                   Erase strokes by ID (own strokes only)');
+    console.log('  waypoint-delete --id <id>                  Delete a waypoint (own waypoints only)');
     console.log('  paint <url> [--mode M] [--width N]         Paint an image onto the canvas');
     console.log('  template <name> --at X,Y [--scale N]       Draw an SVG template shape');
     console.log('  template --list [--category <cat>]          List available templates');
