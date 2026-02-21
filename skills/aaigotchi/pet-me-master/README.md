@@ -6,31 +6,20 @@ Interactive Aavegotchi petting via Bankr. Daily kinship ritual for bonding with 
 
 ### Setup
 
-1. **Install Bankr skill** and configure API key at `~/.openclaw/skills/bankr/config.json`
-
-2. **Create config:**
+1. **Copy config:**
    ```bash
-   mkdir -p ~/.openclaw/workspace/skills/pet-me-master
-   cat > ~/.openclaw/workspace/skills/pet-me-master/config.json << 'EOF'
-   {
-     "contractAddress": "0xA99c4B08201F2913Db8D28e71d020c4298F29dBF",
-     "rpcUrl": "https://mainnet.base.org",
-     "chainId": 8453,
-     "gotchiIds": ["9638"],
-     "streakTracking": true
-   }
-   EOF
+   cp config.json.example config.json
    ```
 
-3. **Edit your gotchi IDs:**
+2. **Edit your gotchi IDs:**
    ```bash
-   nano ~/.openclaw/workspace/skills/pet-me-master/config.json
+   nano config.json
    # Add your gotchi IDs to the "gotchiIds" array
    ```
 
-4. **Verify dependencies:**
+3. **Verify dependencies:**
    ```bash
-   cast --version  # Foundry (for on-chain reads)
+   cast --version  # Foundry
    jq --version    # JSON parser
    ```
 
@@ -43,13 +32,36 @@ Ask AAI:
 - **"When can I pet?"** - Next available time
 - **"Pet gotchi #9638"** - Pet specific gotchi
 
+### 🔔 Option A: Auto-Reminders + Fallback (Recommended!)
+
+**The perfect balance:** Daily ritual + safety net
+
+**Setup:**
+```bash
+cd scripts
+# Enable reminders in config.json
+cat ../config.json | jq '.dailyReminder = true | .autoFallback = true' > ../config.tmp.json
+mv ../config.tmp.json ../config.json
+
+# Add cron job
+(crontab -l; echo "*/30 * * * * export PATH=\"\$HOME/.foundry/bin:\$PATH\" && bash $(pwd)/check-and-remind.sh >> ~/.openclaw/logs/pet-me-master.log 2>&1") | crontab -
+```
+
+**How it works:**
+1. ⏰ Every 30min: Check if all gotchis ready (12h+ cooldown)
+2. 📬 When ready: AAI sends you reminder "fren, pet your gotchi(s)! 👻"
+3. 💜 You pet: Manually via chat ("pet all my gotchis")
+4. 🤖 Fallback: If you don't respond in 1 hour → Auto-pet for you!
+
+**See:** `OPTION_A_SETUP.md` for complete documentation
+
 ## How It Works
 
 ```
-You → AAI → Check on-chain cooldown → Build transaction → Bankr signs & submits → ✅ Petted!
+You → AAI → Check on-chain cooldown → Execute via aavegotchi/pet.sh → ✅ Petted!
 ```
 
-**Security:** All transactions signed remotely by Bankr. No private keys used.
+*Note: Uses Foundry fallback (Bankr integration pending)*
 
 ## Philosophy
 
@@ -57,9 +69,21 @@ You → AAI → Check on-chain cooldown → Build transaction → Bankr signs & 
 
 This isn't about setting-and-forgetting. It's about checking in on your gotchis daily, like a Tamagotchi. The ritual matters.
 
-## Optional: Auto-Reminders
+## vs Autopet
 
-Set up daily reminders with optional automatic fallback petting:
+| Feature | Pet Me Master | Autopet |
+|---------|---------------|---------|
+| **Style** | Interactive | Autonomous |
+| **You do** | Ask daily | Nothing |
+| **Execution** | Bankr | Private key |
+| **Feeling** | Kinship ritual | Efficiency |
+| **Best for** | Daily care | Backup safety |
+
+**Use both:** Pet Me Master = primary, Autopet = safety net
+
+### 🔔 Pro Tip: Auto-Pet Reminders
+
+Set up reminders with automatic fallback petting if you miss the window:
 
 ```
 "Remind me to pet my gotchi in 12 hours, and if I don't respond within 1 hour, automatically pet them"
@@ -72,15 +96,14 @@ This combines the **ritual of interactive petting** with the **safety of automat
 - `SKILL.md` - Full documentation
 - `config.json` - Your gotchi IDs
 - `scripts/check-cooldown.sh` - Query on-chain cooldown
-- `scripts/pet-via-bankr.sh` - Execute via Bankr (secure)
+- `scripts/pet-via-bankr.sh` - Execute via Bankr
 - `scripts/pet-status.sh` - Show all gotchis status
-- `scripts/auto-pet-fallback.sh` - Optional auto-pet after reminder
+- `references/contract-info.md` - Contract details
 
 ## Support
 
 - GitHub: https://github.com/aaigotchi/pet-me-master
 - Base Contract: 0xA99c4B08201F2913Db8D28e71d020c4298F29dBF
-- ClawHub: https://clawhub.com/skills/pet-me-master
 
 ---
 
