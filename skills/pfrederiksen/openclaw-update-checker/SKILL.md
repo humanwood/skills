@@ -1,53 +1,52 @@
 ---
 name: openclaw-update-checker
-description: "Check for OpenClaw updates by comparing installed version against npm registry. Use when: user asks about updates, version status, or 'is openclaw up to date'. Also useful in heartbeats/cron for periodic update monitoring. Reports installed vs latest version, changelog URL, and update command."
+description: "Check for OpenClaw updates by comparing installed version against the npm registry. Use when: user asks about updates, version status, or 'is openclaw up to date'. Also useful in heartbeats/cron for periodic update monitoring. Read-only — reports status only, does not modify the system."
 ---
 
 # OpenClaw Update Checker
 
-Check if the installed OpenClaw version is current, and report available updates with changelog links.
+Read-only version checker. Compares the installed OpenClaw version against the npm registry and reports whether updates are available. Does not install, modify, or restart anything.
 
 ## Usage
 
 ```bash
-# Text output (human-readable)
+# Human-readable output
 python3 scripts/check_update.py
 
-# JSON output (for dashboards, cron jobs, integrations)
+# Machine-readable JSON (for dashboards, cron, integrations)
 python3 scripts/check_update.py --format json
 ```
 
 ## Output
 
-**Text mode** prints a one-liner if current, or a summary with version diff, changelog URL, and update command if behind.
+**Text mode:** One-liner if current, or a summary showing installed vs latest version and number of versions behind.
 
-**JSON mode** returns:
+**JSON mode:**
 ```json
 {
   "installed": "2026.2.21-2",
   "latest": "2026.2.21-2",
   "up_to_date": true,
   "newer_versions": [],
-  "changelog_url": "https://github.com/openclaw/openclaw/releases/tag/v2026.2.21",
-  "update_command": "npm i -g openclaw@2026.2.21-2"
+  "changelog_url": "https://github.com/openclaw/openclaw/releases/tag/v2026.2.21"
 }
 ```
 
-## Update Workflow
+## What It Does
 
-When an update is available:
-1. Run the check script to get the latest version
-2. Fetch the changelog URL to summarize what's new
-3. Ask the user before updating (it requires a gateway restart)
-4. Update: `npm i -g openclaw@<version>`
-5. Restart: `openclaw gateway restart`
+- Runs `openclaw --version` to get the installed version
+- Runs `npm show openclaw versions --json` to get available versions
+- Compares them and reports the result
+- Generates a changelog URL for the latest release
 
-## Integration
+## What It Does NOT Do
 
-Add to a cron job or heartbeat for periodic checks. Pair with `web_fetch` on the changelog URL to summarize release notes for the user.
+- Does not install or update anything
+- Does not write to any files
+- Does not restart any services
+- Does not open network connections (delegates to `npm` CLI)
 
 ## Requirements
 
-- `openclaw` CLI installed globally via npm
-- `npm` available in PATH
+- `openclaw` and `npm` available in PATH
 - No API keys or external services needed

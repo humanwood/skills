@@ -1,64 +1,92 @@
 #!/usr/bin/env python3
-"""Check for OpenClaw updates by comparing installed vs npm registry version."""
+"""
+OpenClaw Update Checker
 
-import subprocess
+Compares the locally installed openclaw version against the npm registry
+to determine if updates are available.
+
+Read-only — no files are modified, no packages installed, no services restarted.
+No subprocess calls — reads local package.json and queries the npm registry
+API via HTTPS directly.
+
+Usage:
+    python3 check_update.py              # Human-readable text output
+    python3 check_update.py --format json # Machine-readable JSON output
+"""
+
 import json
-import sys
 import re
+import sys
+import urllib.request
+import urllib.error
+from pathlib import Path
 
 
-def get_installed_version():
-    """Get currently installed openclaw version."""
+# Known install locations for openclaw's package.json
+_PACKAGE_JSON_PATHS = [
+    Path("/usr/lib/node_modules/openclaw/package.json"),
+    Path("/usr/local/lib/node_modules/openclaw/package.json"),
+]
+
+# npm public registry endpoint (read-only, no auth required)
+_NPM_REGISTRY_URL = "https://registry.npmjs.org/openclaw"
+
+
+def get_installed_version() -> str | None:
+    """Read the installed openclaw version from its package.json."""
+    for p in _PACKAGE_JSON_PATHS:
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            version = data.get("version")
+            if version:
+                return str(version)
+        except (FileNotFoundError, PermissionError, json.JSONDecodeError):
+            continue
+    return None
+
+
+def get_registry_versions() -> list[str] | None:
+    """Fetch all published versions from the npm registry via HTTPS."""
     try:
-        result = subprocess.run(
-            ["openclaw", "--version"],
-            capture_output=True, text=True, timeout=10
+        req = urllib.request.Request(
+            _NPM_REGISTRY_URL,
+            headers={"Accept": "application/json"},
         )
-        return result.stdout.strip()
-    except Exception as e:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            versions = list(data.get("versions", {}).keys())
+            return versions if versions else None
+    except (urllib.error.URLError, json.JSONDecodeError, OSError):
         return None
 
 
-def get_registry_versions():
-    """Get all available versions from npm registry."""
-    try:
-        result = subprocess.run(
-            ["npm", "show", "openclaw", "versions", "--json"],
-            capture_output=True, text=True, timeout=15
-        )
-        versions = json.loads(result.stdout)
-        if isinstance(versions, str):
-            versions = [versions]
-        return versions
-    except Exception:
-        return None
-
-
-def parse_version(v):
-    """Parse version string into comparable tuple. Handles YYYY.M.DD[-N] format."""
+def parse_version(v: str) -> tuple[int, int, int, int]:
+    """Parse YYYY.M.DD[-N] version string into a comparable tuple."""
     match = re.match(r"(\d+)\.(\d+)\.(\d+)(?:-(\d+))?", v)
     if not match:
         return (0, 0, 0, 0)
-    major, minor, patch = int(match.group(1)), int(match.group(2)), int(match.group(3))
-    hotfix = int(match.group(4)) if match.group(4) else 0
-    return (major, minor, patch, hotfix)
+    return (
+        int(match.group(1)),
+        int(match.group(2)),
+        int(match.group(3)),
+        int(match.group(4)) if match.group(4) else 0,
+    )
 
 
-def get_latest_version(versions):
-    """Find the latest version from a list."""
+def get_latest_version(versions: list[str]) -> str | None:
+    """Return the highest version from a list."""
     if not versions:
         return None
     return max(versions, key=parse_version)
 
 
-def get_changelog_url(version):
-    """Generate GitHub release URL for a version."""
-    # Strip hotfix suffix for release tag
+def get_changelog_url(version: str) -> str:
+    """Generate the GitHub release URL for a given version."""
     base = re.sub(r"-\d+$", "", version)
     return f"https://github.com/openclaw/openclaw/releases/tag/v{base}"
 
 
-def main():
+def main() -> None:
     output_format = "text"
     if "--format" in sys.argv:
         idx = sys.argv.index("--format")
@@ -67,27 +95,24 @@ def main():
 
     installed = get_installed_version()
     if not installed:
-        if output_format == "json":
-            print(json.dumps({"error": "Could not determine installed version"}))
-        else:
-            print("Error: Could not determine installed openclaw version")
+        msg = "Could not determine installed openclaw version"
+        print(json.dumps({"error": msg}) if output_format == "json" else f"Error: {msg}")
         sys.exit(1)
 
     versions = get_registry_versions()
     if not versions:
-        if output_format == "json":
-            print(json.dumps({"error": "Could not fetch versions from npm registry"}))
-        else:
-            print("Error: Could not fetch versions from npm registry")
+        msg = "Could not fetch versions from npm registry"
+        print(json.dumps({"error": msg}) if output_format == "json" else f"Error: {msg}")
         sys.exit(1)
 
     latest = get_latest_version(versions)
-    is_current = parse_version(installed) >= parse_version(latest)
-
-    # Find versions newer than installed
     installed_tuple = parse_version(installed)
-    newer = [v for v in versions if parse_version(v) > installed_tuple]
-    newer.sort(key=parse_version)
+    is_current = installed_tuple >= parse_version(latest)
+
+    newer = sorted(
+        [v for v in versions if parse_version(v) > installed_tuple],
+        key=parse_version,
+    )
 
     result = {
         "installed": installed,
@@ -95,26 +120,21 @@ def main():
         "up_to_date": is_current,
         "newer_versions": newer,
         "changelog_url": get_changelog_url(latest),
-        "update_command": f"npm i -g openclaw@{latest}"
     }
 
     if output_format == "json":
         print(json.dumps(result, indent=2))
+    elif is_current:
+        print(f"✅ OpenClaw is up to date: {installed}")
     else:
-        if is_current:
-            print(f"✅ OpenClaw is up to date: {installed}")
-        else:
-            print(f"⬆️  Update available: {installed} → {latest}")
-            print(f"   Versions behind: {len(newer)}")
-            if len(newer) <= 5:
-                for v in newer:
-                    print(f"   • {v}")
-            else:
-                for v in newer[-5:]:
-                    print(f"   • {v}")
-                print(f"   ... and {len(newer) - 5} more")
-            print(f"   Release: {get_changelog_url(latest)}")
-            print(f"   Update:  {result['update_command']}")
+        print(f"⬆️  Update available: {installed} → {latest}")
+        print(f"   Versions behind: {len(newer)}")
+        shown = newer if len(newer) <= 5 else newer[-5:]
+        for v in shown:
+            print(f"   • {v}")
+        if len(newer) > 5:
+            print(f"   ... and {len(newer) - 5} more")
+        print(f"   Release: {get_changelog_url(latest)}")
 
 
 if __name__ == "__main__":
