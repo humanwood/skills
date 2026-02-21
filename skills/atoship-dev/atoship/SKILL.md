@@ -1,9 +1,9 @@
 ---
 name: atoship
-description: Turn your AI assistant into a fully autonomous shipping manager. Buy discounted labels, compare rates across USPS, FedEx, and UPS, track packages, and manage shipments — all by just describing what you need. No portals, no tabs, no manual work.
+description: Ship packages with AI — compare rates across USPS, FedEx, and UPS, buy discounted labels, track shipments, and manage orders. Requires user confirmation before any purchase or wallet-affecting action.
 user-invokable: true
 license: MIT
-metadata: {"openclaw": {"emoji": "📦", "primaryEnv": "ATOSHIP_API_KEY", "homepage": "https://atoship.com"}}
+metadata: {"openclaw": {"emoji": "📦", "primaryEnv": "ATOSHIP_API_KEY", "requiredEnv": ["ATOSHIP_API_KEY"], "homepage": "https://atoship.com"}}
 ---
 
 # atoship — Your AI Shipping Manager
@@ -81,6 +81,8 @@ Dimensions (optional): length × width × height in inches
 Results show each carrier's services, prices, and estimated delivery times. USPS, FedEx Ground, FedEx Express, UPS Ground, UPS 2-Day, and more.
 
 ### Step 2 — Buy a label
+
+> **IMPORTANT**: Always show the user the carrier, service, price, and full addresses, then ask for explicit confirmation (e.g. "Confirm purchase?") before calling the purchase API. Never purchase a label without user approval — this action charges their wallet.
 
 Once you pick a service, I'll collect the full addresses and purchase the label:
 
@@ -225,16 +227,25 @@ atoship is built for e-commerce sellers, small business owners, logistics coordi
 
 ## Security & API key safety
 
-This skill calls the atoship REST API (https://atoship.com/api/v1) on your behalf. It does not write files to disk, does not access your system beyond the API calls, and only uses the `ATOSHIP_API_KEY` you provide.
+This skill calls the atoship REST API (`https://atoship.com/api/v1`) on your behalf. It does **not** write files to disk, does **not** access your file system, does **not** read other environment variables, and only communicates with the single domain `atoship.com`.
 
-**API actions that affect your wallet:**
-- `purchase_label` — deducts the label cost from your balance
+**Required environment variable:**
+- `ATOSHIP_API_KEY` — Your atoship API key (`ak_live_...` for production, `ak_test_...` for testing)
+
+**Wallet-affecting actions (require user confirmation before executing):**
+- `purchase_label` — deducts the label cost from your wallet balance
 - `void_label` — issues a refund (within carrier void window)
 
-**API actions that are read-only:**
-- `get_shipping_rates`, `track_package`, `list_labels`, `get_label`, `get_account`, `list_carrier_accounts`, `validate_address`
+> **Rule for AI assistants**: You MUST ask the user for explicit confirmation before calling `purchase_label` or `void_label`. Display the action summary (carrier, service, price, addresses) and wait for a "yes" or "confirm" response. Never execute wallet-affecting actions autonomously.
 
-To limit risk, you can create a read-only API key in Dashboard → Settings → API Keys and restrict it to specific IP addresses or rate limits.
+**Read-only actions (safe to call without confirmation):**
+- `get_shipping_rates`, `track_package`, `list_labels`, `get_label`, `get_account`, `list_carrier_accounts`, `validate_address`, `list_orders`, `get_order`, `create_order`
+
+**Recommendations:**
+- Start with a test key (`ak_test_...`) — test labels are free and never shipped
+- Use a small wallet balance (e.g. $20) while evaluating
+- Set spending alerts in Dashboard → Billing → Notifications
+- Rotate/revoke keys at any time from Dashboard → Settings → API Keys
 
 ## Support & Contact
 
