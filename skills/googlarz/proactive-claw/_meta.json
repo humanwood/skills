@@ -3,11 +3,16 @@
   "slug": "proactive-claw",
   "displayName": "Proactive Claw",
   "latest": {
-    "version": "1.2.1",
-    "publishedAt": 1771659806043,
-    "commit": "https://github.com/openclaw/skills/commit/05781c6fee2b5b1ee250e229d8580498948590de"
+    "version": "1.2.3",
+    "publishedAt": 1771661838266,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.2.1",
+      "publishedAt": 1771659806043,
+      "commit": "https://github.com/openclaw/skills/commit/05781c6fee2b5b1ee250e229d8580498948590de"
+    },
     {
       "version": "1.1.9",
       "publishedAt": 1771596037836,

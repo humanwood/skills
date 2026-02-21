@@ -65,9 +65,16 @@ side_effects:
 
 ---
 
-## 🏗️ Architecture — 2-Calendar + Link Graph
+## 🏗️ Architecture — Chat + 2-Calendar + Link Graph
 
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                    CLAUDE CODE (CHAT)                        │
+│  Conversation Radar → reads context → proposes → you approve│
+│  Calls scripts on-demand only. Respects max_autonomy_level.  │
+└─────────────────────────┬───────────────────────────────────┘
+                          │ (optional, explicit per conversation)
+                          ▼
 ┌──────────────────────┐     ┌───────────────────────────┐
 │   YOUR CALENDARS     │     │  Proactive Claw — Actions  │
 │   (read-only)        │────▶│  (skill-owned, visible)    │
@@ -85,17 +92,41 @@ side_effects:
           │  suppression      │
           │  sent_actions     │
           └──────────────────┘
+                    ▲
+                    │ (background, every 15 min)
+┌─────────────────────────────────────────────────────────────┐
+│                  BACKGROUND DAEMON                           │
+│  PLAN → EXECUTE → CLEANUP (user-level, non-root)            │
+│  Fully autonomous within configured autonomy cap            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Your calendars** are read-only — never modified. All actions are written to a single **"Proactive Claw — Actions"** calendar that you can see in your calendar app. Events are linked via a SQLite graph so actions stay in sync when source events move or are deleted.
+**Two independent modes — both governed by `max_autonomy_level`:**
+
+| Mode | Who triggers it | Network | Autonomy |
+|------|----------------|---------|----------|
+| **Chat** | You, explicitly per conversation | Same as daemon | Capped by `max_autonomy_level` |
+| **Daemon** | Background timer, every 15 min | Google/Nextcloud calendar | Capped by `max_autonomy_level` |
+
+**Your calendars** are read-only in both modes — never modified. All writes go to the **"Proactive Claw — Actions"** calendar only. Events are linked via a SQLite graph so actions stay in sync when source events move or are deleted.
 
 ### Daemon Cycle: PLAN → EXECUTE
 
-Every 15 minutes:
+Every 15 minutes (background, after `install_daemon.sh`):
 
 1. **PLAN** — Ingest user events, detect deletions, auto-relink moved events, plan reminder/prep/buffer/debrief actions
 2. **EXECUTE** — Fire due actions idempotently (check `sent_actions` table before sending)
 3. **CLEANUP** — Once daily: rename paused/canceled events, delete old canceled entries
+
+### Chat Mode: On-demand, With Your Approval
+
+When chatting with Claude Code, it can call proactive-claw scripts to:
+- **Read your schedule** → `scan_calendar.py` → shows you the result, no writes
+- **Propose a change** → `cal_editor.py --dry-run` → you approve before anything changes
+- **Log an outcome** → `capture_outcome.py` → only after you confirm the summary
+- **Check what policies would do** → `policy_engine.py --evaluate --dry-run` → suggestions only
+
+With `max_autonomy_level: confirm` (default), Claude Code **always asks before writing**. With `advisory`, it can only suggest — never execute. With `autonomous`, it acts without asking (not recommended).
 
 ---
 
@@ -316,6 +347,7 @@ All local features default ON. External-facing features default OFF.
 | `feature_voice` | **`false`** | Voice (requires whisper skill) |
 | `feature_team_awareness` | **`false`** | Team cross-calendar (external) |
 | `feature_llm_rater` | **`false`** | LLM rater (external if cloud) |
+| `feature_telegram_notifications` | **`false`** | Telegram push notifications (external, requires bot token) |
 
 ### LLM Rater Config
 
@@ -1002,6 +1034,7 @@ All new v1.2.0 scripts are **local-only** unless noted otherwise.
 | `daemon.py` | Google/Nextcloud API, Telegram (opt-in) | `osascript` (macOS notifications), `notify-send` (Linux) | Core daemon loop |
 | `memory.py` | None | None | Local SQLite |
 | `capture_outcome.py` | Notion API (opt-in) | `osascript` (Apple Notes, opt-in) | Outcome storage |
+| `create_checkin.py` | Google/Nextcloud API | None | Creates calendar check-in events |
 | `cross_skill.py` | Notion API (opt-in), GitHub via `gh` CLI (opt-in) | `gh pr list`, `gh issue list` (opt-in) | External context |
 | `rules_engine.py` | None | None | Local SQLite |
 | `intelligence_loop.py` | None | `python3` (calls scan/conflict scripts) | Local orchestration |
