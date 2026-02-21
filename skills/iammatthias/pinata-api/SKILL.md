@@ -2,7 +2,7 @@
 name: pinata-api
 description: Pinata IPFS API for file storage, groups, gateways, signatures, x402 payments, and file vectorization.
 homepage: https://pinata.cloud
-metadata: {"openclaw": {"emoji": "📌", "requires": {"env": ["PINATA_JWT", "GATEWAY_URL"]}, "primaryEnv": "PINATA_JWT"}}
+metadata: {"openclaw": {"emoji": "📌", "requires": {"env": ["PINATA_JWT", "PINATA_GATEWAY_URL"]}, "primaryEnv": "PINATA_JWT"}}
 ---
 
 # Pinata API
@@ -22,8 +22,8 @@ Authorization: Bearer $PINATA_JWT
 **Environment Variables:**
 
 - `PINATA_JWT` (required) - Your Pinata API JWT token. Get one at [app.pinata.cloud/developers/api-keys](https://app.pinata.cloud/developers/api-keys)
-- `GATEWAY_URL` (required) - Your Pinata gateway domain (e.g., `your-gateway.mypinata.cloud`). Find yours at [app.pinata.cloud/gateway](https://app.pinata.cloud/gateway)
-- `GATEWAY_KEY` (optional) - Gateway key for accessing public IPFS content not tied to your Pinata account. See [Gateway Access Controls](https://docs.pinata.cloud/gateways/gateway-access-controls#gateway-keys)
+- `PINATA_GATEWAY_URL` (required) - Your Pinata gateway domain (e.g., `your-gateway.mypinata.cloud`). Find yours at [app.pinata.cloud/gateway](https://app.pinata.cloud/gateway)
+- `PINATA_GATEWAY_KEY` (optional) - Gateway key for accessing public IPFS content not tied to your Pinata account. See [Gateway Access Controls](https://docs.pinata.cloud/gateways/gateway-access-controls#gateway-keys)
 
 ### Test Authentication
 
@@ -173,14 +173,14 @@ Body:
 
 ```json
 {
-  "url": "https://{GATEWAY_URL}/files/{cid}",
+  "url": "https://{PINATA_GATEWAY_URL}/files/{cid}",
   "expires": 600,
   "date": 1700000000,
   "method": "GET"
 }
 ```
 
-- `url` (required) - Full gateway URL using your `GATEWAY_URL` and the file's CID
+- `url` (required) - Full gateway URL using your `PINATA_GATEWAY_URL` and the file's CID
 - `expires` (optional) - Seconds until expiry (default: 600)
 - `date` (required) - Current Unix timestamp in seconds
 - `method` (required) - HTTP method, typically `GET`
@@ -379,7 +379,7 @@ Body:
 - File uploads use `multipart/form-data` — do not set Content-Type manually
 - Pagination: use `pageToken` from the previous response to get the next page
 - Network defaults to `public` if not specified
-- Gateway URLs follow the pattern `https://{GATEWAY_URL}/files/{cid}`
+- Gateway URLs follow the pattern `https://{PINATA_GATEWAY_URL}/files/{cid}`
 
 ## Resources
 

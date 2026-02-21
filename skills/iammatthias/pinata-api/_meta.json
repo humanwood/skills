@@ -3,11 +3,16 @@
   "slug": "pinata-api",
   "displayName": "Pinata API",
   "latest": {
-    "version": "1.0.8",
-    "publishedAt": 1771435605813,
-    "commit": "https://github.com/openclaw/skills/commit/0a5438e2d6d8a8cc14ece6c465001fc4c5873579"
+    "version": "1.0.9",
+    "publishedAt": 1771601507591,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.8",
+      "publishedAt": 1771435605813,
+      "commit": "https://github.com/openclaw/skills/commit/0a5438e2d6d8a8cc14ece6c465001fc4c5873579"
+    },
     {
       "version": "1.0.6",
       "publishedAt": 1771371217488,
