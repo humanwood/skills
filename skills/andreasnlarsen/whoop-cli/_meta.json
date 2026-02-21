@@ -3,9 +3,15 @@
   "slug": "whoop-cli",
   "displayName": "WHOOP CLI for Agents",
   "latest": {
-    "version": "0.1.6",
-    "publishedAt": 1771473979767,
-    "commit": "https://github.com/openclaw/skills/commit/3864191db04fd59fd759f94b4598a4b10ae62cf1"
+    "version": "0.3.1",
+    "publishedAt": 1771602548124,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.6",
+      "publishedAt": 1771473979767,
+      "commit": "https://github.com/openclaw/skills/commit/3864191db04fd59fd759f94b4598a4b10ae62cf1"
+    }
+  ]
 }
