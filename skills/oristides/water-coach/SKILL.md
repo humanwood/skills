@@ -25,11 +25,11 @@ water setup
 
 | is_setup | What to do |
 |----------|-------------|
-| **false** | Ask only: weight OR desired goal. Then use `water set_body_weight 80` or `water set_goal 3000`. Don't ask about reminders! |
+| **false** | Ask: weight OR desired goal. Also ask: "What times do you want water reminders?" (let user configure their schedule). Then use `water set_body_weight 80` or `water set_goal 3000`. Don't assume hardcoded times! |
 | **true** | Skip setup. Just log water or show status. |
 
 ### ❌ Don't Ask
-- Reminder schedules, units, notification preferences
+- Reminder schedules after first setup (user already configured)
 
 ### ✅ Do Ask  
 - "How much water did you drink?"
@@ -148,15 +148,25 @@ water-coach/
 ├── scripts/
 │   ├── water_coach.py   ← Unified CLI
 │   └── water.py         ← Core functions
-├── data/
-│   ├── water_config.json (Current configs)
-│   ├── water_log.csv
-│   └── body_metrics.csv
+├── data/                 ← DO NOT USE - keep skill code separate from user data
 └── references/
     ├── setup.md
     ├── dynamic.md
     └── log_format.md
 ```
+
+### ⚠️ IMPORTANT: Data Location
+**User data is stored in the AGENT WORKSPACE, NOT in the skill folder!**
+
+| Data | Location |
+|------|----------|
+| water_log.csv | `<agent-workspace>/memory/data/water_log.csv` |
+| water_config.json | `<agent-workspace>/memory/data/water_config.json` |
+| body_metrics.csv | `<agent-workspace>/memory/data/body_metrics.csv |
+
+Example path: `/home/oriel/.openclaw/workspace/memory/data/`
+
+**Why?** Keeps user data separate from skill code — makes backups, migrations, and skill updates easier.
 
 ---
 
@@ -164,10 +174,16 @@ water-coach/
 
 | Type | When | Command |
 |------|------|---------|
-| Base (5x) | 9am, 12pm, 3pm, 6pm, 9pm | water status |
+| User Configured | Per user's schedule | water status |
+| Default Suggestion | 9am, 12pm, 3pm, 6pm, 9pm | water status |
 | Dynamic | Every ~30 min (heartbeat) | water dynamic |
 | Weekly | Sunday 8pm | analytics week |
 | Monthly | 2nd day 8pm | analytics month |
+
+### Notification Rules (MUST FOLLOW)
+- **USER CONFIGURES THEIR SCHEDULE** — Agent should ask user: "What times do you want water reminders?" and respect that
+- **NO "no log" skip logic** — Always send notifications when scheduled, don't skip because user hasn't logged water
+- **Notifications STIMULATE logging** — That's the point! Don't assume user will log on their own
 
 ---
 

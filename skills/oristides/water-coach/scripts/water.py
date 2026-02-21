@@ -34,8 +34,26 @@ SESSION_DIR = AGENTS_DIR / "main" / "sessions"
 # HELPERS
 # ============================================================================
 
+import random
+import string
+
+def generate_entry_id(length: int = 6) -> str:
+    """Generate a short unique ID for water entries.
+    
+    Args:
+        length: Length of the ID (default 6)
+    
+    Returns:
+        Short unique ID string
+    """
+    chars = string.ascii_lowercase + string.digits
+    return ''.join(random.choices(chars, k=length))
+
 def get_current_message_id() -> str:
     """Get the current user message ID from session transcript for audit trail.
+    
+    Searches recursively through recent sessions if no user message found in latest.
+    Returns message_id from the most recent user message.
     
     Returns:
         Message ID string or empty string if not found
@@ -44,21 +62,29 @@ def get_current_message_id() -> str:
         return ""
     
     try:
-        # Find most recent session file
+        # Find session files sorted by modification time (newest first)
         files = [f for f in SESSION_DIR.iterdir() if f.suffix == '.jsonl' and not f.name.endswith('.lock')]
         if not files:
             return ""
         
-        latest_session = max(files, key=lambda f: f.stat().st_mtime)
+        # Sort by modification time (newest first)
+        files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
         
-        # Read and find last user message
-        with open(latest_session) as f:
-            lines = f.readlines()
-        
-        for line in reversed(lines):
-            d = json.loads(line)
-            if d.get('type') == 'message' and d.get('message', {}).get('role') == 'user':
-                return d.get('id', '')
+        # Search through recent sessions (newest first)
+        for session_file in files[:5]:  # Check up to 5 most recent sessions
+            try:
+                with open(session_file) as f:
+                    lines = f.readlines()
+                
+                # Search from end (most recent) to start
+                for line in reversed(lines):
+                    d = json.loads(line)
+                    if d.get('type') == 'message' and d.get('message', {}).get('role') == 'user':
+                        msg_id = d.get('id', '')
+                        if msg_id:
+                            return msg_id
+            except Exception:
+                continue
         
         return ""
     except Exception:
@@ -270,7 +296,35 @@ def get_today_status():
         "entries": entries
     }
 
-def log_water(amount_ml: int, slot: str = "manual", drank_at: str = None, message_id: str = "") -> dict:
+def remove_entry_by_id(entry_id: str) -> dict:
+    """Remove a water entry by its unique entry_id.
+    
+    Args:
+        entry_id: The unique entry ID to remove
+    
+    Returns:
+        Dict with success status and removed entry
+    """
+    if not LOG_FILE.exists():
+        return {"error": "Log file not found", "success": False}
+    
+    with open(LOG_FILE) as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+    
+    # Find entry with matching entry_id
+    for i, row in enumerate(rows):
+        if row.get("entry_id") == entry_id:
+            removed = rows.pop(i)
+            with open(LOG_FILE, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=["entry_id", "logged_at", "drank_at", "date", "slot", "ml_drank", "goal_at_time", "message_id"])
+                writer.writeheader()
+                writer.writerows(rows)
+            return {"success": True, "removed": removed, "remaining_entries": len(rows)}
+    
+    return {"error": f"Entry not found: {entry_id}", "success": False}
+
+def log_water(amount_ml: int, slot: str = "manual", drank_at: str = None, message_id: str = None) -> dict:
     """Log water intake.
     
     IMPORTANT: 
@@ -282,11 +336,15 @@ def log_water(amount_ml: int, slot: str = "manual", drank_at: str = None, messag
         amount_ml: Integer of ml to log (LLM converts "2 glasses" → 500)
         slot: Optional slot name for tracking
         drank_at: When user drank (ISO timestamp). If None, uses logged_at
-        message_id: For audit trail - link to conversation message
+        message_id: For audit trail - link to conversation message. If None, auto-fetches from session.
     
     Returns:
         Updated status dict
     """
+    # Auto-populate message_id if not provided
+    if message_id is None or message_id == "":
+        message_id = get_current_message_id()
+    
     if amount_ml <= 0:
         return {"error": "Amount must be positive", "current_status": get_today_status()}
     
@@ -302,13 +360,16 @@ def log_water(amount_ml: int, slot: str = "manual", drank_at: str = None, messag
     # Get goal at that time (use current goal for now - could be historical later)
     goal = get_daily_goal()
     
+    # Generate unique entry ID
+    entry_id = generate_entry_id()
+    
     # Append to CSV with new format
     file_exists = LOG_FILE.exists()
     with open(LOG_FILE, "a", newline="") as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["logged_at", "drank_at", "date", "slot", "ml_drank", "goal_at_time", "message_id"])
-        writer.writerow([now, drank_at, drank_date, slot, amount_ml, goal, message_id])
+            writer.writerow(["entry_id", "logged_at", "drank_at", "date", "slot", "ml_drank", "goal_at_time", "message_id"])
+        writer.writerow([entry_id, now, drank_at, drank_date, slot, amount_ml, goal, message_id])
     
     return get_today_status()
 
@@ -917,6 +978,14 @@ if __name__ == "__main__":
     
     elif cmd == "goal":
         print(json.dumps({"goal_ml": get_daily_goal()}))
+    
+    elif cmd == "remove":
+        # Usage: water.py remove <entry_id>
+        if len(sys.argv) > 2:
+            entry_id = sys.argv[2]
+            print(json.dumps(remove_entry_by_id(entry_id)))
+        else:
+            print(json.dumps({"error": "Usage: water.py remove <entry_id>"}))
     
     elif cmd == "set_body_weight":
         if len(sys.argv) > 2:
