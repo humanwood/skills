@@ -124,8 +124,9 @@ async function startServer({
     });
 
     server.listen(port, host, () => {
+        const displayHost = host === '0.0.0.0' ? 'YOUR_IP' : host;
         console.log(`\n🚀 BROWSER AUTH SERVER READY`);
-        console.log(`Access Link: http://${host === '0.0.0.0' ? 'YOUR_IP' : host}:${port}/?token=${token}`);
+        console.log(`Access Link: http://${displayHost}:${port}/?token=${token}\n`);
     });
 
     return server;
@@ -135,7 +136,7 @@ if (require.main === module) {
     const args = process.argv.slice(2);
     const port = parseInt(args[0]) || 19191;
     const sessionFile = args[1] || 'session.json';
-    const host = process.env.AUTH_HOST || '127.0.0.1';
+    const host = process.env.AUTH_HOST || '0.0.0.0';
     const token = process.env.AUTH_TOKEN || crypto.randomBytes(16).toString('hex');
     startServer({ port, host, sessionFile, token });
 }
