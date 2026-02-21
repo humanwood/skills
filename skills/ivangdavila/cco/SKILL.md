@@ -1,8 +1,11 @@
 ---
-name: Chief Customer Officer
+name: CCO / Chief Customer Officer
 slug: cco
-version: 1.0.0
+version: 1.0.1
+homepage: https://clawic.com/skills/cco
 description: Lead customer success with retention strategies, health scoring, expansion revenue, and lifecycle management.
+changelog: Added Core Rules structure and customer success leadership frameworks.
+metadata: {"clawdbot":{"emoji":"🤝","os":["linux","darwin","win32"]}}
 ---
 
 ## When to Use
@@ -18,54 +21,69 @@ User needs CCO-level guidance for customer success leadership. Agent acts as vir
 | Expansion and revenue growth | `expansion.md` |
 | Customer success operations | `operations.md` |
 
-## Core Capabilities
+## Core Rules
 
-1. **Health scoring** — Risk indicators, engagement metrics, usage patterns, early warning systems
-2. **Retention management** — Churn prediction, save plays, renewal forecasting, at-risk intervention
-3. **Expansion revenue** — Upsell identification, cross-sell timing, usage-based triggers, land-and-expand
-4. **Onboarding excellence** — Time-to-value, adoption milestones, success criteria, implementation playbooks
-5. **Customer segmentation** — Tiered service models, resource allocation, touch frequency, automation balance
-6. **Lifecycle orchestration** — Journey stages, milestone tracking, proactive outreach, maturity progression
-7. **Advocacy programs** — NPS optimization, reference programs, case studies, community building
+### 1. Retention Before Acquisition
+- Keeping customers is cheaper than finding new ones
+- A 5% increase in retention can mean 25%+ profit increase
+- Fix churn before scaling growth
 
-## Decision Checklist
+### 2. Proactive Over Reactive
+- Reach out before they complain
+- Declining engagement predicts churn
+- Schedule check-ins, don't wait for problems
 
-Before customer success initiatives, verify:
-- [ ] Health score model? (leading indicators defined)
-- [ ] Segmentation strategy? (who gets high-touch vs tech-touch)
-- [ ] Renewal process? (timing, ownership, playbook)
-- [ ] Expansion signals? (when to engage sales)
-- [ ] Success metrics? (GRR, NRR, NPS ownership)
+### 3. Value Delivered, Not Activities Logged
+- Outcomes matter, not check-ins
+- Track customer success, not CSM activity
+- If they're not getting value, nothing else matters
 
-## Critical Rules
+### 4. Segment Ruthlessly
+- Not all customers deserve equal attention
+- High-touch for enterprise, tech-touch for SMB
+- Match resources to revenue potential
 
-- **Retention before acquisition** — Keeping customers is cheaper than finding new ones
-- **Proactive over reactive** — Reach out before they complain
-- **Value delivered, not activities logged** — Outcomes matter, not check-ins
-- **Segment ruthlessly** — Not all customers deserve equal attention
-- **Expansion is earned** — Prove value before asking for more
-- **Health predicts churn** — Declining engagement means declining retention
-- **Executive alignment** — Know the economic buyer, not just the user
+### 5. Expansion is Earned
+- Prove value before asking for more
+- Timing matters — expand at peak satisfaction
+- Cross-sell and upsell follow success, not desperation
 
-## By Company Stage
+### 6. Health Predicts Everything
+- Build a health score that actually predicts churn
+- Leading indicators beat lagging ones
+- Update models quarterly as patterns change
 
-| Stage | CCO Focus |
-|-------|-----------|
-| **Pre-PMF** | Founder-led success, manual retention, learning what works |
-| **Seed** | First CSM hire, basic health signals, renewal process |
-| **Series A** | CS team structure, segmentation, expansion playbook |
-| **Series B+** | Scaled operations, predictive models, revenue accountability |
+### 7. Executive Alignment
+- Know the economic buyer, not just the user
+- Champions change jobs — build multi-threaded relationships
+- Business outcomes trump feature adoption
 
 ## Metrics Framework
 
-| Metric | What It Measures |
-|--------|------------------|
-| **GRR** | Gross retention — keeping existing revenue |
-| **NRR** | Net retention — expansion minus churn |
-| **Time to Value** | Onboarding effectiveness |
-| **Health Score** | Risk and opportunity prediction |
-| **NPS** | Advocacy likelihood |
-| **Logo Churn** | Customer count retention |
+| Metric | Measures |
+|--------|----------|
+| GRR | Gross retention — keeping existing revenue |
+| NRR | Net retention — expansion minus churn |
+| Time to Value | Onboarding effectiveness |
+| Health Score | Risk and opportunity prediction |
+| Logo Churn | Customer count retention |
+
+## Customer Success by Stage
+
+| Stage | Focus |
+|-------|-------|
+| Pre-PMF | Founder-led success, manual retention |
+| Seed | First CSM hire, basic health signals |
+| Series A | CS team structure, segmentation |
+| Series B+ | Scaled ops, predictive models, revenue accountability |
+
+## Common Traps
+
+- Activity theater — logging calls instead of driving value
+- One-size-fits-all — treating enterprise like SMB
+- Reactive firefighting — only engaging when things break
+- NPS obsession — chasing scores instead of outcomes
+- Ignoring product — CS can't fix bad product
 
 ## Human-in-the-Loop
 
@@ -73,6 +91,16 @@ These decisions require human judgment:
 - High-value account save negotiations
 - Strategic customer escalations
 - Pricing exceptions for renewals
-- Segmentation tier changes
 - Executive business reviews
-- Partnership or co-development decisions
+
+## Related Skills
+Install with `clawhub install <slug>` if user confirms:
+- `ceo` — executive leadership
+- `cro` — revenue strategy
+- `cmo` — marketing alignment
+- `cxo` — experience strategy
+
+## Feedback
+
+- If useful: `clawhub star cco`
+- Stay updated: `clawhub sync`
