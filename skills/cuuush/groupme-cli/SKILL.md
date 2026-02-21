@@ -19,7 +19,7 @@ metadata:
               "repo": "https://github.com/cuuush/groupme-cli",
               "bins": ["groupme"],
               "label": "Install groupme-cli (from source)",
-              "notes": "Builds via npm (git clone + npm install + npm run build + npm link). Review package.json scripts before running on sensitive systems.",
+              "notes": "Bundles to a single JS file via esbuild (git clone + npm install + npm run bundle + npm link). No separate build step needed — esbuild produces a self-contained dist/groupme-cli.js. Review package.json scripts before running on sensitive systems.",
             },
           ],
       },
@@ -38,9 +38,11 @@ Send and read GroupMe messages from the command line using the `groupme` CLI.
 git clone https://github.com/cuuush/groupme-cli
 cd groupme-cli
 npm install
-npm run build
+npm run bundle
 npm link
 ```
+
+> **Note:** `npm run bundle` uses [esbuild](https://esbuild.github.io/) to produce a single self-contained file at `dist/groupme-cli.js`. No separate TypeScript compilation step needed — just install, bundle, and link.
 
 ### Authentication
 

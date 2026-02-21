@@ -3,11 +3,16 @@
   "slug": "groupme-cli",
   "displayName": "GroupMe CLI",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1771503529204,
-    "commit": "https://github.com/openclaw/skills/commit/38a80cfa5965861317680c09007054c4972f221f"
+    "version": "1.0.4",
+    "publishedAt": 1771510677239,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1771503529204,
+      "commit": "https://github.com/openclaw/skills/commit/38a80cfa5965861317680c09007054c4972f221f"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1771500094384,
