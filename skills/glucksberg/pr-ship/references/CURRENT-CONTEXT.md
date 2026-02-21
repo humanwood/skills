@@ -84,7 +84,7 @@ These are architectural traps that have no CHANGELOG entry. They exist since ear
 - **Close resource pools on every call** -- unclosed `ProxyAgent` pools leak.
 - **Validate URLs before constructing connection objects** -- invalid proxy URL crashes execution.
 - **Duplicate inverse conditions = dead code** -- Block A skips non-gateway, Block B skips gateway = nothing runs.
-- **Run `pnpm protocol:gen:swift` after protocol schema changes.**
+- **After protocol schema changes, user should run `pnpm protocol:gen:swift`.**
 
 ### From v2026.2.17
 
@@ -126,7 +126,7 @@ These supplement the stable checklist in STABLE-PRINCIPLES.md:
 [] If touching cron webhooks: verify targets are publicly reachable HTTPS.
 [] If installing plugins: use --pin flag. Record name, version, spec, integrity.
 [] If touching canvas/A2UI: use scoped session capability URLs, not shared-IP auth.
-[] If touching protocol schemas: run pnpm protocol:gen:swift && pnpm protocol:check.
+[] If touching protocol schemas: recommend user runs pnpm protocol:gen:swift && pnpm protocol:check.
 [] If touching config loading: test negative path for out-of-root $include and symlink escape.
 [] If touching cron schedules: verify both expression and persisted schedule.staggerMs.
 ```

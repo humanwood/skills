@@ -290,7 +290,7 @@ Pattern-based signals that indicate elevated risk, regardless of module:
 | File locking removed | Diff removes `locked()`, `withLock`, lock wrappers | Race conditions in concurrent session/cron access. |
 | `--force` in git operation | Diff or command uses `git push --force` | Data loss risk. Must use `--force-with-lease`. |
 | New tool without policy entry | New tool file without matching policy configuration | Tool runs without access controls. |
-| Protocol schema changed | Diff touches `gateway/protocol/schema/*.ts` | CLI/TUI client compatibility. Run `pnpm protocol:gen:swift` + `pnpm protocol:check`. |
+| Protocol schema changed | Diff touches `gateway/protocol/schema/*.ts` | CLI/TUI client compatibility. Recommend running `pnpm protocol:gen:swift` + `pnpm protocol:check` before PR. |
 
 ---
 
@@ -308,29 +308,24 @@ node -e "const p=require('./package.json'); Object.keys(p.scripts).forEach(k=>co
 grep -n "run:" .github/workflows/ci.yml | head -30
 ```
 
-### Standard Commands (verify these exist before running)
+### Standard Commands (recommend to the user, do NOT execute)
 
-```bash
-pnpm build          # TypeScript compilation
-pnpm check          # Format + type check + lint
-pnpm test           # Full test suite
-pnpm check:docs     # Documentation validation
-pnpm protocol:check # Protocol compatibility
-pnpm protocol:gen:swift  # Regenerate Swift protocol (after schema changes)
-```
+These are commands the **user** should run before submitting a PR. List them in findings as suggested actions, but do not execute them -- they modify files or run long processes.
 
-### Conditional Verification
+- `pnpm build` -- TypeScript compilation
+- `pnpm check` -- Format + type check + lint
+- `pnpm test` -- Full test suite
+- `pnpm check:docs` -- Documentation validation
+- `pnpm protocol:check` -- Protocol compatibility
+- `pnpm protocol:gen:swift` -- Regenerate Swift protocol (after schema changes, generates files)
 
-```bash
-# After protocol schema changes
-pnpm protocol:gen:swift && pnpm protocol:check
+### Conditional Recommendations
 
-# For docs changes
-pnpm check:docs && pnpm format:check -- <changed-doc> && npx markdownlint-cli2 <changed-doc>
+Recommend these in findings when the corresponding files are in the diff:
 
-# After config changes
-pnpm vitest run src/config/
-```
+- Protocol schema changes: recommend `pnpm protocol:gen:swift && pnpm protocol:check`
+- Docs changes: recommend `pnpm check:docs && pnpm format:check -- <changed-doc>`
+- Config changes: recommend `pnpm vitest run src/config/`
 
 ---
 

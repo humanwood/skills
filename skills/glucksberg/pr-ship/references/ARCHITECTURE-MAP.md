@@ -171,7 +171,7 @@ The highest-impact "if you change X, you MUST also check Y" mappings:
 | `auto-reply/reply/get-reply.ts` | The entire reply pipeline -- most impactful single file |
 | `auto-reply/templating.ts` | `MsgContext` type used by 15+ files |
 | `channels/registry.ts` | Channel normalization, routing, dock, all channel references |
-| `gateway/protocol/schema/*.ts` | WS protocol compat, CLI client, TUI. Run `pnpm protocol:gen:swift` |
+| `gateway/protocol/schema/*.ts` | WS protocol compat, CLI client, TUI. User should run `pnpm protocol:gen:swift` before PR |
 | Any `index.ts` barrel | All consumers of that module's exports |
 
 For the full list, use EXPLORATION-PLAYBOOK.md's dynamic investigation commands.
