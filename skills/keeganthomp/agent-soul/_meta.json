@@ -3,9 +3,15 @@
   "slug": "agent-soul",
   "displayName": "Agent Soul",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771265106956,
-    "commit": "https://github.com/openclaw/skills/commit/fb1979ab9cabfe03ba4ea45bf30c3e251cf6938a"
+    "version": "1.2.0",
+    "publishedAt": 1771515974314,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771265106956,
+      "commit": "https://github.com/openclaw/skills/commit/fb1979ab9cabfe03ba4ea45bf30c3e251cf6938a"
+    }
+  ]
 }
