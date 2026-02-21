@@ -2,6 +2,8 @@
 name: 1claw
 description: HSM-backed secret management for AI agents — store, retrieve, rotate, and share secrets via the 1Claw vault without exposing them in context.
 homepage: https://1claw.xyz
+repository: https://github.com/1clawAI/1claw
+metadata: {"openclaw":{"requires":{"env":["ONECLAW_AGENT_TOKEN","ONECLAW_VAULT_ID"],"bins":[]},"primaryEnv":"ONECLAW_AGENT_TOKEN","install":[{"id":"npm","kind":"node","package":"@1claw/mcp","bins":["1claw-mcp"],"label":"1Claw MCP Server"}],"credentials":["ONECLAW_AGENT_TOKEN"],"permissions":["vault:read","vault:write","vault:delete","secret:read","secret:write","secret:delete","policy:create","share:create"]}}
 ---
 
 # 1Claw — HSM-Backed Secret Management
@@ -12,9 +14,28 @@ Use this skill to securely store, retrieve, and share secrets using the 1Claw va
 
 - You need an API key, password, or credential to complete a task
 - You want to store a newly generated credential securely
-- You need to share a secret with a human collaborator by email
+- You need to share a secret with a user or another agent
 - You need to rotate a credential after regenerating it
 - You want to check what secrets are available before using one
+
+## Access control model
+
+Agents do NOT get blanket access to all secrets in a vault. Access is controlled by policies that specify:
+- **Which paths** the agent can access (glob patterns like `api-keys/*` or `**`)
+- **Which permissions** (read, write, delete)
+- **Under what conditions** (IP allowlist, time windows)
+- **For how long** (policy expiry date)
+
+A human must explicitly create a policy to grant an agent access. If no policy matches, access is denied with 403.
+
+### Crypto transaction proxy
+
+Agents can have `crypto_proxy_enabled` set to `true` by a human. When enabled, two things happen:
+
+1. The agent **gains access** to submit on-chain transaction intents through a signing proxy — signing keys stay in the HSM.
+2. The agent is **blocked from reading** `private_key` and `ssh_key` type secrets directly via the normal secret read endpoint (returns 403). This prevents key exfiltration.
+
+Transaction endpoint: `POST /v1/agents/{id}/transactions` with `{ to, value, chain }`. The backend fetches the signing key from the vault, signs an EIP-155 transaction, and returns the signed transaction hex + keccak tx hash. The key is decrypted in-memory, used once, then zeroized. The flag is disabled by default and can be toggled at any time.
 
 ## Setup
 
@@ -149,7 +170,7 @@ list_vaults()
 
 ### grant_access
 
-Grant a user or agent access to a vault.
+Grant a user or agent access to a vault. You can only grant access on vaults you created.
 
 ```
 grant_access(vault_id: "...", principal_type: "agent", principal_id: "...", permissions: ["read"])
@@ -157,11 +178,24 @@ grant_access(vault_id: "...", principal_type: "agent", principal_id: "...", perm
 
 ### share_secret
 
-Share a secret with someone by email. They don't need a 1Claw account — the share is claimed when they sign up.
+Share a secret with your creator (the human who registered you), a specific user or agent by ID, or create an open link. Use `recipient_type: "creator"` to share back with your human — no ID needed.
 
 ```
-share_secret(secret_id: "...", email: "alice@example.com", expires_at: "2026-12-31T00:00:00Z", max_access_count: 3)
+share_secret(secret_id: "...", recipient_type: "creator", expires_at: "2026-12-31T00:00:00Z")
+share_secret(secret_id: "...", recipient_type: "user", recipient_id: "...", expires_at: "2026-12-31T00:00:00Z", max_access_count: 3)
+share_secret(secret_id: "...", recipient_type: "anyone_with_link", expires_at: "2026-12-31T00:00:00Z")
 ```
+
+Recipients of targeted shares (creator/user/agent) must explicitly accept the share before they can access the secret. Agents cannot create email-based shares.
+
+## Security model
+
+- **Credentials are configured by the human**, not the agent. The `ONECLAW_AGENT_TOKEN` and `ONECLAW_VAULT_ID` environment variables are set in the MCP server config or SDK initialization by the human who owns the agent.
+- **The agent never sees its own credentials.** The MCP server reads them from the environment and uses them to authenticate API requests on behalf of the agent.
+- **Access is deny-by-default.** Even with valid credentials, the agent can only access secrets allowed by its policies.
+- **Secret values are fetched just-in-time** and should never be stored, echoed, or included in conversation summaries.
+- **Agents cannot create email-based shares.** This prevents phishing via share links.
+- **Crypto proxy is opt-in and enforced.** Agents only gain transaction signing capabilities if a human explicitly enables `crypto_proxy_enabled`. When enabled, direct reads of `private_key` and `ssh_key` secrets are blocked — the agent must use the proxy. It is off by default.
 
 ## Best practices
 
@@ -170,7 +204,8 @@ share_secret(secret_id: "...", email: "alice@example.com", expires_at: "2026-12-
 3. **Use `describe_secret` first** if you just need to check whether a secret exists or is still valid.
 4. **Use `list_secrets` to discover** what credentials are available before guessing paths.
 5. **Rotate after regeneration.** If you regenerate an API key at a provider, immediately `rotate_and_store` the new value.
-6. **Share by email** when a human collaborator needs a credential. They'll see it when they log in.
+6. **Use `grant_access` for vault-level sharing.** This is the preferred way to share access — it creates a fine-grained policy with path patterns and permissions.
+7. **Use `share_secret` for one-off sharing.** For sharing a single specific secret with a user or agent.
 
 ## Error handling
 
@@ -181,6 +216,7 @@ share_secret(secret_id: "...", email: "alice@example.com", expires_at: "2026-12-
 | 402   | Free tier quota exhausted           | Inform the user to upgrade at 1claw.xyz/settings/billing |
 | 401   | Not authenticated                   | Token expired; re-authenticate                           |
 | 403   | No permission                       | Ask the user to grant access via a policy                |
+| 429   | Rate limited                        | Wait and retry; share creation is limited to 10/min/org  |
 
 ## Links
 
