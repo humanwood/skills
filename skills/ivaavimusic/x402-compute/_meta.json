@@ -3,11 +3,16 @@
   "slug": "x402-compute",
   "displayName": "x402 Compute",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1771568164816,
-    "commit": "https://github.com/openclaw/skills/commit/97339ef249c309d91e2bb74cf7761945d7b82be3"
+    "version": "1.0.7",
+    "publishedAt": 1771595637206,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1771568164816,
+      "commit": "https://github.com/openclaw/skills/commit/97339ef249c309d91e2bb74cf7761945d7b82be3"
+    },
     {
       "version": "1.0.3",
       "publishedAt": 1771448399420,
