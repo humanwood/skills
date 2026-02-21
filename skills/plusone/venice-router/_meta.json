@@ -1,11 +1,17 @@
 {
   "owner": "plusone",
   "slug": "venice-router",
-  "displayName": "Venice Router",
+  "displayName": "Venice.Ai Router Openclaw",
   "latest": {
-    "version": "1.4.1",
-    "publishedAt": 1771581096354,
-    "commit": "https://github.com/openclaw/skills/commit/ea5a28bd101c047b9e47f1f3ca4af5639aef4909"
+    "version": "1.5.0",
+    "publishedAt": 1771650856804,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.4.1",
+      "publishedAt": 1771581096354,
+      "commit": "https://github.com/openclaw/skills/commit/ea5a28bd101c047b9e47f1f3ca4af5639aef4909"
+    }
+  ]
 }
