@@ -1,0 +1,11 @@
+{
+  "owner": "pfrederiksen",
+  "slug": "openclaw-update-checker",
+  "displayName": "OpenClaw Update Checker",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771696203008,
+    "commit": null
+  },
+  "history": []
+}
