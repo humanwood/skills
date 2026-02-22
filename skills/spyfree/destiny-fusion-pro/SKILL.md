@@ -1,6 +1,6 @@
 ---
 name: ziwei-bazi-consulting
-description: 综合命理咨询技能（紫微斗数 + 八字）。Use when 用户希望一次性完成 Ziwei Doushu + Bazi/Four Pillars 的联合排盘、年度锚点分析、咨询交付文案生成。Supports Chinese and English search intents: 紫微斗数, 八字, 命理, destiny, fortune, astrology, consulting report.
+description: 综合命理咨询技能（紫微斗数 + 八字 / mingli）。Use when 用户希望一次性完成 Ziwei Doushu + Bazi/Four Pillars 的联合排盘、年度锚点分析、咨询交付文案生成。Supports Chinese and English search intents: 紫微斗数, 八字, 命理, 算命, mingli, destiny, fortune, astrology, consulting report.
 ---
 
 # Destiny Fusion Pro / 命理融合咨询
@@ -16,6 +16,7 @@ python skills/ziwei-bazi-consulting/scripts/fortune_fusion.py \
   --year 2026 \
   --from-year 2026 \
   --years 10 \
+  --template pro \
   --format markdown
 ```
 
@@ -23,6 +24,11 @@ python skills/ziwei-bazi-consulting/scripts/fortune_fusion.py \
 1. 紫微核心：命宫/身宫/流年锚点/四化键
 2. 八字核心：四柱/日主/五行/大运/流年
 3. 咨询交付：事业、关系、健康、财务、风险提示（可直接发客户）
+
+## 交付模板
+- `--template lite`：短摘要，适合社媒/私聊
+- `--template pro`：标准咨询版（默认）
+- `--template executive`：高净值客户话术
 
 ## 依赖
 - `iztro-py`

@@ -116,7 +116,7 @@ def bazi_block(date_text, time_text, gender, sect, from_year, years):
     }
 
 
-def render_md(payload):
+def render_md(payload, template='pro'):
     z = payload['ziwei']; b = payload['bazi']; c = payload['consulting']
     lines = [
         '# Destiny Fusion Pro Report（紫微斗数 + 八字）','',
@@ -143,16 +143,41 @@ def render_md(payload):
         f"- 日主：{b['day_master']}｜命宫：{b['minggong']}｜身宫：{b['shengong']}｜胎元：{b['taiyuan']}",
         f"- 五行：木{w.get('木',0)} 火{w.get('火',0)} 土{w.get('土',0)} 金{w.get('金',0)} 水{w.get('水',0)}",
         '',
-        '## C) 咨询交付摘要（可直接给客户）',
-        f"- 综合定位：{c['positioning']}",
-        f"- 事业建议：{c['career']}",
-        f"- 关系建议：{c['relationship']}",
-        f"- 健康建议：{c['health']}",
-        f"- 财务建议：{c['finance']}",
-        f"- 风险提示：{c['risk']}",
-        '',
-        '## D) 大运与流年（节选）',
     ]
+
+    if template == 'lite':
+        lines += [
+            '## C) 快速结论（Lite）',
+            f"- 一句话定位：{c['positioning']}",
+            f"- 本期重点：{c['career']}",
+            f"- 风险：{c['risk']}",
+            '',
+            '## D) 大运与流年（节选）',
+        ]
+    elif template == 'executive':
+        lines += [
+            '## C) 高净值咨询摘要（Executive）',
+            f"- 战略定位：{c['positioning']}",
+            f"- 事业/商业：{c['career']}",
+            f"- 家庭/关系治理：{c['relationship']}",
+            f"- 身心与节律：{c['health']}",
+            f"- 资产与风控：{c['finance']}",
+            f"- 关键风险：{c['risk']}",
+            '',
+            '## D) 大运与流年（节选）',
+        ]
+    else:
+        lines += [
+            '## C) 咨询交付摘要（Pro）',
+            f"- 综合定位：{c['positioning']}",
+            f"- 事业建议：{c['career']}",
+            f"- 关系建议：{c['relationship']}",
+            f"- 健康建议：{c['health']}",
+            f"- 财务建议：{c['finance']}",
+            f"- 风险提示：{c['risk']}",
+            '',
+            '## D) 大运与流年（节选）',
+        ]
     for d in b['dayun'][:5]:
         lines.append(f"- 大运{d['idx']}：{d['age']}岁 {d['ganzhi']}")
     for ly in b['liunian'][:5]:
@@ -184,6 +209,7 @@ def main():
     ap.add_argument('--sect', type=int, default=2)
     ap.add_argument('--from-year', type=int, default=None)
     ap.add_argument('--years', type=int, default=10)
+    ap.add_argument('--template', choices=['lite','pro','executive'], default='pro')
     ap.add_argument('--format', choices=['markdown','json'], default='markdown')
     args = ap.parse_args()
 
@@ -197,9 +223,10 @@ def main():
     }
 
     if args.format == 'json':
+        payload['template'] = args.template
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
-        print(render_md(payload))
+        print(render_md(payload, args.template))
 
 
 if __name__ == '__main__':
