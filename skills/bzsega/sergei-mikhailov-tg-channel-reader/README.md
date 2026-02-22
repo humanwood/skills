@@ -81,20 +81,40 @@ You need a personal Telegram API key. This is free and takes 2 minutes.
 
 ### Step 2 — Set credentials securely
 
+The simplest way is `~/.bashrc`, but it's less secure if you share your machine or use cloud backups. Choose the method that fits your threat model:
+
+**Option A: `~/.bashrc` (simple, convenient)**
 ```bash
-# Add to ~/.bashrc so they persist across sessions
 echo 'export TG_API_ID=12345678' >> ~/.bashrc
 echo 'export TG_API_HASH=your_api_hash_here' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-Alternatively, create `~/.tg-reader.json` (never commit this file!):
+**Option B: `~/.tg-reader.json` (outside project, never commit)**
 ```json
 {
   "api_id": 12345678,
   "api_hash": "your_api_hash_here"
 }
 ```
+
+**Option C: `direnv` (recommended for developers)**
+```bash
+# Install direnv, then create .envrc in your working directory
+echo 'export TG_API_ID=12345678' >> .envrc
+echo 'export TG_API_HASH=your_api_hash_here' >> .envrc
+echo '.envrc' >> .gitignore
+direnv allow
+```
+
+**Option D: System keychain (most secure)**
+```bash
+# Linux (secret-tool)
+secret-tool store --label="TG API" service tg-reader username api
+# Then retrieve at runtime: secret-tool lookup service tg-reader username api
+```
+
+> 💡 Avoid storing `TG_API_HASH` in files that are backed up to the cloud or shared between users.
 
 ### Step 3 — Authenticate once
 
@@ -239,7 +259,28 @@ Both implementations use the same API credentials and provide identical function
 - Telegram is rate-limiting requests
 - The error shows how many seconds to wait — just retry after that
 
+## Legal
+
+By using this skill you agree to the terms in [DISCLAIMER.md](./DISCLAIMER.md).
+
 ## Security
+
+This skill uses **MTProto** — the same protocol as the official Telegram app. This means:
+
+- 🔑 **`TG_API_HASH` is a secret** — treat it like a password. Never commit it to git, never share it.
+- 📱 **Session file = full account access** — `~/.tg-reader-session.session` grants complete access to your Telegram account. Keep it on your machine only.
+- 🚫 **Never copy session files** between machines or share them with anyone.
+- 👁️ **Your agent can read private channels** you're subscribed to — this is by design, but be aware of it.
+
+**What the skill does NOT do:**
+- Does not send messages on your behalf
+- Does not modify or delete anything
+- Does not share your data with third parties
+
+**Best practices:**
+- Store credentials in env vars, not in files tracked by git
+- Add `*.session` and `.tg-reader.json` to `.gitignore`
+- Revoke your API app on my.telegram.org if credentials are compromised
 
 - ✅ Credentials stored in env vars or `~/.tg-reader.json` (outside the project)
 - ✅ Session file stored in home directory (`~/.tg-reader-session.session`)

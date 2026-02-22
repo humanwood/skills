@@ -1,11 +1,17 @@
 {
   "owner": "bzsega",
   "slug": "sergei-mikhailov-tg-channel-reader",
-  "displayName": "TG (Telegram) Channel Reader",
+  "displayName": "Telegram Channels Reader",
   "latest": {
-    "version": "0.2.1",
-    "publishedAt": 1771779401050,
-    "commit": "https://github.com/openclaw/skills/commit/1d9644de58752151c4e3429fb53281b78ca88abb"
+    "version": "0.3.1",
+    "publishedAt": 1771789113693,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.2.1",
+      "publishedAt": 1771779401050,
+      "commit": "https://github.com/openclaw/skills/commit/1d9644de58752151c4e3429fb53281b78ca88abb"
+    }
+  ]
 }
