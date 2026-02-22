@@ -3,9 +3,15 @@
   "slug": "solo-landing-gen",
   "displayName": "Landing Gen",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1771616141735,
-    "commit": "https://github.com/openclaw/skills/commit/c66cc110f44e64476efb2ad079e84ca9ede93a67"
+    "version": "1.1.1",
+    "publishedAt": 1771711601043,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1771616141735,
+      "commit": "https://github.com/openclaw/skills/commit/c66cc110f44e64476efb2ad079e84ca9ede93a67"
+    }
+  ]
 }
