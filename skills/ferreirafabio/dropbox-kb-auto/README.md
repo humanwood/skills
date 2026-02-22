@@ -1,98 +1,91 @@
 # Dropbox KB Auto
 
-**OpenClaw skill: Automatically index your Dropbox into a searchable knowledge base with OCR and Office file support.**
+## What problem does this solve?
+
+You have years of documents, receipts, research papers, and notes in Dropbox — but your AI agent can't search any of them. Finding a specific file means opening Dropbox and digging through folders manually.
+
+This skill connects Dropbox to your agent's knowledge base. It syncs your files, extracts text (including OCR for scans and photos), and indexes everything so you can ask natural-language questions like *"Find my Q1 2025 expense receipts"* and get answers instantly.
 
 ## How It Works
 
 ```
-Dropbox files → This skill extracts text → Markdown files → OpenClaw indexes & embeds → Searchable via agent
+        ┌─────────────────────┐
+        │   Dropbox (files)   │
+        │  PDFs, Office, Imgs │
+        └────────┬────────────┘
+                 │  Delta API (only changes)
+                 ▼
+        ┌─────────────────────┐
+        │   Text Extraction   │
+        │                     │
+        │  PDF → pypdf / OCR  │
+        │  DOCX → python-docx │
+        │  XLSX → openpyxl    │
+        │  PPTX → python-pptx │
+        │  IMG → Tesseract    │
+        │  TXT → UTF-8 read   │
+        └────────┬────────────┘
+                 │  Saves as .md files
+                 ▼
+        ┌─────────────────────┐
+        │  OpenClaw Memory    │
+        │                     │
+        │  Embeddings + Index │
+        │  Semantic + keyword │
+        │  hybrid search      │
+        └────────┬────────────┘
+                 │
+                 ▼
+        ┌─────────────────────┐
+        │  Ask your agent:    │
+        │  "Find my Q1 2025   │
+        │   expense receipts" │
+        └─────────────────────┘
 ```
-
-**What this skill does:**
-- Monitors your Dropbox for new/changed files (delta-based sync)
-- Extracts text from PDFs, images (OCR), Office files, documents
-- Saves content as markdown in OpenClaw's knowledge base folder
-
-**What OpenClaw handles automatically:**
-- Generates vector embeddings (text-embedding-3-small via OpenAI)
-- Stores in PostgreSQL with pgvector extension
-- Provides semantic + keyword hybrid search (70% vector + 30% BM25)
-- Makes content available to your agent for retrieval
-
-**You get:** Ask your agent about any Dropbox document and it can answer based on the content.
 
 ## Features
 
-🚀 **Delta-based sync** - Only processes new/changed files (10x-100x faster than full scans)  
-📄 **Multi-format extraction** - PDF, Word, Excel, PowerPoint, images, text files  
-🔍 **OCR support** - Extracts text from scanned PDFs and images (eng + deu)  
-⚡ **Incremental indexing** - Efficient hash-set lookups, cursor persistence  
-📊 **Office file support** - Excel (first 5 sheets), PowerPoint (first 30 slides), Word docs  
-🎯 **Production-tested** - Handles 650K+ files, rate limits, retries, large file edge cases  
-
-## What This Skill Includes
-
-- **Delta-based Dropbox sync** - Only processes changed files (fast incremental updates)
-- **Multi-format text extraction** - PDF (OCR fallback), images (Tesseract), Office files, documents
-- **Cron scheduler integration** - Runs automatically every 6 hours (configurable)
-- **Progress tracking** - Remembers indexed files, handles deletions
-
-**Not included (provided by OpenClaw core):**
-- Vector embeddings generation (OpenAI API)
-- PostgreSQL + pgvector storage
-- Semantic search engine
-- Agent memory/retrieval system
+- **Delta sync with content hashing** - Only processes new/changed files via Dropbox cursor API and content hashes (unchanged files are never re-downloaded or re-processed)
+- **Multi-format extraction** - PDF, Word, Excel, PowerPoint, images, plain text
+- **OCR** - Reads scanned documents and photos via Tesseract
+- **Interactive installer** - Configures folders, exclusions, cron schedule in one command
+- **Production-tested** - Handles 650K+ file Dropboxes with rate limiting and retries
 
 ## Requirements
 
 - OpenClaw installed and running
-- Dropbox account with API access
-- Linux/macOS system (tested on Ubuntu 24.04, macOS 14+)
+- Dropbox account with API access ([create app](https://www.dropbox.com/developers/apps))
+- Linux or macOS (tested on Ubuntu 24.04, macOS 14+)
 
 ## Installation
 
-### Prerequisites
-
 ```bash
-# Install system dependencies (Debian/Ubuntu)
-sudo apt-get update
-sudo apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu poppler-utils
-
-# Install Python dependencies
-pip3 install pypdf openpyxl python-pptx python-docx
-```
-
-### Install via ClawHub
-
-**Recommended:**
-```bash
+# Via ClawHub (recommended)
 clawhub install dropbox-kb-auto
-```
 
-**Manual installation:**
-```bash
+# Or manually
 cd ~/.openclaw/workspace/skills
 git clone https://github.com/ferreirafabio/dropbox-kb-auto.git
 ```
 
-> **Note:** ClawHub is OpenClaw's package manager for agent skills. Learn more at [clawhub.com](https://clawhub.com)
+Then run the interactive setup:
+```bash
+cd ~/.openclaw/workspace/skills/dropbox-kb-auto
+./install.sh
+```
 
-## Setup
+The installer walks you through folder selection, exclusion patterns, file types, Dropbox API credentials, and cron scheduling.
 
-### 1. Create Dropbox App
+## Manual Setup
+
+### 1. Dropbox App
 
 1. Go to https://www.dropbox.com/developers/apps
-2. Create app → **Scoped access** → **Full Dropbox** (or App folder if preferred)
-3. Permissions tab:
-   - ✅ `files.metadata.read`
-   - ✅ `files.content.read`
-4. Copy **App key**, **App secret**
-5. Generate **Refresh token**:
-   ```bash
-   # Use Dropbox OAuth 2 flow or their official SDK
-   ```
+2. Create app → **Scoped access** → **Full Dropbox**
+3. Enable permissions: `files.metadata.read`, `files.content.read`
+4. Generate a refresh token via OAuth 2 flow
 
-### 2. Configure Credentials
+### 2. Credentials
 
 Add to `~/.openclaw/.env`:
 ```bash
@@ -101,208 +94,100 @@ DROPBOX_FULL_APP_SECRET=your_app_secret
 DROPBOX_FULL_REFRESH_TOKEN=your_refresh_token
 ```
 
-### 3. Customize Config
+### 3. Config
 
 Edit `config.json`:
 ```json
 {
-  "folders": [
-    "/Documents",
-    "/Work",
-    "/Research"
-  ],
-  "skip_paths": [
-    "/Documents/Archive",
-    "/Downloads"
-  ],
+  "folders": ["/Documents", "/Work"],
+  "skip_paths": ["/Archive", "/Backups"],
   "file_types": ["pdf", "docx", "xlsx", "pptx", "jpg", "png", "txt"],
   "max_file_size_mb": 20
 }
 ```
 
-### 4. Run Initial Sync
+### 4. Run
 
 ```bash
-cd ~/.openclaw/workspace/skills/dropbox-kb-auto
 python3 dropbox-sync.py
 ```
 
-First run takes 5-10 minutes (builds delta cursors). Subsequent runs: <10 seconds.
+First run: 5-10 min (builds delta cursors). Subsequent runs: <10 seconds.
 
-### 5. Set Up Cron Job (Optional)
+### 5. Schedule (optional)
 
 ```bash
 openclaw cron create \
   --name "Dropbox KB Sync" \
   --cron "0 */6 * * *" \
-  --tz "Europe/Berlin" \
+  --tz "America/New_York" \
   --timeout-seconds 14400 \
   --session isolated \
-  --message "Run Dropbox KB sync: cd ~/.openclaw/workspace/skills/dropbox-kb-auto && python3 dropbox-sync.py"
+  --message "cd ~/.openclaw/workspace/skills/dropbox-kb-auto && python3 dropbox-sync.py"
 ```
 
-## Usage
+## Performance
 
-### Manual Sync
+Tested on 650,000 files (1,840 indexable):
+
+| Metric | First Run | Incremental |
+|--------|-----------|-------------|
+| Time | ~15 min | <30 sec |
+| Files processed | 1,840 | 5-20 (avg) |
+| Disk usage | ~45 MB | +100 KB |
+
+## Supported File Types
+
+| Type | Extensions | Method |
+|------|-----------|--------|
+| PDF | `.pdf` | pypdf + OCR fallback |
+| Word | `.docx`, `.doc` | python-docx |
+| Excel | `.xlsx`, `.xls` | openpyxl (5 sheets, 100 rows) |
+| PowerPoint | `.pptx`, `.ppt` | python-pptx (30 slides) |
+| Images | `.jpg`, `.png` | Tesseract OCR |
+| Text | `.txt`, `.md`, `.csv`, `.json` | UTF-8 |
+
+## Troubleshooting
+
+**Missing Python packages:**
 ```bash
-python3 ~/.openclaw/workspace/skills/dropbox-kb-auto/dropbox-sync.py
+pip3 install pypdf openpyxl python-pptx python-docx
 ```
 
-### Search Your Files
-Once indexed, ask your agent:
-- "Show me my blood test results from 2026"
-- "Find documents about tax deductions"
-- "Search for presentations about machine learning"
-
-Your agent searches using:
-- **Vector similarity** (semantic understanding via embeddings)
-- **Keyword matching** (BM25 full-text search)
-- **Hybrid ranking** (combines both for best results)
-
-All handled automatically by OpenClaw's memory system (PostgreSQL + pgvector).
-
-## How It Works
-
-### Delta-Based Sync
-Uses Dropbox's `list_folder` with cursor persistence:
-1. **First run:** Lists all files, saves cursor
-2. **Subsequent runs:** Fetches only changes since cursor (new/modified/deleted)
-3. **Result:** 10x-100x faster than re-scanning everything
-
-### Text Extraction Pipeline
+**Tesseract not found:**
+```bash
+sudo apt-get install tesseract-ocr tesseract-ocr-eng  # add language packs as needed
 ```
-File detected → Check extension
-  ├─ PDF → pypdf extraction → OCR fallback (tesseract)
-  ├─ DOCX/DOC → python-docx
-  ├─ XLSX/XLS → openpyxl (first 5 sheets, 100 rows each)
-  ├─ PPTX/PPT → python-pptx (first 30 slides)
-  ├─ JPG/PNG → tesseract OCR (eng+deu)
-  └─ TXT/MD/CSV → direct UTF-8 read
-    ↓
-Save as markdown → OpenClaw auto-generates embeddings
+
+**Timeout on large Dropboxes (500K+ files):**
+```bash
+openclaw cron edit <job-id> --timeout-seconds 28800
 ```
+
+## Security
+
+- Read-only Dropbox access recommended
+- All extraction runs locally on your machine
+- No data leaves your Dropbox / local knowledge base
+- Credentials stored in `~/.openclaw/.env` (gitignored)
 
 ## File Structure
 
 ```
 dropbox-kb-auto/
-├── README.md              # This file
-├── SKILL.md               # OpenClaw skill manifest
-├── dropbox-sync.py        # Main indexer (delta-based)
-├── config.json            # User configuration
-├── setup.sh               # Dependency installer
-├── .env.example           # Credential template
-└── LICENSE                # MIT License
+├── dropbox-sync.py    # Delta-based indexer
+├── config.json        # Folder/type configuration
+├── install.sh         # Interactive setup
+├── setup.sh           # Dependency installer
+├── SKILL.md           # OpenClaw skill manifest
+├── .env.example       # Credential template
+└── LICENSE            # MIT
 ```
-
-## Supported File Types
-
-| Type | Extensions | Extraction Method |
-|------|-----------|------------------|
-| PDF | `.pdf` | pypdf + OCR fallback |
-| Word | `.docx`, `.doc` | python-docx |
-| Excel | `.xlsx`, `.xls` | openpyxl |
-| PowerPoint | `.pptx`, `.ppt` | python-pptx |
-| Images | `.jpg`, `.jpeg`, `.png` | Tesseract OCR |
-| Text | `.txt`, `.md`, `.csv`, `.json` | UTF-8 decode |
-
-## Configuration
-
-### Folders to Index
-```json
-"folders": ["/Documents", "/Work"]
-```
-
-### Skip Patterns
-```json
-"skip_paths": [
-  "/Archive",
-  "/Backups",
-  "/Downloads"
-]
-```
-
-### File Size Limit
-```json
-"max_file_size_mb": 20
-```
-
-## Troubleshooting
-
-### "No module named 'pypdf'"
-```bash
-pip3 install pypdf openpyxl python-pptx python-docx
-```
-
-### "tesseract: command not found"
-```bash
-sudo apt-get install tesseract-ocr tesseract-ocr-eng tesseract-ocr-deu
-```
-
-### Rate Limiting
-The indexer includes automatic retry logic with exponential backoff. If you hit Dropbox rate limits:
-- Reduce folder scope
-- Increase sleep intervals in `dropbox-sync.py`
-
-### Timeout on First Run
-Initial sync of large Dropboxes (500K+ files) can take 10-20 minutes. Increase cron timeout:
-```bash
-openclaw cron edit <job-id> --timeout-seconds 28800  # 8 hours
-```
-
-## Performance
-
-**Test case:** 650,000 files, 1,840 indexable documents
-
-| Metric | First Run | Subsequent Runs |
-|--------|-----------|----------------|
-| List time | 5-10 min | <10 sec |
-| Files indexed | 1,840 | 5-20 (avg) |
-| Total time | ~15 min | <30 sec |
-| Disk usage | 45 MB | +100 KB |
-
-## Privacy & Security
-
-- **Read-only access recommended** - Use scoped app with only read permissions
-- **Local processing** - All extraction happens on your machine
-- **No data transmission** - Files stay in your Dropbox and local knowledge base
-- **Credential storage** - Store tokens in `~/.openclaw/.env` (not in repo)
-
-## Comparison to Alternatives
-
-| Feature | dropbox-kb-auto | dropbox-api | dropbox-integration |
-|---------|----------------|-------------|---------------------|
-| Auto-indexing | ✅ | ❌ | ❌ |
-| OCR support | ✅ | ❌ | ❌ |
-| Office files | ✅ | ❌ | ❌ |
-| Delta sync | ✅ | ❌ | ❌ |
-| Semantic search | ✅ (via OpenClaw KB) | ❌ | ❌ |
-| Use case | Knowledge base | File operations | Manual browsing |
 
 ## Contributing
 
-Issues and PRs welcome at https://github.com/ferreirafabio/dropbox-kb-auto
+Issues and PRs welcome: https://github.com/ferreirafabio/dropbox-kb-auto
 
 ## License
 
-MIT License - see LICENSE file
-
-## Related Links
-
-- **OpenClaw Docs:** https://docs.openclaw.ai
-- **OpenClaw GitHub:** https://github.com/openclaw/openclaw
-- **ClawHub (Skill Marketplace):** https://clawhub.com
-- **Community Discord:** https://discord.gg/clawd
-
-## Author
-
-Fabio Ferreira ([@ferreirafabio](https://github.com/ferreirafabio))
-
-## Changelog
-
-### v1.0.0 (2026-02-21)
-- Initial release
-- Delta-based Dropbox sync
-- OCR support (eng + deu)
-- Office file extraction (Excel, PowerPoint, Word)
-- Production-tested on 650K+ files
+MIT
