@@ -1,13 +1,18 @@
 {
   "owner": "tkuehnl",
   "slug": "rug-checker",
-  "displayName": "Rug Checker",
+  "displayName": "rug-checker",
   "latest": {
-    "version": "0.2.0",
-    "publishedAt": 1771471500633,
-    "commit": "https://github.com/openclaw/skills/commit/9b00e183dc4f58ae8298907374e1b1e6a5b7ea38"
+    "version": "0.2.1",
+    "publishedAt": 1771717220446,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.2.0",
+      "publishedAt": 1771471500633,
+      "commit": "https://github.com/openclaw/skills/commit/9b00e183dc4f58ae8298907374e1b1e6a5b7ea38"
+    },
     {
       "version": "0.1.5",
       "publishedAt": 1771314786981,
