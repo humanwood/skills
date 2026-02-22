@@ -4,7 +4,7 @@
 Usage:
     fastmail.py inbox [--limit N] [--unread]
     fastmail.py unread
-    fastmail.py search <query> [--limit N] [--from ADDR] [--after DATE] [--before DATE]
+    fastmail.py search <query> [--limit N] [--from ADDR] [--after DATE] [--before DATE] [--json] [--ids]
     fastmail.py read <email-id>
     fastmail.py mailboxes
     fastmail.py send <to> <subject> <body> [--from ADDR]
@@ -96,7 +96,7 @@ def cmd_mailboxes():
         print(f"  {mb['name']:25s} role={role:12s} total={mb['totalEmails']:5d} unread={mb['unreadEmails']}")
 
 
-def cmd_inbox(limit=10, unread_only=False):
+def cmd_inbox(limit=10, unread_only=False, output_format="human"):
     _, by_role, _ = _mailbox_map()
     inbox_id = by_role.get("inbox")
     if not inbox_id:
@@ -105,7 +105,7 @@ def cmd_inbox(limit=10, unread_only=False):
     filt = {"inMailbox": inbox_id}
     if unread_only:
         filt["notKeyword"] = "$seen"
-    _list_emails(filt, limit)
+    _list_emails(filt, limit, output_format=output_format)
 
 
 def cmd_unread():
@@ -126,7 +126,7 @@ def cmd_unread():
     cmd_inbox(limit=min(total, 50), unread_only=True)
 
 
-def cmd_search(query, limit=10, from_addr=None, after=None, before=None):
+def cmd_search(query, limit=10, from_addr=None, after=None, before=None, output_format="human"):
     filt = {"text": query}
     if from_addr:
         filt["from"] = from_addr
@@ -134,7 +134,7 @@ def cmd_search(query, limit=10, from_addr=None, after=None, before=None):
         filt["after"] = f"{after}T00:00:00Z"
     if before:
         filt["before"] = f"{before}T23:59:59Z"
-    _list_emails(filt, limit)
+    _list_emails(filt, limit, output_format=output_format)
 
 
 def cmd_read(email_id):
@@ -272,7 +272,7 @@ def cmd_send(to_addr, subject, body, from_addr=None):
 
 # ─── Helpers ────────────────────────────────────────────────────
 
-def _list_emails(filt, limit):
+def _list_emails(filt, limit, output_format="human"):
     resp = _call([
         ["Email/query", {
             "accountId": None,
@@ -288,6 +288,26 @@ def _list_emails(filt, limit):
     ])
     total = resp["methodResponses"][0][1].get("total", "?")
     emails = resp["methodResponses"][1][1]["list"]
+
+    if output_format == "ids":
+        for e in emails:
+            print(e["id"])
+        return
+
+    if output_format == "json":
+        import json as _json
+        out = []
+        for e in emails:
+            out.append({
+                "id": e["id"],
+                "from": e["from"][0]["email"] if e.get("from") else None,
+                "subject": e.get("subject", ""),
+                "receivedAt": e.get("receivedAt", ""),
+                "unread": "$seen" not in e.get("keywords", {}),
+            })
+        print(_json.dumps(out, indent=2))
+        return
+
     print(f"  Showing {len(emails)} of {total} results\n")
     for e in emails:
         fr = e["from"][0]["email"] if e.get("from") else "?"
@@ -314,6 +334,7 @@ def main():
 
     # Parse common flags
     limit = 10
+    output_format = "human"
     from_addr = after = before = None
     for i, a in enumerate(args):
         if a == "--limit" and i + 1 < len(args):
@@ -324,16 +345,22 @@ def main():
             after = args[i + 1]
         if a == "--before" and i + 1 < len(args):
             before = args[i + 1]
+        if a == "--format" and i + 1 < len(args):
+            output_format = args[i + 1]  # human, json, ids
+        if a == "--ids":
+            output_format = "ids"
+        if a == "--json":
+            output_format = "json"
 
     if cmd == "mailboxes":
         cmd_mailboxes()
     elif cmd == "inbox":
         unread = "--unread" in args
-        cmd_inbox(limit=limit, unread_only=unread)
+        cmd_inbox(limit=limit, unread_only=unread, output_format=output_format)
     elif cmd == "unread":
         cmd_unread()
     elif cmd == "search" and len(args) >= 2:
-        cmd_search(args[1], limit=limit, from_addr=from_addr, after=after, before=before)
+        cmd_search(args[1], limit=limit, from_addr=from_addr, after=after, before=before, output_format=output_format)
     elif cmd == "read" and len(args) >= 2:
         cmd_read(args[1])
     elif cmd == "move" and len(args) >= 3:

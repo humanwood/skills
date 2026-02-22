@@ -2,6 +2,13 @@
 name: fastmail-jmap
 description: "Give your AI agent email superpowers via Fastmail JMAP. Read, search, send, move, trash — zero deps. By The Agent Wire (theagentwire.ai)"
 homepage: https://theagentwire.ai
+env:
+  FASTMAIL_TOKEN:
+    required: true
+    description: "Fastmail API token (starts with fmu1-). Get one at https://app.fastmail.com/settings/security/tokens"
+  FASTMAIL_IDENTITY:
+    required: false
+    description: "Override sender email address (defaults to primary identity)"
 metadata: { "openclaw": { "emoji": "📧" } }
 ---
 
@@ -46,7 +53,7 @@ That's it. No pip install, no config files, no OAuth dance.
 
 ## Agent Integration
 
-### In AGENTS.md / system prompt:
+### Example reference snippet for your docs:
 
 ```markdown
 ## Email
