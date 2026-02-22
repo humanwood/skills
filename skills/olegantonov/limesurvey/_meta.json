@@ -1,0 +1,11 @@
+{
+  "owner": "olegantonov",
+  "slug": "limesurvey",
+  "displayName": "LimeSurvey RemoteControl 2 API",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1771705167927,
+    "commit": null
+  },
+  "history": []
+}
