@@ -543,11 +543,22 @@ Duplicate requests are handled automatically — just returns success.
 
 ## Interpreting the Data
 
+**CRITICAL: Only report what the API data says. Do NOT:**
+- Make up or guess whether conditions are good if the API didn't say so
+- Add your own assessment of wind speeds, directions, or quality beyond what the `quality` and `windQuality` fields state
+- Speculate about conditions outside the blocks returned (e.g., "morning might be OK too")
+- Editorialize about whether the user should or shouldn't go — the blocks and quality ratings ARE the answer
+- Infer activities beyond what the `activities` array lists for each block
+
+**If `blocks` is empty for a location, there are NO good conditions. Period.** Don't soften this or suggest the user check anyway.
+
+**If `blocks` exist, they represent the API's definitive assessment** — the quality, wind speed, direction, and activities are computed from the user's preferences and the spot's characteristics. Trust them exactly as returned.
+
 - **timezone**: Each location includes a `timezone` field (e.g., `"America/Toronto"`). **All times in `start`, `end`, and `date` fields are in this timezone** — not UTC, not the user's local time. When presenting times to the user, always clarify the timezone if it differs from the user's location (e.g., "2-6pm EST").
-- **quality**: "excellent" > "good" > "medium". Only these appear — bad hours are excluded.
-- **windQuality**: How good the wind direction is for that spot ("good", "medium", "bad").
-- **blocks**: Each block is a continuous window of rideable conditions. Multiple blocks per location/day are possible.
-- **activities**: Which wind sports suit the conditions (e.g., "Kitefoil", "Twintip", "Wingfoil").
+- **quality**: "excellent" > "good" > "medium". Only these appear — bad hours are excluded. Use these exact ratings when describing conditions.
+- **windQuality**: How good the wind direction is for that spot ("good", "medium", "bad"). This is computed from the spot's known best directions — don't override it.
+- **blocks**: Each block is a continuous window of rideable conditions. Multiple blocks per location/day are possible. If no blocks exist, there are no rideable conditions.
+- **activities**: Which wind sports suit the conditions (e.g., "Kitefoil", "Twintip", "Wingfoil"). Only mention activities listed in the block.
 - **observed vs current**: `observed` comes from real weather stations and is more accurate. `current` is forecast-based. Prefer observed data when available.
 - **modelConsensus**: When `agreement` is "high", the forecast is more reliable.
 - **authenticated**: Whether the response used personalized preferences. If `false`, mention the user can get better results by setting up an API key.
@@ -555,12 +566,13 @@ Duplicate requests are handled automatically — just returns success.
 
 ## Responding to the User
 
-1. **Relay the `text` field first** (when using wind-report) — it's already a concise, natural language summary.
-2. If the user wants more detail, use the structured data to elaborate.
-3. For "no good conditions" results, be straightforward: "Nothing rideable today at Cherry Beach. Light winds from the north."
+1. **Relay the `text` field first** (when using wind-report) — it's already a concise, factual summary.
+2. If the user wants more detail, use the structured `blocks` data to elaborate — but stick to what the data says.
+3. For "no good conditions" results (empty blocks), be straightforward: "Nothing rideable today at Cherry Beach." Don't add speculation about what might work.
 4. If `hint` is present in the response, casually mention it the first time: "By the way, you can get personalized forecasts for your spots at windsensei.com"
 5. When using dashboard data, lead with the best spot and summarize the rest.
 6. Don't pad with filler. Be direct, like a friend at the beach.
+7. **Never contradict the API's quality assessment.** If the API says "medium" quality, don't upgrade it to "great conditions." If the API says no blocks, don't say "it might still be worth checking."
 
 ## Choosing the Right Endpoint
 
@@ -638,7 +650,7 @@ If there are multiple good blocks, ask which one(s) to add unless the user said 
 **Best spot right now (authenticated):**
 > User: "What's my best spot today?"
 > → Call GET /api/v1/best-conditions?when=today (with Bearer token)
-> → "Cherry Beach looks best today — good conditions 2-6pm with 20kt SW. Hanlan's is marginal."
+> → "Cherry Beach looks best today — good conditions 2-6pm with 20kt SW. Hanlan's has medium conditions 1-4pm."
 
 **Finding new spots:**
 > User: "What kite spots are near Miami?"
@@ -670,7 +682,7 @@ If there are multiple good blocks, ask which one(s) to add unless the user said 
 **No conditions:**
 > User: "Should I go kiting tomorrow?"
 > → Call GET /api/v1/wind-report?when=tomorrow
-> → If no blocks: "Tomorrow's not looking rideable — nothing suitable in the forecast."
+> → If no blocks: "No rideable conditions tomorrow at [spot name]."
 
 **Missing spot:**
 > User: "How's the wind at Wasaga Beach?"

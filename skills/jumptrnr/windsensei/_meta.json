@@ -3,11 +3,16 @@
   "slug": "windsensei",
   "displayName": "Windsensei",
   "latest": {
-    "version": "1.4.1",
-    "publishedAt": 1771595056326,
-    "commit": "https://github.com/openclaw/skills/commit/3e428467a0879c8fe7b29120f6113ef54c50d512"
+    "version": "1.4.2",
+    "publishedAt": 1771765630977,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.4.1",
+      "publishedAt": 1771595056326,
+      "commit": "https://github.com/openclaw/skills/commit/3e428467a0879c8fe7b29120f6113ef54c50d512"
+    },
     {
       "version": "1.4.0",
       "publishedAt": 1771415494775,
