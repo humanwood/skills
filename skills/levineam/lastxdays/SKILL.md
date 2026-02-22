@@ -16,6 +16,12 @@ Activate when the user message contains any of:
 - `last x days`
 - A question like: **"what happened in the last N days"** (optionally followed by a topic)
 
+## Default Model
+
+Default to `sonnet` (`anthropic/claude-sonnet-4-6`) when spawning as a subagent.
+
+Use `flash` (`openrouter/google/gemini-2.0-flash-001`) **only** for simple single-source lookups (one topic, one platform, straightforward synthesis with no file reading required). Flash is unreliable for multi-step agentic work requiring tool chaining (search → fetch → read files → synthesize → report). When in doubt, use sonnet.
+
 ## Input Parsing
 
 Parse from the user message:
