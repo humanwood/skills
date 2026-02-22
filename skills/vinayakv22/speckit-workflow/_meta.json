@@ -3,9 +3,15 @@
   "slug": "speckit-workflow",
   "displayName": "Speckit Workflow for Openclaw",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1771678199728,
-    "commit": "https://github.com/openclaw/skills/commit/837edc96224089da3eecf8725203523d29e1d960"
+    "version": "1.0.3",
+    "publishedAt": 1771785254770,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1771678199728,
+      "commit": "https://github.com/openclaw/skills/commit/837edc96224089da3eecf8725203523d29e1d960"
+    }
+  ]
 }
