@@ -1,40 +1,83 @@
 ---
 name: proactive-claw
-version: 1.2.13
-description: >
-  🦞 Proactive calendar AI: reads calendars + chat → plans reminders, prep blocks, buffers.
-  Requires Google OAuth or Nextcloud password. Install: bash scripts/setup.sh (pip, OAuth).
-  Optional non-root daemon (15 min). Writes to skill-owned calendar only. All features OFF.
+version: 1.2.18
+description: "🦞 Proactive Claw — your AI calendar co-pilot. Connects to Google Calendar or Nextcloud and plans prep blocks, reminders and buffers for you."
 
-emoji: 🦞
-homepage: https://clawhub.ai/skills/proactive-claw
-primaryEnv: GOOGLE_CREDENTIALS_PATH
+primaryEnv: GOOGLE_CREDENTIALS_JSON
 
 requires:
   bins:
     - python3
-    - bash
   env:
-    - GOOGLE_CREDENTIALS_PATH
+    - GOOGLE_CREDENTIALS_JSON
   config:
-    - credentials.json (Google OAuth) OR nextcloud.password (Nextcloud app password)
+    - credentials.json
+    - config.json
 
 install:
   - kind: uv
-    label: "One-time setup: pip installs deps, Google OAuth or Nextcloud auth, creates action calendar, optional user-level daemon"
-    package: "bash scripts/setup.sh"
+    label: "Google Calendar backend (credentials.json required — see Setup section)"
+    package: google-api-python-client
+  - kind: uv
+    label: "Nextcloud CalDAV backend (app password required — see Setup section)"
+    package: caldav
 
 side_effects:
-  - Runs bash scripts/setup.sh — pip installs google-api-python-client/caldav, Google OAuth browser flow or Nextcloud credentials, creates "Proactive Claw — Actions" calendar.
-  - Optionally installs user-level daemon (launchd macOS / systemd Linux) via install_daemon.sh. Runs every 15 min as your user. NOT root. Uninstall instructions in SKILL.md.
-  - Writes only to ~/.openclaw/workspace/skills/proactive-claw/ — credentials.json, token.json, config.json, memory.db, proactive_links.db, daemon.log.
-  - Writes to "Proactive Claw — Actions" calendar only. All other calendars read-only — never modified.
-  - Outbound HTTPS: Google Calendar API by default. Notion/Telegram/GitHub/clawhub.ai/LLM require explicit feature_* opt-in.
+  - "CREDENTIALS REQUIRED before first use — Google backend needs credentials.json (OAuth desktop flow, handled by scripts/setup.sh). Nextcloud backend needs an app-specific password entered during scripts/setup.sh. No credentials are uploaded or shared with third parties."
+  - "INSTALL STEPS (transparent, no hidden downloads) — (1) scripts/setup.sh: pip installs PyPI packages, runs OAuth flow, creates action calendar. (2) scripts/install_daemon.sh (optional): writes a user-level launchd/systemd timer only. No sudo. No root. Full source in SKILL.md."
+  - "Writes only to ~/.openclaw/workspace/skills/proactive-claw/ — credentials.json, token.json, config.json, memory.db, proactive_links.db, daemon.log. Nothing outside this directory."
+  - "Creates one new calendar named 'Proactive Claw — Actions' in your Google/Nextcloud account. All your existing calendars are read-only — never modified."
+  - "Network calls — Google Calendar API only by default. Notion, Telegram, GitHub, and LLM endpoints only if you explicitly enable the matching feature_* flag in config.json."
+  - "pip packages installed from PyPI only — google-api-python-client, google-auth-oauthlib, google-auth-httplib2 (Google) or caldav, icalendar (Nextcloud). No private package indexes."
 ---
 
-# 🦞 Proactive Claw v1.2.13
+# 🦞 Proactive Claw v1.2.18
 
 > Transform AI agents into governed execution partners that understand your work, monitor your context, and act ahead of you — predictively and under your control.
+
+---
+
+## ⚠️ Credentials & Install — Full Transparency
+
+This section documents every credential, install step, and network call so there are no surprises.
+
+### Required credentials (one of two, depending on calendar backend)
+
+| Backend | What you need | Where it's stored | Who sees it |
+|---------|--------------|-------------------|-------------|
+| Google Calendar (default) | `credentials.json` — Google OAuth desktop app credentials | `~/.openclaw/workspace/skills/proactive-claw/credentials.json` | **You only.** Never uploaded. |
+| Nextcloud CalDAV | App-specific password (NOT your account password) | Entered once in `scripts/setup.sh`, stored in `config.json` locally | **You only.** Never uploaded. |
+
+### Optional credentials (all empty by default)
+
+| Credential | Feature flag | What it enables |
+|-----------|-------------|-----------------|
+| `clawhub_token` | (config field) | Lets clawhub.ai provide your `credentials.json` via OAuth — alternative to Google Cloud Console |
+| `telegram.bot_token` | `feature_telegram_notifications: true` | Sends nudges to your Telegram chat |
+| LLM API key (env var) | `feature_llm_rater: true` + cloud `base_url` | Rates meeting quality via cloud LLM. Default is local Ollama — no key, no data sent. |
+| `NOTION_API_KEY` (env var) | `feature_cross_skill: true` | Reads Notion pages matching event titles (read-only) |
+
+**All optional fields default to empty string. Skill works with just credentials.json (or Nextcloud password) + python3.**
+
+### Install steps (complete, no hidden steps)
+
+```
+Step 1 — scripts/setup.sh
+  - Checks python3 ≥ 3.8
+  - pip install google-api-python-client google-auth-oauthlib google-auth-httplib2
+    OR: pip install caldav icalendar   (Nextcloud path)
+  - Runs OAuth flow (opens browser) → saves token.json locally
+  - Creates "Proactive Claw — Actions" calendar in your account
+  - Writes config.json with safe defaults (all feature_* OFF, max_autonomy_level: confirm)
+
+Step 2 — scripts/install_daemon.sh  (OPTIONAL — only if you want background automation)
+  - macOS: writes ~/Library/LaunchAgents/ai.openclaw.proactive-claw.plist
+  - Linux: writes ~/.config/systemd/user/openclaw-proactive-claw.{service,timer}
+  - NO sudo. NO root. Runs as your user only.
+  - Full source code is included in this SKILL.md (see below).
+```
+
+**No curl/wget. No downloads from private hosts. No eval of remote code. All packages from PyPI.**
 
 ---
 
