@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Feishu Smart Doc Writer - 改进版
-使用 OpenClaw 官方工具调用方式
 自动分块写入 + 自动转移所有权 + 自动更新索引
 """
 
@@ -301,9 +300,64 @@ class FeishuDocWriter:
             return match.group(1)
         raise ValueError(f"无法从URL提取token: {url}")
     
+    async def _get_tenant_access_token(self) -> str:
+        """获取飞书 tenant_access_token"""
+        import aiohttp
+        import json
+        import os
+        
+        # 尝试从 OpenClaw 配置读取 App ID 和 Secret
+        app_id, app_secret = None, None
+        
+        # 方法1: 尝试从环境变量读取
+        app_id = os.environ.get("FEISHU_APP_ID")
+        app_secret = os.environ.get("FEISHU_APP_SECRET")
+        
+        # 方法2: 尝试从 OpenClaw 配置文件读取
+        if not app_id or not app_secret:
+            try:
+                config_paths = [
+                    os.path.expanduser("~/.openclaw/openclaw.json"),
+                    os.path.expanduser("~/.openclaw/config.json"),
+                ]
+                for config_path in config_paths:
+                    if os.path.exists(config_path):
+                        with open(config_path, 'r') as f:
+                            config = json.load(f)
+                            feishu_config = config.get("channels", {}).get("feishu", {})
+                            app_id = feishu_config.get("appId")
+                            app_secret = feishu_config.get("appSecret")
+                            if app_id and app_secret:
+                                break
+            except Exception:
+                pass
+        
+        if not app_id or not app_secret:
+            return ""
+        
+        # 调用飞书 API 获取 token
+        url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+        payload = {
+            "app_id": app_id,
+            "app_secret": app_secret
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload) as resp:
+                    result = await resp.json()
+                    if result.get("code") == 0:
+                        return result.get("tenant_access_token", "")
+        except Exception:
+            pass
+        
+        return ""
+    
     async def transfer_ownership(self, doc_url: str, owner_openid: str) -> bool:
         """
-        转移文档所有权
+        转移文档所有权 - 直接调用飞书 API
+        
+        API端点: POST /drive/v1/permissions/{token}/members/transfer_owner?type=docx
         
         Args:
             doc_url: 文档URL
@@ -312,55 +366,47 @@ class FeishuDocWriter:
         Returns:
             是否成功
         """
-        if not self.ctx:
-            raise ValueError("需要提供 OpenClaw 上下文对象 (ctx)")
+        import aiohttp
+        import json
         
         doc_token = self._extract_token_from_url(doc_url)
         
+        # 获取 tenant_access_token
+        token = await self._get_tenant_access_token()
+        if not token:
+            if self.config.show_progress:
+                print(f"⚠️ 无法获取 tenant_access_token")
+            return False
+        
+        # 调用飞书 API 转移所有权
+        url = f"https://open.feishu.cn/open-apis/drive/v1/permissions/{doc_token}/members/transfer_owner?type=docx"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "member_type": "openid",
+            "member_id": owner_openid
+        }
+        
         try:
-            # 使用直接 API 调用转移所有权
-            # 1. 先获取 tenant_access_token
-            token_result = await self.ctx.invoke_tool("exec", {
-                "command": "curl -s -X POST 'https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal' \
-  -H 'Content-Type: application/json' \
-  -d '{\"app_id\": \"cli_a90cb8b1d0f89cb1\", \"app_secret\": \"U2Mlhpds9hbUgZEVkGFhIfYS1vplru5b\"}'"
-            })
-            
-            import json
-            import re
-            token_data = json.loads(token_result)
-            tenant_token = token_data.get("tenant_access_token")
-            
-            if not tenant_token:
-                raise Exception("无法获取 tenant_access_token")
-            
-            # 2. 调用转移所有权 API
-            transfer_cmd = f"""curl -s -X POST "https://open.feishu.cn/open-apis/drive/v1/permissions/{doc_token}/members/transfer_owner?type=docx" \
-  -H "Authorization: Bearer {tenant_token}" \
-  -H "Content-Type: application/json" \
-  -d '{{"member_type": "openid", "member_id": "{owner_openid}"}}'"""
-            
-            transfer_result = await self.ctx.invoke_tool("exec", {
-                "command": transfer_cmd
-            })
-            
-            result_data = json.loads(transfer_result)
-            
-            if result_data.get("code") == 0:
-                if self.config.show_progress:
-                    print(f"✅ 文档所有权已转移给 {owner_openid}")
-                return True
-            else:
-                error_msg = result_data.get("msg", "未知错误")
-                if self.config.show_progress:
-                    print(f"⚠️ 所有权转移失败: {error_msg}")
-                return False
-            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers, json=payload) as resp:
+                    result = await resp.json()
+                    
+                    if result.get("code") == 0:
+                        if self.config.show_progress:
+                            print(f"✅ 文档所有权已转移给 {owner_openid}")
+                        return True
+                    else:
+                        error_msg = result.get("msg", "未知错误")
+                        if self.config.show_progress:
+                            print(f"⚠️ 所有权转移失败: {error_msg}")
+                        return False
+                        
         except Exception as e:
             if self.config.show_progress:
                 print(f"⚠️ 所有权转移失败: {e}")
-            
-            # 转移失败不影响文档创建，记录错误但不抛出
             return False
     
     async def write_document_with_transfer(

@@ -1,152 +1,132 @@
-## Changelog
+# Changelog
 
-### v1.3.0 - Major Update with Auto-Indexing & Document Management
+All notable changes to this project will be documented in this file.
 
-**Release Date:** 2026-02-22
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-#### 🚀 New Features
+## [1.4.1] - 2026-02-23
 
-1. **Automatic Index Management**
-   - Documents are automatically added to local index (`memory/feishu-docs-index.md`) after creation
-   - Auto-generated summaries from document content
-   - Smart content-based tagging (AI, E-commerce, Health, etc.)
-   - No manual index updates needed - everything is automatic!
+### Fixed
+- **Skill.json tool count**: Fixed missing tools display on Clawhub
+- Verified all 7 tools are properly declared: write_smart, configure, append_smart, transfer_ownership, get_config_status, search_docs, list_docs
 
-2. **Document Search & List Tools**
-   - `search_docs`: Search through all your Feishu documents by keyword
-   - `list_docs`: List documents with filtering by tags or status
-   - Find any document instantly without remembering URLs
+## [1.4.0] - 2026-02-23
 
-3. **Enhanced Auto-Chunking**
-   - Smart content splitting to avoid API limits
-   - Maintains document structure (headings, lists)
-   - Handles long documents (10,000+ characters) seamlessly
+### Added
+- **Document Search Functionality** (`search_docs`)
+  - Search local index by keywords
+  - Search in document name, summary, and tags
+  - Return matching documents with links
 
-#### 🔧 First-Time Setup Guide
+- **Document List Functionality** (`list_docs`)
+  - List all created Feishu documents
+  - Filter by tags (AI Technology, E-commerce, Health & Sports, etc.)
+  - Filter by status
 
-**Step 1: Get Your Feishu OpenID**
+- **Automatic Index Management** (`index_manager.py`)
+  - Auto-update local index at `memory/feishu-docs-index.md` after document creation
+  - Auto-generate document summary (first 100 characters)
+  - Intelligent auto-categorization tags:
+    - AI Technology (AI, artificial intelligence, model, GPT, LLM)
+    - OpenClaw (OpenClaw, skill, agent)
+    - Feishu Docs (Feishu, document, docx)
+    - E-commerce (e-commerce, TikTok, Alibaba)
+    - Health & Sports (Garmin, Strava, cycling, health)
+    - Daily Archive (conversation, archive, chat history)
 
-Before using this skill, you need to obtain your Feishu OpenID:
+- **Tool Declarations**
+  - Officially declare `search_docs` and `list_docs` tools in `package.json` and `skill.json`
 
-1. **Login to Feishu Open Platform**
-   - Visit: https://open.feishu.cn
-   - Login with your Feishu account
+### Changed
+- Updated `SKILL.md` documentation with detailed descriptions of new features
+- Improved usage examples and configuration instructions
 
-2. **Navigate to Permission Management**
-   - Select your app
-   - Click "Permission Management" (权限管理)
-   - Search for: `im:message`
-   - Hover over "Related API Events" (相关API事件)
-   - Select: **【API】Send Message** (【API】发送消息)
-   - Click: **"Go to API Debug Console"** (前往API调试台)
+### Technical Details (Ownership Transfer Fix)
+- **Before**: Used `ctx.invoke_tool("exec", ...)` which failed when ctx was None or unavailable
+- **After**: Direct HTTP API calls with `aiohttp`, fully independent of OpenClaw context
+- **API Endpoint**: `POST /drive/v1/permissions/{token}/members/transfer_owner?type=docx`
 
-3. **Copy Your OpenID**
-   - Find the blue link "Quick Copy open_id" (快速复制 open_id)
-   - Click it
-   - Select your account from the dropdown
-   - Click "Copy"
-   - Your OpenID looks like: `ou_xxxxxxxxxxxxxxxx`
+### Optimized Ownership Transfer Workflow
+- Automatically transfer ownership to user after document creation
+- Automatically obtain tenant_access_token without manual configuration
+- Fixed "permission denied" errors caused by ctx passing issues
 
-**Step 2: Grant Transfer Ownership Permission**
+## [1.3.0] - 2026-02-22
 
-⚠️ **CRITICAL: You must publish the app after granting permission!**
+### Fixed
+- **Fixed Ownership Transfer Functionality** (`transfer_ownership`)
+  - **BREAKING CHANGE**: Replaced ctx-dependent implementation with independent API calls
+  - Added `_get_tenant_access_token()` method for independent token retrieval using aiohttp
+  - **Removed dependency**: No longer relies on `ctx.invoke_tool("exec", ...)` to call curl commands
+  - **More stable**: Directly use `aiohttp` to call Feishu API, eliminating context passing issues
+  - **Better error handling**: Returns detailed error messages on failure
+  - Reads Feishu app credentials from OpenClaw config independently
 
-1. **Go to Permission Management**
-   - In your app, click "Permission Management" (权限管理)
+### Technical Details
+- **Before**: Used `ctx.invoke_tool("exec", ...)` which failed when ctx was None or unavailable
+- **After**: Direct HTTP API calls with `aiohttp`, fully independent of OpenClaw context
+- **API Endpoint**: `POST /drive/v1/permissions/{token}/members/transfer_owner?type=docx`
 
-2. **Search and Enable**
-   - Search: `docs:permission.member:transfer`
-   - Find: "Transfer cloud document ownership" (转移云文档的所有权)
-   - Click "Enable" (开通)
+### Changed
+- **Optimized Ownership Transfer Workflow**
+  - Automatically transfer ownership to user after document creation
+  - Automatically obtain tenant_access_token without manual configuration
+  - Fixed "permission denied" errors caused by ctx passing issues
 
-3. **Publish New Version** ⚠️
-   - Click "Publish" (发布) button in top right
-   - Wait for "Published" status
-   - **Without publishing, the permission won't work!**
+## [1.2.0] - 2026-02-21
 
-**Step 3: Configure the Skill**
+### Added
+- **Intelligent Chunk Writing Functionality**
+  - Automatically split long content into chunks (default 2000 characters)
+  - Avoid blank document issues caused by Feishu API character limits
+  - Smart paragraph segmentation while preserving heading structure
+  - Support automatic table-to-text conversion
 
-Run the configure command:
-```
-/feishu-smart-doc-writer configure
-openid: ou_your_openid_here
-permission_checked: true
-```
+- **First-Time User Guide**
+  - Auto-detect first-time usage
+  - Guide users to obtain OpenID
+  - Auto-save configuration to `user_config.json`
 
-Your configuration is saved to `user_config.json` and will be used for all future documents.
+- **Basic Document Operations**
+  - `write_smart` - Smart document creation
+  - `append_smart` - Append content to existing documents
+  - `transfer_ownership` - Transfer document ownership
+  - `configure` - Configure OpenID
+  - `get_config_status` - Check configuration status
 
-#### 📖 Usage Examples
+## [1.1.0] - 2026-02-20
 
-**Create a Document:**
-```
-/feishu-smart-doc-writer write_smart
-title: My Project Report
-content: # Introduction
-
-This is my project report...
-```
-
-The skill will:
-1. Create the document
-2. Write content in chunks (auto-split if long)
-3. Transfer ownership to you automatically
-4. Add to your local index with tags
-
-**Search Documents:**
-```
-/feishu-smart-doc-writer search_docs
-keyword: AI technology
-```
-
-**List Documents by Tag:**
-```
-/feishu-smart-doc-writer list_docs
-tag: E-commerce
-```
-
-#### 🔍 Auto-Tagging System
-
-Documents are automatically tagged based on content:
-- **AI Technology**: AI, artificial intelligence, model, GPT, LLM
-- **OpenClaw**: OpenClaw, skill, agent
-- **Feishu**: Feishu, document, docx
-- **E-commerce**: E-commerce, TikTok, Alibaba, toy
-- **Health & Sports**: Garmin, Strava, cycling, health
-- **Daily Archive**: Conversation, archive, chat log
-
-#### 🐛 Fixed Issues
-
-- Fixed table parsing for 8-column index format
-- Improved error handling during ownership transfer
-- Enhanced chunking algorithm for better content preservation
-
-#### 📁 Files Added
-
-- `index_manager.py` - Core index management functionality
-- Updated `__init__.py` - Added search_docs and list_docs tools
-- Updated `SKILL.md` - Comprehensive usage documentation
-
-#### 💡 Tips
-
-1. **Keep user_config.json safe** - It contains your OpenID
-2. **Check permissions** - If transfer fails, verify permission is published
-3. **Index location** - Local index is at `memory/feishu-docs-index.md`
-4. **Long documents** - Don't worry about length, auto-chunking handles it!
+### Added
+- Initial release
+- Basic Feishu document creation and writing functionality
+- Support Markdown format (headings, lists, code blocks, etc.)
+- Support automatic image upload
 
 ---
 
-### v1.2.0 - Auto-Chunking & Ownership Transfer
+## Version Summary
 
-- Implemented smart content chunking to avoid API limits
-- Added automatic ownership transfer after document creation
-- First-time user guide for OpenID configuration
+- **v1.4.0** - Added search, list, and automatic index management
+- **v1.3.0** - Fixed ownership transfer using independent API calls (removed ctx dependency)
+- **v1.2.0** - Added intelligent chunk writing and first-time user guide
+- **v1.1.0** - Initial release with basic document operations
 
-### v1.1.0 - Basic Document Operations
+## Key Technical Updates
 
-- Basic document creation and appending
-- Support for folder selection
-- Simple configuration system
+### v1.4.0 Core Technology
+- Local index management system
+- Intelligent content categorization algorithm
+- Automatic document metadata extraction
 
-### v1.0.0 - Initial Release
+### v1.3.0 Core Technology (Critical Fix)
+- **Independent tenant_access_token retrieval** using aiohttp
+- **Direct Feishu API calls** without OpenClaw context dependency
+- **Removed**: `ctx.invoke_tool("exec", ...)` approach
+- **Added**: `_get_tenant_access_token()` for standalone token acquisition
+- Reads app credentials from `~/.openclaw/openclaw.json` independently
 
-- Basic Feishu document writing functionality
+### v1.2.0 Core Technology
+- ContentChunker content segmentation
+- Intelligent paragraph segmentation algorithm
+- User configuration persistence

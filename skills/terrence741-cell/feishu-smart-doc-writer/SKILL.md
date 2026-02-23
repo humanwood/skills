@@ -1,56 +1,42 @@
 ---
 name: feishu-smart-doc-writer
 description: |
-  【English】Feishu/Lark Smart Document Writer with auto-chunking, ownership transfer & index management.
+  Feishu/Lark Smart Document Writer - 飞书智能文档写入器.
   
-  【中文】飞书智能文档写入器，支持自动分块、所有权转移和索引管理。
+  Core Features / 核心功能：
+  1. Smart Chunk Writing / 智能分块写入 - Solve API limit blank doc issues / 解决长文档API限制导致的空白问题
+  2. Auto Ownership Transfer / 自动转移所有权 - Transfer to user after creation / 创建文档后自动转移给用户
+  3. Auto Index Management / 自动索引管理 - Update local index with search support / 自动更新本地文档索引，支持搜索
+  4. First-time Guide / 首次使用引导 - Auto guide for OpenID config / 自动引导配置OpenID
 ---
 
-# Feishu Smart Doc Writer v1.3.0
-# 飞书智能文档写入器 v1.3.0
-
----
+# Feishu Smart Doc Writer v1.4.1
 
 ## 🚀 Core Features / 核心功能
 
 ### 1. Smart Document Creation / 智能文档创建
-**English:**
-- **Auto-chunking**: Split long content into chunks to avoid API limits
-- **Auto Ownership Transfer**: Automatically transfer document to user after creation
-- **Auto Index Update**: Add document info to local index `memory/feishu-docs-index.md`
-- **Smart Tagging**: Auto-tag based on content (AI, E-commerce, Health, etc.)
-
-**中文：**
-- **自动分块**：长内容自动分割，避免API限制导致的空白文档
-- **自动转移所有权**：创建后自动转移给用户
-- **自动索引更新**：文档信息自动添加到本地索引
-- **智能分类**：根据内容自动打标签（AI技术、电商、健康运动等）
+- **Auto-chunk Writing / 自动分块**: Split long content into chunks to avoid API limit blank docs / 长内容自动分割成小块，避免API限制导致的空白文档
+- **Auto Ownership Transfer / 自动转移所有权**: Transfer to user using OpenID after creation / 创建后自动使用 OpenID 转移给用户
+- **Auto Index Update / 自动索引更新**: Add doc info to local index `memory/feishu-docs-index.md` / 文档信息自动添加到本地索引
+- **Smart Categorization / 智能分类**: Auto-tag based on content (AI Tech, E-commerce, Health, etc.) / 根据内容自动打标签（AI技术、电商、健康运动等）
 
 ### 2. Document Management / 文档管理
-**English:**
-- **Search Documents**: Search local index by keyword
-- **List Documents**: Filter by tags or status
-- **Append Content**: Add content to existing documents
-
-**中文：**
-- **搜索文档**：按关键词搜索本地索引
-- **列出文档**：按标签、状态筛选
-- **追加内容**：向现有文档追加内容
+- **Search Documents / 搜索文档**: Search local index by keywords / 按关键词搜索本地索引
+- **List Documents / 列出文档**: Filter by tags and status / 按标签、状态筛选文档列表
+- **Append Content / 追加内容**: Append to existing docs (auto-chunk) / 向现有文档追加内容（自动分块）
 
 ---
 
 ## 📋 Tools / 工具列表
 
-### write_smart - Create Document / 创建文档
-**English:** Create document with auto-chunking, ownership transfer, and index update.
+### write_smart - Smart Document Creation / 智能创建文档
+Create document with auto-chunk writing, ownership transfer, and index update.
+创建文档，自动完成分块写入、所有权转移、索引更新。
 
-**中文：** 创建文档，自动完成分块写入、所有权转移、索引更新。
-
-**Parameters / 参数：**
 ```json
 {
   "title": "Document Title / 文档标题",
-  "content": "Content (supports long text) / 内容（支持长内容）",
+  "content": "Content (long content supported) / 文档内容（支持长内容）",
   "folder_token": "Optional folder token / 可选的文件夹token"
 }
 ```
@@ -66,166 +52,186 @@ description: |
 }
 ```
 
----
-
 ### append_smart - Append Content / 追加内容
-**English:** Append content to existing document (auto-chunked).
+Append content to existing document with auto-chunk.
+向现有文档追加内容（自动分块）。
 
-**中文：** 向现有文档追加内容（自动分块）。
-
----
+```json
+{
+  "doc_url": "https://feishu.cn/docx/xxx",
+  "content": "Content to append / 要追加的内容"
+}
+```
 
 ### search_docs - Search Documents / 搜索文档
-**English:** Search documents in local index.
+Search documents in local index.
+搜索本地索引中的文档。
 
-**中文：** 搜索本地索引中的文档。
-
-**Parameters / 参数：**
 ```json
 {
-  "keyword": "Search keyword / 搜索关键词",
-  "search_in": ["name", "summary", "tags"]  // optional / 可选
+  "keyword": "Search keyword / 搜索关键词"
 }
 ```
 
----
+**Returns / 返回：**
+```json
+{
+  "results": [
+    {
+      "name": "Document Name / 文档名",
+      "link": "https://...",
+      "summary": "Summary / 摘要",
+      "tags": "AI Tech, OpenClaw / AI技术, OpenClaw"
+    }
+  ],
+  "count": 1
+}
+```
 
 ### list_docs - List Documents / 列出文档
-**English:** List all documents with filtering.
+List all documents with optional filters.
+列出所有文档，支持筛选。
 
-**中文：** 列出所有文档，支持筛选。
-
-**Parameters / 参数：**
 ```json
 {
-  "tag": "AI / 标签",
-  "status": "Completed / 状态",
-  "limit": 10
+  "tag": "AI Tech / AI技术",
+  "status": "Completed / 已完成"
 }
 ```
 
----
-
 ### transfer_ownership - Transfer Ownership / 转移所有权
-**English:** Manually transfer document ownership (usually automatic).
+Manually transfer document ownership (usually auto-handled by write_smart).
+手动转移文档所有权（通常不需要，write_smart 已自动处理）。
 
-**中文：** 手动转移文档所有权（通常自动完成）。
+```json
+{
+  "doc_url": "https://feishu.cn/docx/xxx",
+  "owner_openid": "ou_xxxxxxxx"
+}
+```
 
-**Note / 注意：** Only need `owner_openid`. `tenant_access_token` is obtained automatically by the skill.
+**Note / 注意:** Only provide OpenID, tenant_access_token is auto-obtained by Skill.
+只需要提供 OpenID，tenant_access_token 由 Skill 自动获取。
 
-只需要提供 `owner_openid`，`tenant_access_token` 由 Skill 自动获取。
+### configure - Configure OpenID / 配置 OpenID
+Configure OpenID for first-time use.
+首次使用时配置 OpenID。
 
----
+```json
+{
+  "openid": "ou_xxxxxxxx",
+  "permission_checked": true
+}
+```
 
-### configure - Configure / 配置
-**English:** Configure OpenID on first use.
-
-**中文：** 首次使用时配置 OpenID。
+### get_config_status - Get Config Status / 查看配置状态
+View current configuration status.
+查看当前配置状态。
 
 ---
 
 ## 🚀 Quick Start / 快速开始
 
-### First-Time Setup (3 Steps) / 首次使用（3步）
+### First-time Setup (3 Steps) / 首次使用（3步配置）
 
-**Step 1: Call write_smart / 调用 write_smart**
+**Step 1 / 第1步: Call write_smart / 调用 write_smart**
 ```
 /feishu-smart-doc-writer write_smart
 title: Test Document / 测试文档
-content: This is a test / 这是测试内容
+content: This is a test document. / 这是一个测试文档内容
 ```
 
-**Step 2: Get Your OpenID / 获取 OpenID**
+**Step 2 / 第2步: Get OpenID / 获取 OpenID**
+If not configured, follow the guide:
+如果未配置，会显示引导：
+1. Login / 登录 https://open.feishu.cn
+2. Go to / 进入 Application → Permission Management / 应用 → 权限管理 → Search / 搜索 `im:message`
+3. Click / 点击【API】Send Message / 发送消息 → Go to API Debug Console / 前往API调试台
+4. Click / 点击"Quick Copy open_id" / 快速复制 open_id", select your account / 选择你的账号, copy / 复制
 
-**English:**
-1. Login to https://open.feishu.cn
-2. Go to your app → Permission Management
-3. Search `im:message` → Click 【API】Send Message → Go to API Debug Console
-4. Click "Quick Copy open_id" → Select your account → Copy
-
-**中文：**
-1. 登录 https://open.feishu.cn
-2. 进入应用 → 权限管理
-3. 搜索 `im:message` → 点击【API】发送消息 → 前往API调试台
-4. 点击"快速复制 open_id" → 选择账号 → 复制
-
-**Step 3: Configure / 配置**
+**Step 3 / 第3步: Configure and Enable Permissions / 配置并开通权限**
 ```
 /feishu-smart-doc-writer configure
-openid: ou_your_openid
+openid: ou_your_openid / ou_你的OpenID
 permission_checked: true
 ```
 
-Then enable permission `docs:permission.member:transfer` and **publish** your app.
+Then go to Permission Management / 然后到权限管理：
+1. Search / 搜索 `docs:permission.member:transfer`
+2. Click / 点击"Enable / 开通"
+3. **Important / 重要**: Click / 点击"Publish / 发布" button to publish new version / 按钮发布新版本
 
-然后开通权限 `docs:permission.member:transfer` 并**发布**应用。
+After setup, future document creation will automatically:
+配置完成后，以后创建文档会自动：
+- ✅ Chunk write content / 分块写入内容
+- ✅ Transfer ownership to you / 转移所有权给你
+- ✅ Update local index / 更新本地索引
 
 ---
 
 ## 📊 Index Management / 索引管理
 
-### Auto-Index Workflow / 自动索引流程
+### Auto Index Workflow / 自动索引流程
 ```
-write_smart creates document
+write_smart creates document / 创建文档
     ↓
-Write content (auto-chunked) / 写入内容（自动分块）
+Write content (auto-chunk) / 写入内容（自动分块）
     ↓
 Transfer ownership / 转移所有权
     ↓
-Auto-update index → memory/feishu-docs-index.md / 自动更新索引
+Auto update index → memory/feishu-docs-index.md / 自动更新索引
     ↓
 Done! / 完成！
 ```
 
-### Auto-Tagging / 自动标签
-**English:** Tags are automatically assigned based on content:
+### Auto-categorization Tags / 自动分类标签
+Auto-identified based on content / 根据内容自动识别：
+- **AI Tech / AI技术** - AI, artificial intelligence / 人工智能, model / 模型, GPT, LLM
+- **OpenClaw** - OpenClaw, skill, agent
+- **Feishu Docs / 飞书文档** - Feishu / 飞书, document / 文档, feishu
+- **E-commerce / 电商** - e-commerce / 电商, TikTok, Alibaba / 阿里巴巴
+- **Health & Sports / 健康运动** - Garmin, Strava, cycling / 骑行, health / 健康
+- **Daily Archive / 每日归档** - conversation / 对话, archive / 归档, chat history / 聊天记录
 
-**中文：** 根据内容自动识别标签：
+### Index File Location / 索引文件位置
+`memory/feishu-docs-index.md`
 
-| Keyword / 关键词 | Tag / 标签 |
-|----------------|-----------|
-| AI, 人工智能, GPT | AI技术 |
-| OpenClaw, skill, agent | OpenClaw |
-| Feishu, 飞书, docx | 飞书文档 |
-| E-commerce, 电商, TikTok | 电商 |
-| Garmin, Strava, 骑行 | 健康运动 |
+Format / 格式: Markdown table with / Markdown 表格，包含 index / 序号, name / 名称, type / 类型, link / 链接, summary / 摘要, status / 状态, tags / 标签, owner / 所有者
 
 ---
 
-## 📝 Examples / 示例
+## 🔍 Usage Examples / 使用示例
 
-### Example 1: Create Tech Document / 创建技术文档
+### Example 1 / 示例1: Create Tech Document / 创建技术文档
 ```
 /feishu-smart-doc-writer write_smart
-title: AI Research Report / AI技术调研报告
-content: # Overview / 概述
-
-AI technology is... / 人工智能是...
+title: AI Tech Research Report / AI技术调研报告
+content: # AI Overview / AI技术概述\n\nAI is... / 人工智能（AI）是...
 ```
 
-**Result / 结果：**
-- Document created / 文档创建成功
-- Tagged "AI Technology" / 自动打上"AI技术"标签
+Result / 结果：
+- Document created successfully / 文档创建成功
+- Auto-tagged "AI Tech / AI技术" / 自动打上"AI技术"标签
 - Index updated / 索引已更新
 
-### Example 2: Search Documents / 搜索文档
+### Example 2 / 示例2: Search Documents / 搜索文档
 ```
 /feishu-smart-doc-writer search_docs
-keyword: AI
+keyword: AI Tech / AI技术
 ```
 
-### Example 3: List by Tag / 按标签列出
+### Example 3 / 示例3: List All Tech Documents / 列出所有技术文档
 ```
 /feishu-smart-doc-writer list_docs
-tag: AI
+tag: AI Tech / AI技术
 ```
 
 ---
 
-## ⚙️ Configuration / 配置
+## ⚙️ Configuration / 配置说明
 
 ### User Config File / 用户配置文件
-**Location / 位置：** `skills/feishu-smart-doc-writer/user_config.json`
+Location / 位置: `skills/feishu-smart-doc-writer/user_config.json`
 
 ```json
 {
@@ -236,50 +242,59 @@ tag: AI
 ```
 
 ### Required Permissions / 必需权限
-- `docx:document:create` - Create documents / 创建文档
+- `docx:document:create` - Create document / 创建文档
 - `docx:document:write` - Write content / 写入内容
-- `docs:permission.member:transfer` - Transfer ownership ⚠️ **Critical** / 转移所有权 ⚠️ **关键**
-
----
-
-## 🐛 Troubleshooting / 故障排除
-
-### "open_id is not exist" Error / 错误
-**Cause / 原因：** Used `user_id` instead of `openid`
-
-**Fix / 解决：** Use format `ou_xxxxxxxx` (starts with "ou_")
-
-### "Permission denied" Error / 权限不足错误
-**Cause / 原因：** Missing `docs:permission.member:transfer` or not published
-
-**Fix / 解决：**
-1. Enable the permission / 开通权限
-2. Click "Publish" button / 点击"发布"按钮
-
-### Index Not Updated / 索引未更新
-**Check / 检查：**
-1. Check `memory/feishu-docs-index.md` exists / 检查索引文件是否存在
-2. Check `index_updated` field in response / 检查返回的 `index_updated` 字段
-3. Check error logs / 查看错误日志
+- `docs:permission.member:transfer` - Transfer ownership ⚠️ Critical / 转移所有权 ⚠️ 关键权限
 
 ---
 
 ## 📝 Version History / 版本历史
 
-### v1.3.0 (2026-02-22)
-- ✅ Auto-index management / 自动索引管理
-- ✅ search_docs & list_docs tools / 搜索和列出工具
-- ✅ Smart auto-tagging / 智能自动标签
-- ✅ Write smart auto-updates index / 写入时自动更新索引
+### v1.4.1 (2026-02-23)
+- ✅ Fixed description inconsistency between skill.json and package.json / 修复 skill.json 和 package.json 描述不一致问题
+- ✅ Unified all file versions to v1.4.1 / 统一所有文件版本号为 v1.4.1
+- ✅ Verified all 7 tools properly declared / 确认所有 7 个工具正确声明
+
+### v1.4.0 (2026-02-23)
+- ✅ Added auto index management (index_manager.py) / 新增自动索引管理（index_manager.py）
+- ✅ Added search_docs tool (search local index) / 新增 search_docs 工具（搜索本地索引）
+- ✅ Added list_docs tool (list documents) / 新增 list_docs 工具（列出文档）
+- ✅ Smart auto-categorization tags / 智能自动分类标签
+- ✅ Fixed ownership transfer (independent API calls, no ctx dependency) / 修复所有权转移（独立 API 调用，不依赖 ctx）
 
 ### v1.2.0
-- ✅ Auto-chunking / 自动分块
+- ✅ Auto-chunk writing / 自动分块写入
 - ✅ Auto ownership transfer / 自动转移所有权
 - ✅ First-time user guide / 首次使用引导
 
 ### v1.1.0
-- ✅ Basic document operations / 基础文档操作
+- ✅ Basic document creation and append / 基础文档创建和追加
 
 ---
 
-*Last updated / 最后更新：2026-02-22*
+## 🔧 Troubleshooting / 故障排除
+
+### "open_id is not exist" Error / 错误
+**Cause / 原因**: Used user_id instead of openid / 使用了 user_id 而不是 openid
+**Solution / 解决**: Use openid starting with `ou_` / 使用以 `ou_` 开头的 openid
+
+### "Permission Denied" Error / "权限不足" 错误
+**Cause / 原因**: `docs:permission.member:transfer` not enabled or app not published / 未开通权限，或未发布应用
+**Solution / 解决**：
+1. Permission Management → Search `docs:permission.member:transfer` → Enable / 权限管理 → 搜索 → 开通
+2. Click "Publish" button to publish new version (Critical!) / 点击"发布"按钮（关键！）
+
+### Index Not Updated / 索引未更新
+**Check / 检查**：
+1. Check if `memory/feishu-docs-index.md` exists / 查看文件是否存在
+2. Check `index_updated` field in write_smart return / 检查返回字段
+3. Check error logs / 查看错误日志
+
+---
+
+## 📞 Support / 支持
+
+If issues, please check / 如有问题，请检查：
+1. OpenID format correct (starts with ou_) / 格式是否正确（ou_ 开头）
+2. Permissions enabled and published / 权限是否已开通并发布
+3. Index file path correct / 索引文件路径是否正确

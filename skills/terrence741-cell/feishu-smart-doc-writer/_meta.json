@@ -3,11 +3,16 @@
   "slug": "feishu-smart-doc-writer",
   "displayName": "feishu-smart-doc-writer",
   "latest": {
-    "version": "1.3.1",
-    "publishedAt": 1771700884600,
-    "commit": "https://github.com/openclaw/skills/commit/9e01e37b2e5d021ef7ccddb48b37548ddc6c79a1"
+    "version": "1.4.1",
+    "publishedAt": 1771834474198,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.3.1",
+      "publishedAt": 1771700884600,
+      "commit": "https://github.com/openclaw/skills/commit/9e01e37b2e5d021ef7ccddb48b37548ddc6c79a1"
+    },
     {
       "version": "1.2.0",
       "publishedAt": 1771390824267,

@@ -1,7 +1,7 @@
 {
   "name": "feishu-smart-doc-writer",
-  "version": "1.2.0",
-  "description": "Feishu/Lark Smart Document Writer - 飞书智能文档写入器. Auto-chunk writing to avoid blank docs, auto ownership transfer. Config OpenID on first use.",
+  "version": "1.4.1",
+  "description": "Feishu/Lark Smart Document Writer v1.4.1 - 飞书智能文档写入器. Auto-chunk writing, auto ownership transfer, document index management with search/list. Config OpenID on first use.",
   "author": "OpenClaw",
   "license": "MIT",
   "tools": [
@@ -132,6 +132,59 @@
           "openid": {"type": "string"},
           "first_time": {"type": "boolean"},
           "message": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "search_docs",
+      "description": "Search local document index by keywords. Searches in document name, summary, and tags. 搜索本地文档索引，支持关键词搜索。",
+      "handler": "index_manager.search_docs",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "description": "Search keyword / 搜索关键词"
+          }
+        },
+        "required": ["keyword"]
+      },
+      "returns": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "link": {"type": "string"},
+            "summary": {"type": "string"},
+            "tags": {"type": "string"}
+          }
+        }
+      }
+    },
+    {
+      "name": "list_docs",
+      "description": "List all Feishu documents from local index. Optionally filter by tag. 列出所有飞书文档，可按标签筛选。",
+      "handler": "index_manager.list_all_docs",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "description": "Optional tag filter / 可选的标签筛选"
+          }
+        }
+      },
+      "returns": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "link": {"type": "string"},
+            "summary": {"type": "string"},
+            "tags": {"type": "string"}
+          }
         }
       }
     }
