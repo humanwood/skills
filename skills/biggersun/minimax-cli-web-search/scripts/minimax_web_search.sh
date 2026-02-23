@@ -98,10 +98,15 @@ if ! [[ "$TIMEOUT_SECONDS" =~ ^[0-9]+$ ]] || [[ "$TIMEOUT_SECONDS" -lt 1 ]]; the
   exit 2
 fi
 
+LIST_ERR=$(mktemp)
+TMP_OUT=$(mktemp)
+TMP_ERR=$(mktemp)
+trap 'rm -f "$LIST_ERR" "$TMP_OUT" "$TMP_ERR"' EXIT
+
 # Preflight: verify minimax server is visible in mcporter list
-if ! LIST_JSON=$(mcporter list --json 2>/tmp/minimax_search_list.err); then
+if ! LIST_JSON=$(mcporter list --json 2>"$LIST_ERR"); then
   echo "[ERR] Failed to run 'mcporter list --json'" >&2
-  sed -n '1,80p' /tmp/minimax_search_list.err >&2 || true
+  sed -n '1,80p' "$LIST_ERR" >&2 || true
   exit 4
 fi
 
@@ -128,10 +133,6 @@ if [[ -z "$QUERY" ]]; then
   echo "[ERR] --query is required (unless using --preflight)" >&2
   exit 2
 fi
-
-TMP_OUT=$(mktemp)
-TMP_ERR=$(mktemp)
-trap 'rm -f "$TMP_OUT" "$TMP_ERR" /tmp/minimax_search_list.err' EXIT
 
 # minimax.web_search currently requires only query; freshness is appended into query hint.
 QUERY_EFF="$QUERY"

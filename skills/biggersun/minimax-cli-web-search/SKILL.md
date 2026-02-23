@@ -91,6 +91,8 @@ Treat code `6` as a normal “no match” outcome, not a crash.
    - Use `--preflight` before first use in a new environment.
 2. **API key exposure risk**
    - Never print key values; report only missing/invalid status.
+3. **Temporary file safety**
+   - Wrapper uses `mktemp` for stderr/output temp files and cleans them with `trap`.
 3. **Upstream response variance**
    - Use `--json` normalized output for downstream automation.
 4. **Timeout/network instability**
