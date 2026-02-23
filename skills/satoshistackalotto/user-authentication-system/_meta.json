@@ -3,9 +3,15 @@
   "slug": "user-authentication-system",
   "displayName": "User Authentication System",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1771681648068,
-    "commit": "https://github.com/openclaw/skills/commit/6fed6f69d2f1fb1be6269a60fc73cd2b79e69bcc"
+    "version": "0.1.1",
+    "publishedAt": 1771695957811,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1771681648068,
+      "commit": "https://github.com/openclaw/skills/commit/6fed6f69d2f1fb1be6269a60fc73cd2b79e69bcc"
+    }
+  ]
 }

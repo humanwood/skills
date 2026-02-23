@@ -5,7 +5,7 @@ version: 1.0.0
 author: openclaw-greek-accounting
 homepage: https://github.com/satoshistackalotto/openclaw-greek-accounting
 tags: ["greek", "accounting", "authentication", "rbac", "security"]
-metadata: {"openclaw": {"requires": {"bins": ["jq", "openssl"], "env": ["OPENCLAW_DATA_DIR"]}, "notes": "Manages local user accounts and role-based access. Credentials are stored as salted SHA-256 hashes in OPENCLAW_DATA_DIR/auth/. 2FA uses SHA-256 TOTP. No external auth services — fully local."}}
+metadata: {"openclaw": {"requires": {"bins": ["jq", "openssl", "openclaw"], "env": ["OPENCLAW_DATA_DIR"]}, "notes": "Manages local user accounts and role-based access. Credentials are stored as salted SHA-256 hashes in OPENCLAW_DATA_DIR/auth/. 2FA uses SHA-256 TOTP. No external auth services — fully local.", "path_prefix": "/data/ in examples refers to $OPENCLAW_DATA_DIR (default: /data/)"}}
 ---
 
 # User Authentication System
