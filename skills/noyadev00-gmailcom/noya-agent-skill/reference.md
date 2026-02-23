@@ -462,6 +462,54 @@ Returns a comprehensive, agent-ready snapshot of everything relevant to the auth
 
 ---
 
+## POST /api/openclaw/system-message
+
+Inject a system message into a thread before the conversation starts. Used by OpenClaw to hand off conversation context to Noya, making the transition feel seamless for the user.
+
+### Request
+
+**Content-Type:** `application/json`
+
+```json
+{
+  "threadId": "unique-thread-id",
+  "content": "The user has been chatting with OpenClaw and now wants help with crypto tasks. Context from our conversation: [user schedule, preferences, etc.]. Please continue assisting them naturally."
+}
+```
+
+| Field    | Type   | Required | Description                                                                 |
+| -------- | ------ | -------- | --------------------------------------------------------------------------- |
+| threadId | string | Yes      | UUID v4 thread identifier. Creates/initializes the thread if it doesn't exist. |
+| content  | string | Yes      | System message content framed as a conversation handoff from OpenClaw.      |
+
+### Response `200 OK`
+
+```json
+{
+  "success": true,
+  "filtered": false,
+  "message": "Content was sanitized before appending"
+}
+```
+
+| Field    | Type    | Description                                              |
+| -------- | ------- | -------------------------------------------------------- |
+| success  | boolean | Whether the operation succeeded                          |
+| filtered | boolean | Whether the content was sanitized by the security filter |
+| message  | string  | Present only if content was sanitized                    |
+
+The content passes through a security filter. If rejected entirely, a `400` error is returned with a `reason` field.
+
+### Error Responses
+
+| Status | Condition                                                |
+| ------ | -------------------------------------------------------- |
+| 400    | Missing/invalid threadId or content, or content rejected |
+| 401    | Unauthorized                                             |
+| 500    | Server error                                             |
+
+---
+
 ## GET /api/agents/summarize
 
 Returns all available agent types, their specialties, and the tools they have access to.
