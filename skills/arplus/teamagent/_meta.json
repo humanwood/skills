@@ -1,0 +1,11 @@
+{
+  "owner": "arplus",
+  "slug": "teamagent",
+  "displayName": "Teamagent Client Skill",
+  "latest": {
+    "version": "1.0.5",
+    "publishedAt": 1771826532243,
+    "commit": null
+  },
+  "history": []
+}
