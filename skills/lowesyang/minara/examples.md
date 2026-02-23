@@ -54,9 +54,10 @@ minara assets perps            # Perps: equity, margin, positions
 minara assets spot --json      # JSON output
 
 # Deposit
-minara deposit                 # Interactive: Spot (addresses) or Perps (address / transfer)
+minara deposit                 # Interactive: Spot / Perps / Buy with credit card
 minara deposit spot            # Show spot deposit addresses (EVM + Solana)
 minara deposit perps           # Perps: show Arbitrum address, or transfer Spot → Perps
+minara deposit buy             # Buy crypto with credit card via MoonPay (opens browser)
 ```
 
 ## 5 — Perpetual futures
@@ -79,6 +80,12 @@ minara perps cancel
 
 # Withdraw from perps
 minara perps withdraw -a 50
+
+# AI analysis → optional quick order
+minara perps ask
+
+# AI autopilot trading strategy
+minara perps autopilot
 
 # History
 minara perps trades
@@ -131,7 +138,29 @@ minara limit-order list            # List all orders
 minara limit-order cancel abc123   # Cancel by ID
 ```
 
-## 9 — Premium & subscription
+## 9 — x402 protocol payment
+
+When an HTTP API returns **402 Payment Required** with x402 headers, the agent
+can pay using the Minara wallet.
+
+```bash
+# 1. Check balance before paying
+minara balance
+
+# 2. Pay the x402 service (USDC transfer to the service's payment address)
+#    Example: service requires 0.01 USDC on Base
+minara transfer
+#    → Token: USDC
+#    → Amount: 0.01
+#    → Recipient: <service payment address from 402 header>
+#    → Chain: base
+
+# 3. Ensure wallet is funded for future x402 payments
+minara deposit buy                 # Credit card on-ramp via MoonPay
+minara deposit spot                # Or show deposit addresses to receive crypto
+```
+
+## 10 — Premium & subscription
 
 ```bash
 minara premium plans               # View plans
