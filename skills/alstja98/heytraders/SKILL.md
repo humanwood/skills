@@ -150,7 +150,7 @@ resp = httpx.post(url, json={
 | POST | `/orders` | Yes | Place order |
 | GET | `/orders` | Yes | List orders (query: `account_id`, `symbol`, `status`, `exchange`, `limit`, `offset`) |
 | GET | `/orders/{id}` | Yes | Get order detail |
-| DELETE | `/orders/{id}` | Yes | Cancel order. Cancellable when `pending`/`partially_filled` |
+| DELETE | `/orders/{id}` | Yes | Cancel order (query: `account_id`, `exchange`, `symbol` for exchange-native orders) |
 
 ### Backtest (Async)
 
@@ -226,9 +226,11 @@ resp = httpx.post(url, json={
 | exchange | string | Yes | - | Exchange ID |
 | symbol | string | Yes | - | e.g. `BTC/USDT` or Polymarket token ID |
 | side | string | Yes | - | `buy` or `sell` |
-| order_type | string | No | `market` | `market`, `limit`, `GTC`, `FOK` |
+| order_type | string | No | `market` | `market`, `limit`, `stop_loss`, `take_profit`, `stop_loss_limit`, `take_profit_limit` |
+| time_in_force | string | No | null | `GTC`, `IOC`, `FOK`, `PostOnly`. Default: GTC for limit, IOC for market |
 | amount | string | Yes | - | Trade amount (decimal string, e.g. `"0.01"`) |
-| price | string | Conditional | null | Required for `limit`/`GTC`/`FOK` (decimal string) |
+| price | string | Conditional | null | Required for `limit`/`stop_loss_limit`/`take_profit_limit` (decimal string) |
+| stop_price | string | Conditional | null | Trigger price, required for `stop_loss`/`take_profit`/`stop_loss_limit`/`take_profit_limit` |
 | market_type | string | No | auto-detected | `spot`, `perpetual`, `prediction` (inferred from `exchange` if omitted) |
 | leverage | int | No | null | 1-125 (perpetual only) |
 
@@ -279,13 +281,7 @@ resp = httpx.post(url, json={
 **Response:** `claim_code` (6 chars, valid 30 min). Instruct user to enter at `hey-traders.com/dashboard/claim`.
 
 
-## Exchange-Specific Notes
-
-**Polymarket**: `symbol` must be the token ID (long numeric string). `price` is probability 0.0-1.0. Supported order types are `market`, `GTC`, and `FOK` (for limit-style orders, price should remain 0~1). Single-market balance query: pass `?symbol=TOKEN_ID`.
-
-**Lighter**: Standard symbol format (`BTC/USDT`). `symbol` param is **required** for open-orders endpoint. Cancel orders using numeric `exchange_order_id`, not the `api-` prefixed internal ID.
-
-**Hyperliquid**: Always `perpetual` market type. No spot support.
+> For exchange-specific notes (symbol format, order type constraints, cancel behavior), see `GET /docs/api-reference` → Exchange-Specific Notes.
 
 ## Response Format
 
