@@ -3,9 +3,15 @@
   "slug": "agentstead-deploy",
   "displayName": "AgentStead Deploy",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771495207085,
-    "commit": "https://github.com/openclaw/skills/commit/72fa8fe16a604cbcbc83631e6254e86d2d783c9f"
+    "version": "1.0.2",
+    "publishedAt": 1771601615419,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771495207085,
+      "commit": "https://github.com/openclaw/skills/commit/72fa8fe16a604cbcbc83631e6254e86d2d783c9f"
+    }
+  ]
 }

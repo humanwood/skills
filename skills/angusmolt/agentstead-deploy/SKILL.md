@@ -1,6 +1,6 @@
 ---
 name: agentstead-deploy
-description: Deploy OpenClaw agents to AgentStead cloud hosting. Use when a user wants to deploy their agent to the cloud, host an AI assistant on Telegram/Discord, or set up a remote OpenClaw instance. Handles account creation, agent provisioning, channel connection, and billing.
+description: Deploy OpenClaw sub-agent APIs to AgentStead cloud hosting with production-ready OpenClaw setup. Use when a user wants to auto-deploy a sub-agent on AgentStead, connect Telegram/Discord, and launch quickly with billing via Stripe (card) or crypto (USDC).
 ---
 
 # AgentStead Deploy
