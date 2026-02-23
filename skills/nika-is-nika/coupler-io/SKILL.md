@@ -8,7 +8,6 @@ Read-only data access via Coupler.io's MCP server.
 ## Prerequisites
 
 - [mcporter](https://github.com/openclaw/mcporter) CLI installed and on PATH
-- `curl`, `jq`, `openssl` — standard on macOS/Linux; install via your package manager if missing
 - Coupler.io account with at least one data flow configured to OpenClaw destination
 
 ## Quick Reference
@@ -26,115 +25,39 @@ mcporter call coupler.get-data executionId=<exec-id> query="SELECT * FROM data L
 
 > **Endpoint verification:** This skill connects to `auth.coupler.io` (OAuth) and `mcp.coupler.io` (MCP data). These are official Coupler.io endpoints. You can verify them via your Coupler.io account (AI integrations page).
 
-### Automated Setup
-
-Run the setup script — it handles everything automatically (no manual input needed):
+### 1. Add the server to mcporter config
 
 ```bash
-bash CPL/setup.sh
+mcporter config add coupler --url https://mcp.coupler.io/mcp
 ```
 
-The script registers the OAuth client, opens the browser for login, automatically captures the callback code via a local HTTP server on port 8976, exchanges for tokens, and saves config — all hands-free.
+### 2. Authenticate via OAuth
 
-Note: OAuth credentials are saved in `coupler-io/oauth-state.json`
-
-### Manual OAuth Flow (First-Time Only)
-
-1. **Register client:**
-
-   ```bash
-   curl -X POST https://auth.coupler.io/oauth2/register \
-     -H "Content-Type: application/json" \
-     -d '{
-       "client_name": "OpenClaw",
-       "redirect_uris": ["http://127.0.0.1:8976/callback"],
-       "grant_types": ["authorization_code"],
-       "response_types": ["code"],
-       "token_endpoint_auth_method": "none"
-     }'
-   ```
-
-   Save `client_id` from response.
-
-2. **Generate PKCE:**
-
-   ```bash
-   CODE_VERIFIER=$(openssl rand -base64 32 | tr -d '=/+' | cut -c1-43)
-   CODE_CHALLENGE=$(echo -n "$CODE_VERIFIER" | openssl dgst -sha256 -binary | base64 | tr -d '=' | tr '+/' '-_')
-   ```
-
-3. **Browser auth** — open URL, user logs in:
-
-   ```text
-   https://auth.coupler.io/oauth2/authorize?client_id=<client_id>&redirect_uri=http://127.0.0.1:8976/callback&response_type=code&scope=mcp&code_challenge=<code_challenge>&code_challenge_method=S256
-   ```
-
-4. **Exchange code** (from callback URL):
-
-   ```bash
-   curl -X POST https://auth.coupler.io/oauth2/token \
-     -d "grant_type=authorization_code&client_id=<client_id>&code=<auth_code>&redirect_uri=http://127.0.0.1:8976/callback&code_verifier=<code_verifier>"
-   ```
-
-5. **Save tokens:**
-   - `access_token` → `config/mcporter.json`
-   - `refresh_token` → `coupler-io/oauth-state.json` (critical for silent refresh)
-
-6. **Secure token files:**
-
-   ```bash
-   chmod 600 config/mcporter.json CPL/oauth-state.json
-   ```
-
-   > ⚠️ Token files contain sensitive credentials. Never commit them to version control (already excluded via `.gitignore`). For additional security, consider storing tokens in your system keychain (macOS: `security add-generic-password`).
-
-### mcporter Config
-
-`config/mcporter.json`:
-
-```json
-{
-  "mcpServers": {
-    "coupler": {
-      "baseUrl": "https://mcp.coupler.io/mcp",
-      "headers": {
-        "Authorization": "Bearer <access_token>"
-      }
-    }
-  }
-}
+```bash
+mcporter auth --http-url https://mcp.coupler.io/mcp --persist config/mcporter.json         
 ```
 
-### OAuth State
+This opens the browser for Coupler.io login and handles the OAuth flow (PKCE) automatically. Tokens are stored in mcporter's config.
 
-`coupler-io/oauth-state.json`:
+To re-authenticate (e.g. after revoking access):
 
-```json
-{
-  "authServer": "https://auth.coupler.io",
-  "clientId": "<client_id>",
-  "refreshToken": "<refresh_token>"
-}
+```bash
+mcporter auth coupler --reset
+```
+
+### 3. Verify
+
+```bash
+mcporter list coupler --schema
 ```
 
 ---
 
 ## Token Refresh
 
-Access tokens expire in 2 hours. Refresh silently:
+mcporter handles token refresh automatically on 401 errors. No manual intervention needed.
 
-```bash
-CLIENT_ID=$(jq -r '.clientId' coupler-io/oauth-state.json)
-REFRESH_TOKEN=$(jq -r '.refreshToken' coupler-io/oauth-state.json)
-AUTH_SERVER=$(jq -r '.authServer' coupler-io/oauth-state.json)
-
-curl -s -X POST "$AUTH_SERVER/oauth2/token" \
-  -d "grant_type=refresh_token&client_id=$CLIENT_ID&refresh_token=$REFRESH_TOKEN"
-```
-
-Update `config/mcporter.json` with new `access_token` and `coupler-io/oauth-state.json` with new `refresh_token`.
-
-**When to refresh:** On 401 errors, or proactively before MCP calls if token is near expiry.
+If you need to force a fresh token: `mcporter auth coupler --reset`
 
 ---
 
@@ -198,4 +121,4 @@ mcporter call coupler.get-data executionId=<exec-id> query="SELECT * FROM data L
 
 - Read-only: cannot modify flows, sources, or data
 - Only flows with OpenClaw destination are visible
-- Tokens expire in 2 hours (use refresh token)
+- Tokens expire in 2 hours (mcporter refreshes automatically)
