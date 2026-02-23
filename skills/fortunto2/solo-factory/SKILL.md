@@ -1,10 +1,10 @@
 ---
 name: solo-factory
-description: Install the full Solo Factory toolkit — 23 startup skills + solograph MCP server for code intelligence, KB search, and web search. Use when user says "install solo factory", "set up solo", "install all solo skills", "startup toolkit", or "solo factory setup". This is the one-command entry point for the entire solopreneur pipeline.
+description: Install the full Solo Factory toolkit — 23 startup skills + solograph MCP server for code intelligence, KB search, and web search. Use when user says "install solo factory", "set up solo", "install all solo skills", "startup toolkit", or "solo factory setup". This is the one-command entry point for the entire startup pipeline.
 license: MIT
 metadata:
   author: fortunto2
-  version: "1.1.0"
+  version: "1.1.1"
   openclaw:
     emoji: "🏭"
 allowed-tools: Bash, Read, Write, AskUserQuestion
@@ -13,7 +13,7 @@ argument-hint: "[--mcp] [--skills-only]"
 
 # /factory
 
-One-command setup for the entire Solo Factory solopreneur toolkit.
+One-command setup for the entire Solo Factory startup toolkit.
 
 ## What gets installed
 
@@ -26,12 +26,13 @@ One-command setup for the entire Solo Factory solopreneur toolkit.
 | Promotion | seo-audit, content-gen, community-outreach, video-promo, landing-gen, metrics-track |
 | Utilities | init, audit, retro, pipeline, humanize, index-youtube, you2idea-extract |
 
-**MCP server** (optional) — [solograph](https://github.com/fortunto2/solograph) provides 11 tools:
+**MCP server** (optional) — [solograph](https://github.com/fortunto2/solograph) provides 15 tools:
 - `kb_search` — semantic search over knowledge base
 - `session_search` — search past Claude Code sessions
-- `codegraph_query` / `codegraph_explain` / `codegraph_stats` — code intelligence
-- `project_info` / `project_code_search` — project registry
-- `web_search` — web search via SearXNG or Tavily
+- `codegraph_query` / `codegraph_explain` / `codegraph_stats` / `codegraph_shared` — code intelligence
+- `project_info` / `project_code_search` / `project_code_reindex` — project registry
+- `source_search` / `source_list` / `source_tags` / `source_related` — source management
+- `web_search` — web search
 
 ## Steps
 
