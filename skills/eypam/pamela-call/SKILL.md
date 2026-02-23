@@ -12,7 +12,7 @@ Make AI phone calls instantly. No lag, no setup, unlimited scale. **[ThisIsPamel
 
 **Jump to:** [Installation](#installation) · [Quick Start](#quick-start) · [Examples](#examples) · [SDK Reference](#sdk-reference)
 
-**ClawHub skill release:** `v1.1.11`
+**ClawHub skill release:** `v1.1.12`
 
 ## Prerequisites
 
@@ -55,7 +55,7 @@ npm install @thisispamela/mcp
 npm install @thisispamela/widget
 ```
 
-Latest versions: SDK / CLI / Widget / MCP / Python `1.1.4`, React `1.1.5`.
+Latest versions: SDK / CLI / Widget / MCP / Python / React `1.2.0`.
 
 ## Getting Your API Key
 
