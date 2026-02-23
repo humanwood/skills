@@ -3,9 +3,15 @@
   "slug": "usdckrump",
   "displayName": "USDC Krump EVVM x402 Payment",
   "latest": {
-    "version": "0.1.1",
-    "publishedAt": 1771711392808,
-    "commit": "https://github.com/openclaw/skills/commit/ecad8fb365af1742e09684349dcb20c97f58e111"
+    "version": "0.1.2",
+    "publishedAt": 1771711980594,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.1",
+      "publishedAt": 1771711392808,
+      "commit": "https://github.com/openclaw/skills/commit/ecad8fb365af1742e09684349dcb20c97f58e111"
+    }
+  ]
 }
