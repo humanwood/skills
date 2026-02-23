@@ -28,11 +28,13 @@ npx skills add pskoett/pskoett-ai-skills/simplify-and-harden-ci
 | Category      | Code Quality / Security        |
 | Priority      | Recommended                    |
 
-## Rationale
+## Rationale and Philosophy
 
 When a coding agent completes a task, it holds peak contextual understanding of the problem, the solution, and the tradeoffs it made along the way. This context degrades immediately -- the next task wipes the slate. Simplify & Harden exploits that peak context window to perform two focused review passes before the agent moves on.
 
 Most agents solve the ticket and stop. This skill turns "done" into "done well."
+
+The operating philosophy is a deliberate "fresh eyes" self-review before moving on: carefully re-read all newly written code and all existing code modified in the task, and look hard for obvious bugs, errors, confusing logic, brittle assumptions, naming issues, and missed hardening opportunities. The goal is not to expand scope or rewrite the solution -- it is to use peak context to perform a disciplined first review pass while the agent still remembers the intent behind every change.
 
 ## Best Use with Independent Review
 
@@ -98,6 +100,8 @@ The agent SHOULD flag out-of-scope concerns in the summary output rather than ac
 **Objective:** Reduce unnecessary complexity introduced during implementation.
 
 **Default posture: simplify, don't restructure.** The primary goal of this pass is lightweight cleanup -- removing noise, tightening naming, killing dead code. The agent should bias heavily toward cosmetic fixes that make the code cleaner without changing its structure. Refactoring is the exception, not the rule.
+
+**Fresh-eyes start (mandatory):** Before making any edits in this pass, re-read all code added or modified in this task with "fresh eyes" and actively look for obvious bugs, errors, confusing logic, brittle assumptions, naming issues, and missed hardening opportunities.
 
 The agent reviews its own work and asks:
 
