@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Bluetooth Headset Watcher — auto-starts voice loop when headset connects.
+AirPods Watcher — auto-starts voice loop when AirPods connect.
 
-Polls audio devices every N seconds. When a matching Bluetooth device appears
-as an input device, starts the voice loop. When it disconnects, stops it.
+Polls audio devices every 5 seconds. When "Michael's AirPods" appears
+as an input device, starts the voice loop. When they disconnect, stops it.
 
-Config via environment variables:
-  VL_HEADSET_NAME  — substring to match (default: "AirPods")
-  VL_POLL_INTERVAL — seconds between polls (default: 5)
+Usage:
+    ~/voice-loop/.venv/bin/python ~/voice-loop/airpods_watcher.py
+
+Runs as a background daemon. Add to launchd for auto-start on boot.
 """
 
 import subprocess
@@ -16,12 +17,10 @@ import signal
 import sys
 import os
 
-HEADSET_NAME = os.environ.get("VL_HEADSET_NAME", "AirPods")
-POLL_INTERVAL = int(os.environ.get("VL_POLL_INTERVAL", "5"))
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-VOICE_LOOP_SCRIPT = os.path.join(SCRIPT_DIR, "voice_loop.py")
-VENV_PYTHON = os.path.join(SCRIPT_DIR, "..", ".venv", "bin", "python")
+AIRPODS_NAME = "Michael's AirPods"
+POLL_INTERVAL = 5  # seconds
+VOICE_LOOP_SCRIPT = os.path.expanduser("~/voice-loop/voice_loop.py")
+VENV_PYTHON = os.path.expanduser("~/voice-loop/.venv/bin/python")
 
 running = True
 voice_loop_proc = None
@@ -37,15 +36,15 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-def headset_connected() -> bool:
-    """Check if the headset is available as an input device."""
+def airpods_connected() -> bool:
+    """Check if AirPods are available as an input device."""
     try:
         result = subprocess.run(
-            [VENV_PYTHON, "-c", f"""
+            [VENV_PYTHON, "-c", """
 import sounddevice as sd
 devices = sd.query_devices()
 for d in devices:
-    if d['max_input_channels'] > 0 and '{HEADSET_NAME}' in d['name']:
+    if d['max_input_channels'] > 0 and 'AirPods' in d['name']:
         print('FOUND')
         break
 """],
@@ -59,22 +58,12 @@ for d in devices:
 def start_voice_loop():
     global voice_loop_proc
     if voice_loop_proc and voice_loop_proc.poll() is None:
-        return
+        return  # already running
 
-    print(f"🎧 {HEADSET_NAME} detected — starting voice loop...", flush=True)
-    # Only pass through voice-loop env vars + essential PATH
-    safe_env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
-    for key in os.environ:
-        if key.startswith("VL_"):
-            safe_env[key] = os.environ[key]
-    # HOME needed for Keychain access and model cache
-    if "HOME" in os.environ:
-        safe_env["HOME"] = os.environ["HOME"]
-
+    print("🎧 AirPods detected — starting voice loop...", flush=True)
     voice_loop_proc = subprocess.Popen(
         [VENV_PYTHON, VOICE_LOOP_SCRIPT],
         cwd=os.path.dirname(VOICE_LOOP_SCRIPT),
-        env=safe_env,
     )
     print(f"   Voice loop started (pid {voice_loop_proc.pid})", flush=True)
 
@@ -82,7 +71,7 @@ def start_voice_loop():
 def stop_voice_loop():
     global voice_loop_proc
     if voice_loop_proc and voice_loop_proc.poll() is None:
-        print(f"🔇 {HEADSET_NAME} disconnected — stopping voice loop...", flush=True)
+        print("🔇 AirPods disconnected — stopping voice loop...", flush=True)
         voice_loop_proc.terminate()
         try:
             voice_loop_proc.wait(timeout=5)
@@ -94,18 +83,16 @@ def stop_voice_loop():
 
 def main():
     print("=" * 50)
-    print("👂 Headset Watcher")
+    print("👂 AirPods Watcher")
     print("=" * 50)
-    print(f"Watching for: {HEADSET_NAME}")
+    print(f"Watching for: {AIRPODS_NAME}")
     print(f"Poll interval: {POLL_INTERVAL}s")
-    print(f"Voice loop: {VOICE_LOOP_SCRIPT}")
-    print(f"Python: {VENV_PYTHON}")
     print("Press Ctrl+C to stop\n")
 
     was_connected = False
 
     while running:
-        connected = headset_connected()
+        connected = airpods_connected()
 
         if connected and not was_connected:
             start_voice_loop()
@@ -114,7 +101,7 @@ def main():
             stop_voice_loop()
             was_connected = False
 
-        # Restart if voice loop crashed while headset still connected
+        # Also check if voice loop crashed while AirPods still connected
         if was_connected and voice_loop_proc and voice_loop_proc.poll() is not None:
             print("⚠️  Voice loop crashed, restarting...", flush=True)
             start_voice_loop()

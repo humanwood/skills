@@ -26,7 +26,7 @@ fi
 
 # 2. Python dependencies
 echo "📦 Installing Python dependencies..."
-"$VENV_DIR/bin/pip" install -q numpy sounddevice soundfile kokoro-onnx
+"$VENV_DIR/bin/pip" install -q numpy sounddevice soundfile kokoro-onnx mlx-whisper
 
 # 3. Kokoro models
 mkdir -p "$KOKORO_DIR"
@@ -44,14 +44,18 @@ else
     echo "✅ Kokoro voices exist"
 fi
 
-# 4. Whisper
-if command -v whisper &> /dev/null; then
-    echo "✅ Whisper installed at $(which whisper)"
+# 4. Ollama + local LLM (optional, for hybrid routing)
+if command -v ollama &> /dev/null; then
+    echo "✅ Ollama installed"
+    if ollama list 2>/dev/null | grep -q "gemma3:1b"; then
+        echo "✅ gemma3:1b model ready"
+    else
+        echo "⬇️  Pulling gemma3:1b for local voice responses (~815MB)..."
+        ollama pull gemma3:1b
+    fi
 else
-    echo "⚠️  Whisper not found. Install with:"
-    echo "   brew install openai-whisper"
-    echo "   — or —"
-    echo "   $VENV_DIR/bin/pip install openai-whisper"
+    echo "⚠️  Ollama not found. Install from https://ollama.ai for free local LLM routing."
+    echo "   Without it, all queries route to cloud (still works, just costs API tokens)."
 fi
 
 # 5. OpenClaw check
