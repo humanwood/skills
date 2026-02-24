@@ -1,0 +1,11 @@
+{
+  "owner": "letorresmeza",
+  "slug": "weather-data",
+  "displayName": "Weather Data API",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1771886678957,
+    "commit": null
+  },
+  "history": []
+}
