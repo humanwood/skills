@@ -1,12 +1,15 @@
 ---
 name: guardian-core
 description: Local Guardian scanner with bundled signatures and dashboard. Realtime + batch scanning, no webhook/API/cron automation paths.
-version: 1.0.3
+version: 1.0.5
 metadata:
   openclaw:
     requires:
       bins:
         - python3
+      env:
+        - GUARDIAN_WORKSPACE
+        - GUARDIAN_CONFIG
     permissions:
       - read_workspace
       - write_workspace
@@ -41,6 +44,10 @@ python3 scripts/admin.py status
 python3 scripts/admin.py threats
 python3 scripts/admin.py report
 ```
+
+## Environment/config reads
+- `GUARDIAN_WORKSPACE`
+- `GUARDIAN_CONFIG`
 
 ## Python API
 ```python

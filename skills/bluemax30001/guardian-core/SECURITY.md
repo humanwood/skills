@@ -1,25 +1,18 @@
-# Security Notes
+# Security Notes (Guardian Core)
 
-## What Guardian accesses
+Guardian Core is local-only by design.
 
-- **Reads:** Workspace files, conversation logs, definition files (JSON)
-- **Writes:** `guardian.db` (SQLite) for scan results and threat history
-- **Shell:** `admin.py update-defs` and `onboard.py --setup-crons` invoke subprocesses (crontab setup, signature updates). Explicit operator actions.
-- **Network (optional):**
-  - `integrations/webhook.py` can POST scan results to a configured URL
-  - `scripts/serve.py` runs an HTTP API server if you start it
-  - Both are disabled unless you configure/start them. Documented in SKILL.md.
-- **Base64:** Definition files may be base64-encoded; decoded at load time to extract signature patterns.
+## Data access
+- Reads workspace files for scanning and config discovery.
+- Writes local SQLite DB (`guardian.db`) for detections/history.
+- No webhook sender in this package.
+- No HTTP API server in this package.
+- No cron setup helper in this package.
+- No remote definitions updater in this package.
+
+## Declared runtime inputs
+- Env: `GUARDIAN_WORKSPACE`, `GUARDIAN_CONFIG`
 
 ## Permissions
-
-| Permission | Used by | Purpose |
-|---|---|---|
-| `read_workspace` | `core/scanner.py` | Read files to scan for threats |
-| `write_workspace` | `core/guardian_db.py` | Write scan results to SQLite |
-| `shell_optional` | `scripts/onboard.py` | Optional cron setup via subprocess/crontab |
-| `network_optional` | `integrations/webhook.py`, `scripts/serve.py` | Optional outbound webhooks / HTTP server |
-
-## No credentials required
-
-Guardian does not need API keys, tokens, or external service credentials. All scanning is local regex matching against bundled signature definitions. Optional network features are opt-in and documented.
+- `read_workspace`
+- `write_workspace`

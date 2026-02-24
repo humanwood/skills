@@ -3,9 +3,15 @@
   "slug": "guardian-core",
   "displayName": "Guardian Core",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771898362099,
-    "commit": "https://github.com/openclaw/skills/commit/51008d4ddc5b6e642525705308b29d81cced7b81"
+    "version": "1.0.5",
+    "publishedAt": 1771901551782,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771898362099,
+      "commit": "https://github.com/openclaw/skills/commit/51008d4ddc5b6e642525705308b29d81cced7b81"
+    }
+  ]
 }
