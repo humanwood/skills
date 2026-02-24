@@ -3,9 +3,15 @@
   "slug": "1sec-security",
   "displayName": "1-SEC: All-in-One Cybersecurity for AI Agent Hosts",
   "latest": {
-    "version": "0.4.11",
-    "publishedAt": 1771764467097,
-    "commit": "https://github.com/openclaw/skills/commit/e84159431e9e54839fb973cf34a5cfea770eec1a"
+    "version": "0.4.13",
+    "publishedAt": 1771858255346,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.4.11",
+      "publishedAt": 1771764467097,
+      "commit": "https://github.com/openclaw/skills/commit/e84159431e9e54839fb973cf34a5cfea770eec1a"
+    }
+  ]
 }
