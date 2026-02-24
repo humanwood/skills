@@ -3,9 +3,15 @@
   "slug": "skill-hunter",
   "displayName": "Skill Hunter",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1771867343278,
-    "commit": "https://github.com/openclaw/skills/commit/629919a95d3997b8821c087bb505b1f3d63d6b42"
+    "version": "1.0.2",
+    "publishedAt": 1771963227135,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1771867343278,
+      "commit": "https://github.com/openclaw/skills/commit/629919a95d3997b8821c087bb505b1f3d63d6b42"
+    }
+  ]
 }

@@ -44,3 +44,7 @@ curl -s "https://clawhub.ai/api/v1/skills/kenoodl-synthesis/kenoodl-synthesis/fi
 ```
 
 Full workflow, API reference, and security evaluation framework in `instructions.md`.
+
+## Security profile
+
+No credentials required. No env vars. No external packages. All API calls go to clawhub.ai — the platform's own public endpoints. Nothing leaves your environment except search queries to ClawHub.
