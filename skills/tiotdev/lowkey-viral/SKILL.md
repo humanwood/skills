@@ -209,7 +209,7 @@ curl -s -X POST https://lowkeyviral.com/api/v1/briefs/manual \
   }'
 ```
 
-Response includes `slides` array immediately.
+Response includes `slides` array immediately. Note: `hook` is not accepted for slideshows — it is automatically set to the first slide's `title`.
 
 ## Uploading Custom Images
 
