@@ -1,13 +1,33 @@
 #!/usr/bin/env node
 /**
  * Post-install hook for RescueClaw skill
- * Checks that the RescueClaw daemon is installed
+ * Sets up local data directory and checks for the daemon binary.
+ * Does NOT use curl | bash — binary is bundled or downloaded from GitHub Releases.
  */
 
 const { execSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
-console.log('🛟 RescueClaw Skill - Post-Install Check\n');
+console.log('🛟 RescueClaw Skill - Post-Install Setup\n');
+
+// Use user-local path instead of /var/rescueclaw
+const dataDir = path.join(os.homedir(), '.openclaw', 'rescueclaw');
+
+// Ensure data directory exists
+if (!fs.existsSync(dataDir)) {
+  console.log(`📁 Creating data directory: ${dataDir}`);
+  try {
+    fs.mkdirSync(dataDir, { recursive: true, mode: 0o755 });
+    console.log('   ✅ Directory created');
+  } catch (err) {
+    console.log(`   ⚠️  Could not create ${dataDir}: ${err.message}`);
+    console.log(`   Run manually: mkdir -p ${dataDir}`);
+  }
+} else {
+  console.log(`✅ Data directory ready: ${dataDir}`);
+}
 
 // Check if rescueclaw binary is installed
 try {
@@ -15,26 +35,34 @@ try {
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe']
   }).trim();
-  console.log(`✅ RescueClaw daemon installed: ${version}`);
+  console.log(`✅ RescueClaw daemon found: ${version}`);
 } catch {
-  console.log('⚠️  RescueClaw daemon not found');
-  console.log('   Install: curl -fsSL https://raw.githubusercontent.com/harman314/rescueclaw/main/install.sh | bash');
-  console.log('');
-}
-
-// Ensure checkpoint directory exists
-const dir = '/var/rescueclaw';
-if (!fs.existsSync(dir)) {
-  console.log(`📁 Creating checkpoint directory: ${dir}`);
-  try {
-    fs.mkdirSync(dir, { recursive: true, mode: 0o755 });
-    console.log('   ✅ Directory created');
-  } catch (err) {
-    console.log(`   ⚠️  Could not create ${dir}`);
-    console.log(`   Run: sudo mkdir -p ${dir} && sudo chown $(whoami) ${dir}`);
+  console.log('⚠️  RescueClaw daemon not found in PATH');
+  
+  // Check if bundled binary exists for this platform
+  const arch = os.arch();       // x64, arm64
+  const platform = os.platform(); // linux, darwin
+  const binName = `rescueclaw-${platform}-${arch}`;
+  const bundledPath = path.join(__dirname, 'bin', binName);
+  
+  if (fs.existsSync(bundledPath)) {
+    const installPath = path.join(os.homedir(), '.local', 'bin', 'rescueclaw');
+    console.log(`📦 Found bundled binary for ${platform}/${arch}`);
+    try {
+      fs.mkdirSync(path.dirname(installPath), { recursive: true });
+      fs.copyFileSync(bundledPath, installPath);
+      fs.chmodSync(installPath, 0o755);
+      console.log(`✅ Installed to ${installPath}`);
+      console.log(`   Make sure ~/.local/bin is in your PATH`);
+    } catch (err) {
+      console.log(`   ⚠️  Could not install: ${err.message}`);
+      console.log(`   Copy manually: cp ${bundledPath} ~/.local/bin/rescueclaw && chmod +x ~/.local/bin/rescueclaw`);
+    }
+  } else {
+    console.log(`\n   To install, download the binary for your platform from:`);
+    console.log(`   https://github.com/harman314/rescueclaw/releases`);
+    console.log(`\n   Then place it in your PATH (e.g. ~/.local/bin/rescueclaw)`);
   }
-} else {
-  console.log(`✅ Checkpoint directory ready: ${dir}`);
 }
 
-console.log('\n🎯 Skill installed! Use rescueclaw-checkpoint.js for safe operations.');
+console.log('\n🎯 Skill ready! Use rescueclaw-checkpoint.js for safe operations.');
