@@ -3,9 +3,15 @@
   "slug": "turnip-prophet",
   "displayName": "Turnip Prophet",
   "latest": {
-    "version": "1.2.3",
-    "publishedAt": 1771842942520,
-    "commit": "https://github.com/openclaw/skills/commit/5becb0fe81f19af8d161b9ec8154116ff5a32138"
+    "version": "1.2.4",
+    "publishedAt": 1771843074808,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.2.3",
+      "publishedAt": 1771842942520,
+      "commit": "https://github.com/openclaw/skills/commit/5becb0fe81f19af8d161b9ec8154116ff5a32138"
+    }
+  ]
 }
