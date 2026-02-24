@@ -79,6 +79,10 @@ All string matching is case-insensitive.
 | `date` | Set the date |
 | `amount` | Set the amount |
 
+For `op: "set"` actions, you can also pass advanced options:
+- `options.template` for handlebars-style rule action templating
+- `options.formula` for Excel-style rule formulas
+
 ## Action operators
 
 | Operator | Description |
@@ -99,12 +103,28 @@ Actual automatically creates rules based on user behavior:
 
 You can edit or delete these auto-created rules at any time.
 
-## Workflow: creating rules via fiscal
+## Workflow: creating rules via fscl
 
-### 1. Preview what a rule would match
+### 1. Validate rule JSON first
 
 ```bash
-fiscal rules preview '{
+fscl rules validate '{
+  "stage": null,
+  "conditionsOp": "and",
+  "conditions": [
+    {"field": "imported_payee", "op": "contains", "value": "UBER EATS"}
+  ],
+  "actions": [
+    {"field": "category", "op": "set", "value": "<dining-cat-id>"},
+    {"field": "payee", "op": "set", "value": "<uber-eats-payee-id>"}
+  ]
+}'
+```
+
+### 2. Preview what the rule would match
+
+```bash
+fscl rules preview '{
   "conditions": [
     {"field": "imported_payee", "op": "contains", "value": "UBER EATS"}
   ],
@@ -118,10 +138,10 @@ fiscal rules preview '{
 
 This shows matching transactions without creating the rule.
 
-### 2. Create the rule
+### 3. Create the rule
 
 ```bash
-fiscal rules create '{
+fscl rules create '{
   "stage": null,
   "conditionsOp": "and",
   "conditions": [
@@ -134,26 +154,26 @@ fiscal rules create '{
 }'
 ```
 
-### 3. Apply retroactively
+### 4. Apply retroactively
 
 ```bash
 # Preview what would change
-fiscal rules apply --dry-run
+fscl rules run --dry-run
 
 # Apply all rules to uncategorized transactions
-fiscal rules apply
+fscl rules run
 
 # Apply just one rule
-fiscal rules apply --rule <rule-id> --dry-run
-fiscal rules apply --rule <rule-id>
+fscl rules run --rule <rule-id> --dry-run
+fscl rules run --rule <rule-id>
 ```
 
-### 4. Update a rule
+### 5. Update a rule
 
 You must provide the full rule object including `id`:
 
 ```bash
-fiscal rules update '{
+fscl rules update '{
   "id": "<rule-id>",
   "stage": null,
   "conditionsOp": "and",
@@ -201,6 +221,46 @@ Clean up ugly bank payee names:
 }
 ```
 
+### Formula action (set amount from formula)
+
+```json
+{
+  "stage": null,
+  "conditionsOp": "and",
+  "conditions": [
+    { "field": "imported_payee", "op": "contains", "value": "TIP" }
+  ],
+  "actions": [
+    {
+      "field": "amount",
+      "op": "set",
+      "value": null,
+      "options": { "formula": "=ROUND(amount*1.2,0)" }
+    }
+  ]
+}
+```
+
+### Template action (set notes from template)
+
+```json
+{
+  "stage": null,
+  "conditionsOp": "and",
+  "conditions": [
+    { "field": "payee", "op": "is", "value": "<payee-id>" }
+  ],
+  "actions": [
+    {
+      "field": "notes",
+      "op": "set",
+      "value": "",
+      "options": { "template": "{{payee_name}} {{date}}" }
+    }
+  ]
+}
+```
+
 ### Auto-clear for instant accounts (post stage)
 
 Cash or Venmo accounts where transactions clear immediately:
@@ -237,3 +297,48 @@ Set the payee to the target account's transfer payee to create a transfer:
 ```
 
 If both accounts use bank sync, create matching rules for both to avoid duplicate transfers.
+
+## Workflow: Payee cleanup with rules
+
+Clean up messy bank payee names and set up auto-categorization.
+
+```bash
+# See payee statistics to identify messy names
+fscl payees stats --min-count 2 --extended
+
+# List payees to find duplicates
+fscl payees list
+
+# Create a clean payee if needed (create returns the new ID)
+fscl payees create "Amazon"
+
+# Create a pre-stage rule to clean the payee on import
+fscl rules create '{
+  "stage": "pre",
+  "conditionsOp": "and",
+  "conditions": [
+    {"field": "imported_payee", "op": "contains", "value": "AMAZON"}
+  ],
+  "actions": [
+    {"field": "payee", "op": "set", "value": "<amazon-payee-id>"}
+  ]
+}'
+
+# Create a default-stage rule to auto-categorize
+fscl rules create '{
+  "stage": null,
+  "conditionsOp": "and",
+  "conditions": [
+    {"field": "payee", "op": "is", "value": "<amazon-payee-id>"}
+  ],
+  "actions": [
+    {"field": "category", "op": "set", "value": "<shopping-cat-id>"}
+  ]
+}'
+
+# Apply rules retroactively
+fscl rules run --and-commit
+
+# Merge duplicate payees
+fscl payees merge <amazon-payee-id> <amazon-com-payee-id> <amzn-payee-id>
+```

@@ -1,6 +1,6 @@
 # Importing Transactions
 
-fiscal imports bank transaction files into an account. The import pipeline parses the file, normalizes data, optionally runs rules and deduplication, and commits to the budget.
+fscl imports bank transaction files into an account. The import pipeline parses the file, normalizes data, optionally runs rules and deduplication, and commits to the budget.
 
 ## Supported formats
 
@@ -17,16 +17,16 @@ Format is auto-detected by file extension.
 
 ```bash
 # Import with rule processing and deduplication (default)
-fiscal transactions import <accountId> ./export.ofx
+fscl transactions import <accountId> ./export.ofx
 
 # Preview without committing
-fiscal transactions import <accountId> ./export.ofx --dry-run
+fscl transactions import <accountId> ./export.ofx --dry-run
 
 # See individual imported rows
-fiscal transactions import <accountId> ./export.ofx --show-rows
+fscl transactions import <accountId> ./export.ofx --show-rows
 
 # Get a compact summary
-fiscal transactions import <accountId> ./export.ofx --report
+fscl transactions import <accountId> ./export.ofx --report
 ```
 
 ## Import pipeline
@@ -48,7 +48,7 @@ With `--no-reconcile`, steps 3 is skipped (raw add, no rules, no dedup).
 | `--report` | off | Print compact import summary row |
 | `--no-clear` | off | Don't auto-set `cleared=true` on imported transactions |
 | `--no-import-notes` | off | Skip the memo/notes field from the source file |
-| `--date-format <fmt>` | auto | Override date parsing format (e.g. `MM/dd/yyyy`, `dd/MM/yyyy`) |
+| `--date-format <fmt>` | auto | Override date parsing order (e.g. `mm dd yyyy`, `dd mm yyyy`) |
 | `--multiplier <n>` | 1 | Multiply all parsed amounts by this factor |
 | `--flip-amount` | off | Negate all amounts (useful when bank exports use opposite sign convention) |
 
@@ -90,7 +90,7 @@ There are three ways CSV files represent amounts:
 One column has positive values for income and negative for expenses (or vice versa):
 
 ```bash
-fiscal transactions import <acct> export.csv --csv-amount-col "Amount"
+fscl transactions import <acct> export.csv --csv-amount-col "Amount"
 ```
 
 **Mode 2: Separate inflow/outflow columns**
@@ -98,7 +98,7 @@ fiscal transactions import <acct> export.csv --csv-amount-col "Amount"
 Two columns, one for money in and one for money out:
 
 ```bash
-fiscal transactions import <acct> export.csv \
+fscl transactions import <acct> export.csv \
   --csv-inflow-col "Credit" \
   --csv-outflow-col "Debit"
 ```
@@ -108,7 +108,7 @@ fiscal transactions import <acct> export.csv \
 An amount column plus a separate column that indicates direction:
 
 ```bash
-fiscal transactions import <acct> export.csv \
+fscl transactions import <acct> export.csv \
   --csv-amount-col "Amount" \
   --csv-inout-col "Type" \
   --csv-out-value "DR"
@@ -119,15 +119,15 @@ fiscal transactions import <acct> export.csv \
 | Flag | Description |
 |---|---|
 | `--flip-amount` | Negate all amounts. Use when your bank uses the opposite sign convention |
-| `--multiplier <n>` | Multiply all amounts. Use `--multiplier 100` if amounts are already in dollars (no cents), or `--multiplier -1` as an alternative to `--flip-amount` |
+| `--multiplier <n>` | Multiply all amounts before conversion to minor units. Keep `1` for normal decimal amounts (e.g. `45.67`). Use `0.01` only if the source values are already in cents (e.g. `4567` meaning `$45.67`). Use `-1` as an alternative to `--flip-amount` |
 
 ## Examples
 
 ### Standard OFX import
 
 ```bash
-fiscal transactions import abc123 ./checking-jan.ofx --report
-# status	ok	entity=import	added=42	updated=0	preview=42	errors=0
+fscl transactions import abc123 ./checking-jan.ofx --report
+# {"status":"ok","entity":"import","input":42,"added":42,"updated":0,"preview":0,"skipped":0,"errors":0}
 ```
 
 ### CSV with custom columns
@@ -135,18 +135,18 @@ fiscal transactions import abc123 ./checking-jan.ofx --report
 Bank exports: `Date,Description,Debit,Credit,Balance`
 
 ```bash
-fiscal transactions import abc123 ./statement.csv \
+fscl transactions import abc123 ./statement.csv \
   --csv-date-col "Date" \
   --csv-payee-col "Description" \
   --csv-inflow-col "Credit" \
   --csv-outflow-col "Debit" \
-  --date-format "dd/MM/yyyy"
+  --date-format "dd mm yyyy"
 ```
 
 ### CSV with no header and tab delimiter
 
 ```bash
-fiscal transactions import abc123 ./export.tsv \
+fscl transactions import abc123 ./export.tsv \
   --no-csv-header \
   --csv-delimiter "\t" \
   --csv-date-col 0 \
@@ -159,7 +159,7 @@ fiscal transactions import abc123 ./export.tsv \
 Some bank exports include summary lines before/after the data:
 
 ```bash
-fiscal transactions import abc123 ./export.csv \
+fscl transactions import abc123 ./export.csv \
   --csv-skip-start 3 \
   --csv-skip-end 1 \
   --csv-date-col "Date" \
@@ -172,7 +172,7 @@ fiscal transactions import abc123 ./export.csv \
 Always preview first with unfamiliar files:
 
 ```bash
-fiscal transactions import abc123 ./unknown.csv --dry-run --show-rows
+fscl transactions import abc123 ./unknown.csv --dry-run --show-rows
 ```
 
 This shows what would be imported without making changes. Check the output for correct dates, amounts, and payees before committing.
@@ -180,28 +180,90 @@ This shows what would be imported without making changes. Check the output for c
 ### QIF import with amount flip
 
 ```bash
-fiscal transactions import abc123 ./download.qif --flip-amount --report
+fscl transactions import abc123 ./download.qif --flip-amount --report
 ```
 
 ## Import output
 
 ### With `--report`
 
-```
-status	ok	entity=import	added=14	updated=3	preview=17	errors=0
+```json
+{
+  "status": "ok",
+  "entity": "import",
+  "input": 17,
+  "added": 14,
+  "updated": 3,
+  "preview": 0,
+  "skipped": 0,
+  "errors": 0
+}
 ```
 
 ### With `--show-rows`
 
-After the status line, a TSV block with the imported transactions:
+You still get the JSON import status object, plus an additional JSON payload with `entity: "import-rows"`:
 
-```
-status	ok	entity=import	added=14	updated=3	preview=17	errors=0
-date	amount	imported_payee	notes
-2026-01-05	-4599	STARBUCKS #1234	coffee
-2026-01-06	-12300	WHOLE FOODS MKT	groceries
+```json
+{
+  "status": "ok",
+  "entity": "import-rows",
+  "count": 2,
+  "data": [
+    { "date": "2026-01-05", "amount": -4599, "payee_name": "STARBUCKS #1234", "category": null, "notes": "coffee" },
+    { "date": "2026-01-06", "amount": -12300, "payee_name": "WHOLE FOODS MKT", "category": null, "notes": "groceries" }
+  ]
+}
 ```
 
 ### With `--dry-run`
 
 Same output format but no changes are committed. The `added` and `updated` counts show what *would* happen.
+
+## Workflow: CSV import with custom mapping
+
+Common scenario: bank exports CSV with non-standard columns.
+
+Example bank CSV:
+```
+Transaction Date,Post Date,Description,Category,Type,Amount,Memo
+01/15/2026,01/16/2026,WHOLE FOODS #10234,Groceries,Sale,-45.67,
+01/16/2026,01/17/2026,PAYROLL DEPOSIT,,Direct Dep,2500.00,Monthly salary
+```
+
+```bash
+# Preview first
+fscl transactions import <acct-id> ./bank-export.csv \
+  --csv-date-col "Transaction Date" \
+  --csv-payee-col "Description" \
+  --csv-amount-col "Amount" \
+  --csv-notes-col "Memo" \
+  --date-format "mm dd yyyy" \
+  --dry-run --show-rows
+
+# If it looks correct, import
+fscl transactions import <acct-id> ./bank-export.csv \
+  --csv-date-col "Transaction Date" \
+  --csv-payee-col "Description" \
+  --csv-amount-col "Amount" \
+  --csv-notes-col "Memo" \
+  --date-format "mm dd yyyy" \
+  --report
+```
+
+For a CSV with separate debit/credit columns:
+```
+Date,Description,Debit,Credit
+15/01/2026,WHOLE FOODS,45.67,
+16/01/2026,PAYROLL,,2500.00
+```
+
+```bash
+fscl transactions import <acct-id> ./export.csv \
+  --csv-date-col "Date" \
+  --csv-payee-col "Description" \
+  --csv-outflow-col "Debit" \
+  --csv-inflow-col "Credit" \
+  --date-format "dd mm yyyy" \
+  --report
+```
