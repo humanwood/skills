@@ -3,9 +3,15 @@
   "slug": "foam-notes",
   "displayName": "Foam Notes",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1770855121903,
-    "commit": "https://github.com/openclaw/skills/commit/f48599ee3fb2fb4e25ec603bb1b4c92b189cacfd"
+    "version": "1.0.3",
+    "publishedAt": 1771882254632,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1770855121903,
+      "commit": "https://github.com/openclaw/skills/commit/f48599ee3fb2fb4e25ec603bb1b4c92b189cacfd"
+    }
+  ]
 }

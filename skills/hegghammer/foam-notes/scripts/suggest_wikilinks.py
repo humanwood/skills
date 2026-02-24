@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 from difflib import SequenceMatcher
 
-from foam_config import load_config, get_foam_root
+from foam_config import load_config, get_foam_root, get_wikilink_config
 
 
 def similarity(a: str, b: str) -> float:
@@ -30,9 +30,62 @@ def similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
-def get_all_note_titles(foam_root: Path) -> dict:
-    """Get all note titles and their file paths."""
+def _stem_matches_title(stem: str, title: str, suffixes: tuple = ()) -> bool:
+    """Check whether an H1 title is close enough to the filename stem to be
+    used as an independent match key.
+
+    We normalise hyphens/underscores to spaces and compare.  If the title is
+    just a cleaned-up version of the stem (e.g. "Docker Networking" from
+    "docker-networking") it passes.  Wildly different pairs like "Home" from
+    "index" do not.
+    """
+    norm_stem = stem.lower().replace("-", " ").replace("_", " ")
+    norm_title = title.lower()
+    # Exact (after normalisation)
+    if norm_stem == norm_title:
+        return True
+    # One contains the other
+    if norm_stem in norm_title or norm_title in norm_stem:
+        return True
+    # Also allow suffix-stripped stem
+    for suffix in suffixes:
+        if norm_stem.endswith(suffix.replace("-", " ")):
+            stripped = norm_stem[: -len(suffix.replace("-", " "))].strip()
+            if (
+                stripped == norm_title
+                or norm_title in stripped
+                or stripped in norm_title
+            ):
+                return True
+    # Fuzzy similarity (catches minor differences like plurals, typos)
+    if similarity(norm_stem, norm_title) >= 0.7:
+        return True
+    return False
+
+
+def get_all_note_titles(
+    foam_root: Path,
+    title_stopwords: frozenset = frozenset(),
+    suffixes: tuple = (),
+) -> dict:
+    """Get all note titles and their file paths.
+
+    Keys are lowercased strings that will be matched against note content.
+    Each note can register multiple keys:
+      - filename stem  (always)
+      - stem without configured suffix  (if applicable, lower priority than a
+        note whose stem matches exactly)
+      - H1 title  (only if it resembles the stem or is multi-word)
+
+    Args:
+        foam_root: Path to the Foam workspace root.
+        title_stopwords: Words that should never be used as match keys
+            (too generic / ambiguous). Loaded from config.json wikilinks.title_stopwords.
+        suffixes: Filename suffixes whose base stem should also be registered
+            as a match key. Loaded from config.json wikilinks.suffixes.
+    """
     titles = {}
+    suffix_keys = set()  # keys registered via suffix stripping (protected)
 
     for md_file in foam_root.rglob("*.md"):
         # Skip hidden directories and journals
@@ -52,21 +105,113 @@ def get_all_note_titles(foam_root: Path) -> dict:
             if not title:
                 title = md_file.stem.replace("-", " ").replace("_", " ")
 
-            # Store both filename and title as keys
-            titles[md_file.stem.lower()] = {
+            info = {
                 "path": str(rel_path),
                 "title": title,
                 "stem": md_file.stem,
             }
-            titles[title.lower()] = {
-                "path": str(rel_path),
-                "title": title,
-                "stem": md_file.stem,
-            }
+
+            # 1) Register the full filename stem (unless it's a stopword)
+            if md_file.stem.lower() not in title_stopwords:
+                titles[md_file.stem.lower()] = info
+
+            # 2) Register stem without configured suffix (don't overwrite an
+            #    existing exact-stem entry — e.g. if both icedrive.md and
+            #    icedrive-hub.md exist, icedrive.md wins)
+            for suffix in suffixes:
+                if md_file.stem.lower().endswith(suffix):
+                    base = md_file.stem[: -len(suffix)]
+                    base_key = base.lower()
+                    if base_key not in titles:
+                        titles[base_key] = info
+                        suffix_keys.add(base_key)
+
+            # 3) Register H1 title as a key only when safe:
+            #    - skip stopwords
+            #    - single-word titles must resemble the stem
+            #    - multi-word titles are always registered (low collision risk)
+            #    - never overwrite a suffix-derived key (suffix notes are the
+            #      canonical target for bare topic words like "Foam")
+            title_key = title.lower()
+            if title_key not in title_stopwords and title_key not in suffix_keys:
+                words = title.split()
+                if len(words) >= 2:
+                    # Multi-word title: always register
+                    titles[title_key] = info
+                elif _stem_matches_title(md_file.stem, title, suffixes):
+                    # Single-word title that matches the stem: register
+                    titles[title_key] = info
+                # else: single-word title that doesn't match stem — skip
+
         except Exception:
             continue
 
     return titles
+
+
+def _get_exclusion_zones(line: str) -> list:
+    """Return list of (start, end) character ranges where wikilinks must not be inserted.
+
+    Covers: inline code, existing wikilinks, markdown links/images, URLs, file paths,
+    HTML tags/comments.
+    """
+    zones = []
+
+    # Inline code: `...` (handles double-backtick too)
+    for m in re.finditer(r"``[^`]+``|`[^`]+`", line):
+        zones.append((m.start(), m.end()))
+
+    # Existing wikilinks: [[...]]
+    for m in re.finditer(r"\[\[[^\]]+\]\]", line):
+        zones.append((m.start(), m.end()))
+
+    # Markdown images and links: ![alt](url) and [text](url)
+    for m in re.finditer(r"!?\[[^\]]*\]\([^)]*\)", line):
+        zones.append((m.start(), m.end()))
+
+    # Reference-style link definitions: [label]: url
+    for m in re.finditer(r"^\s*\[[^\]]+\]:\s+\S+", line):
+        zones.append((m.start(), m.end()))
+
+    # URLs: http(s)://... or www.... (extend through spaces for broken URLs on bare lines)
+    for m in re.finditer(r"https?://\S+|www\.\S+", line):
+        zones.append((m.start(), m.end()))
+    # Bare-URL line: if the line is basically just a URL (possibly with spaces in path),
+    # exclude the entire line
+    if re.match(r"^\s*https?://", line.strip()):
+        zones.append((0, len(line)))
+
+    # File paths: things like /foo/bar, ./foo, ../foo, or bare paths with slashes
+    # that aren't URLs (already caught above)
+    for m in re.finditer(r"(?<!\w)(?:\.{0,2}/[\w./_-]+)", line):
+        zones.append((m.start(), m.end()))
+
+    # Filename-like tokens: word.ext where ext is a common file extension
+    for m in re.finditer(
+        r"\b\w+\.(?:md|py|js|ts|json|yaml|yml|toml|html|css|sh|bash|txt|csv|pdf|png|jpg|xml|conf|cfg|ini|log|sql|r|R|qmd|rmd|bib|tex)\b",
+        line,
+    ):
+        zones.append((m.start(), m.end()))
+
+    # HTML tags and comments
+    for m in re.finditer(r"<!--.*?-->|<[^>]+>", line):
+        zones.append((m.start(), m.end()))
+
+    # Quoted strings: "..." and '...' (don't linkify inside quotes)
+    for m in re.finditer(r'"[^"]*"', line):
+        zones.append((m.start(), m.end()))
+    for m in re.finditer(r"'[^']*'", line):
+        zones.append((m.start(), m.end()))
+
+    return zones
+
+
+def _in_exclusion_zone(start: int, end: int, zones: list) -> bool:
+    """Check if range [start, end) overlaps any exclusion zone."""
+    for zs, ze in zones:
+        if start < ze and end > zs:
+            return True
+    return False
 
 
 def find_wikilink_candidates(content: str, titles: dict, min_length: int = 3) -> list:
@@ -82,6 +227,12 @@ def find_wikilink_candidates(content: str, titles: dict, min_length: int = 3) ->
             continue
         # Escape special regex chars but keep spaces
         pattern = re.escape(key)
+        # Allow hyphens in stems to match spaces in prose
+        # e.g. "agentic-coder" matches "agentic coder"
+        pattern = pattern.replace(r"\-", r"[\- ]")
+        # Allow optional trailing 's' for simple plural matching
+        # e.g. "agentic coder" also matches "agentic coders"
+        pattern = pattern + r"s?"
         title_patterns.append((pattern, info))
 
     # Sort by length (longest first) to prefer multi-word matches
@@ -90,31 +241,39 @@ def find_wikilink_candidates(content: str, titles: dict, min_length: int = 3) ->
     # Track what we've already matched to avoid duplicates
     matched_positions = set()
     in_frontmatter = False
-    frontmatter_start = -1
+    frontmatter_seen = False  # only the first --- pair is frontmatter
+    in_code_block = False
 
     for line_idx, line in enumerate(lines):
-        # Track YAML frontmatter boundaries
-        if line.strip() == "---":
-            if not in_frontmatter:
+        stripped = line.strip()
+
+        # Track YAML frontmatter (must start at line 0)
+        if stripped == "---":
+            if line_idx == 0 and not frontmatter_seen:
                 in_frontmatter = True
-                frontmatter_start = line_idx
+                frontmatter_seen = True
                 continue
-            else:
-                # End of frontmatter
+            elif in_frontmatter:
                 in_frontmatter = False
                 continue
 
-        # Skip if we're inside frontmatter
         if in_frontmatter:
             continue
 
-        # Skip code blocks
-        if line.startswith("```"):
+        # Track fenced code blocks (``` or ~~~, possibly with language tag)
+        if re.match(r"^(\s*)(```|~~~)", line):
+            in_code_block = not in_code_block
+            continue
+
+        if in_code_block:
             continue
 
         # Skip Markdown headings
-        if line.lstrip().startswith("#"):
+        if stripped.startswith("#"):
             continue
+
+        # Compute per-line exclusion zones
+        zones = _get_exclusion_zones(line)
 
         for pattern, info in title_patterns:
             # Look for whole word matches
@@ -125,25 +284,17 @@ def find_wikilink_candidates(content: str, titles: dict, min_length: int = 3) ->
                 regex = re.compile(r"\b" + pattern + r"\b", re.IGNORECASE)
 
             for match in regex.finditer(line):
+                start = match.start()
+                end = match.end()
+
                 # Skip if already matched at this position
-                pos = (line_idx, match.start())
+                pos = (line_idx, start)
                 if pos in matched_positions:
                     continue
 
-                # Skip if already a wikilink
-                start = match.start()
-                end = match.end()
-                # Check for [[ before or ]] after
-                before = line[max(0, start - 2) : start]
-                after = line[end : min(len(line), end + 2)]
-                if before == "[[" or after == "]]":
+                # Skip if match overlaps any exclusion zone
+                if _in_exclusion_zone(start, end, zones):
                     continue
-
-                # Check for markdown link
-                if "[" in line[max(0, start - 10) : start]:
-                    # Simple heuristic: if there's a [ within 10 chars before, might be a link
-                    if "]" in line[end : min(len(line), end + 10)]:
-                        continue
 
                 matched_positions.add(pos)
 
@@ -158,13 +309,22 @@ def find_wikilink_candidates(content: str, titles: dict, min_length: int = 3) ->
                     }
                 )
 
-    # Deduplicate by text + line
-    seen = set()
+    # Collect targets already wikilinked in the content, so we don't
+    # suggest a second link to the same note.
+    already_linked = set()
+    for m in re.finditer(r"\[\[([^\]|]+)\]\]", content):
+        already_linked.add(m.group(1).lower())
+
+    # First mention only: keep only the earliest occurrence per target note,
+    # and skip targets that are already wikilinked elsewhere in the note.
+    seen_targets = set()
     unique = []
     for c in candidates:
-        key = (c["text"].lower(), c["line"])
-        if key not in seen:
-            seen.add(key)
+        target = c["target"].lower()
+        if target in already_linked:
+            continue
+        if target not in seen_targets:
+            seen_targets.add(target)
             unique.append(c)
 
     # Sort by line number
@@ -288,16 +448,22 @@ def main():
         print(f"Error: Note not found: {note_path}", file=sys.stderr)
         sys.exit(1)
 
+    # Load wikilink config
+    wl_config = get_wikilink_config(config)
+    title_stopwords = frozenset(wl_config["title_stopwords"])
+    suffixes = tuple(wl_config["suffixes"])
+    min_length = args.min_length or wl_config["min_length"]
+
     # Get all note titles
     print("Scanning archive for note titles...")
-    titles = get_all_note_titles(foam_root)
+    titles = get_all_note_titles(foam_root, title_stopwords, suffixes)
     print(f"Found {len(titles) // 2} unique notes.")
 
     # Read note content
     content = note_path.read_text()
 
     # Find candidates
-    candidates = find_wikilink_candidates(content, titles, args.min_length)
+    candidates = find_wikilink_candidates(content, titles, min_length)
 
     if not candidates:
         print("\nNo wikilink suggestions found.")

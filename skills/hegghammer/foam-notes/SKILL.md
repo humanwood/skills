@@ -1,6 +1,5 @@
 ---
 name: foam-notes
-version: 1.0.2
 description: Work with Foam note repositories. Create, edit, link, and tag notes. Get intelligent wikilink and tag suggestions. Skill supports backlinks discovery, daily notes, templates, graph visualization, note deletion, and renaming. Full Foam documentation included for easy querying.
 ---
 
@@ -18,20 +17,44 @@ Work with Foam note-taking workspaces in VS Code. [Foam](https://foamnotes.com) 
 
 ## Configuration
 
-Set your Foam workspace path in `config.json`:
+Copy `config.json.template` to `config.json` and edit to taste:
 
 ```json
 {
-  "foam_root": "/home/thomas/foam-notes",
+  "foam_root": "/path/to/your/foam-workspace",
   "default_template": "new-note",
   "default_notes_folder": "notes",
-  "daily_note_folder": "journals"
+  "daily_note_folder": "journals",
+  "author": "Your Name",
+  "wikilinks": {
+    "title_stopwords": ["home", "index", "readme", "draft", "template"],
+    "suffixes": ["-hub"],
+    "min_length": 3
+  },
+  "tags": {
+    "editorial_stopwords": ["notes", "note", "foam", "markdown", "file", "page", "section"]
+  }
 }
 ```
 
-**Location**: `~/.openclaw/workspace/skills/foam-notes/config.json`
+**Location**: `config.json` in the skill directory (next to `SKILL.md`).
 
-**Priority order** (highest to lowest):
+### Config keys
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `foam_root` | string | `""` (auto-detect) | Path to your Foam workspace |
+| `default_template` | string | `"new-note"` | Template for new notes |
+| `default_notes_folder` | string | `"notes"` | Subfolder for new notes |
+| `daily_note_folder` | string | `"journals"` | Subfolder for daily notes |
+| `author` | string | `""` | Author name for note creation |
+| `wikilinks.title_stopwords` | list | `[]` | Note titles to never match as wikilinks (e.g. `"home"`, `"index"`, `"todo"`). Add any generic filenames from your workspace that produce false positives. |
+| `wikilinks.suffixes` | list | `[]` | Filename suffixes whose base stem should also register as a match key. For example, if you name your hub/MOC notes `docker-hub.md`, add `"-hub"` here so that "docker" in prose matches `docker-hub.md`. |
+| `wikilinks.min_length` | int | `3` | Minimum key length to consider for wikilink matching |
+| `tags.editorial_stopwords` | list | `[]` | Domain-specific words to exclude from tag suggestions (in addition to standard English stopwords). |
+
+### Foam root priority order (highest to lowest)
+
 1. `--foam-root` CLI argument
 2. `FOAM_WORKSPACE` environment variable
 3. `foam_root` in config.json
@@ -334,6 +357,9 @@ See references/templates.md for complete documentation.
 
 ### Creating a New Note
 
+When creating notes programmatically (not via VS Code), always read the workspace template in `.foam/templates/new-note.md` first and follow its structure exactly.
+
+In VS Code:
 1. Use "Foam: Create New Note" for default template
 2. Use "Foam: Create New Note From Template" to choose template
 3. Or click a non-existent wikilink `[[new-note]]`

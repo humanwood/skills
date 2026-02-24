@@ -55,16 +55,32 @@ def load_config() -> dict:
     default_config = {
         "foam_root": "",
         "default_template": "",
+        "default_notes_folder": "",
         "daily_note_folder": "journals",
+        "author": "",
         "editor": "code",
+        "wikilinks": {
+            "title_stopwords": [],
+            "suffixes": [],
+            "min_length": 3,
+        },
+        "tags": {
+            "editorial_stopwords": [],
+        },
     }
 
     if config_path.exists():
         try:
             with open(config_path) as f:
                 user_config = json.load(f)
-            # Merge with defaults
-            return {**default_config, **user_config}
+            # Deep merge: nested dicts are merged, not replaced
+            merged = {**default_config}
+            for k, v in user_config.items():
+                if isinstance(v, dict) and isinstance(merged.get(k), dict):
+                    merged[k] = {**merged[k], **v}
+                else:
+                    merged[k] = v
+            return merged
         except (json.JSONDecodeError, IOError) as e:
             print(
                 f"Warning: Could not load config.json: {e}",
@@ -168,6 +184,51 @@ def get_default_template(config: dict = None) -> str:
         config = load_config()
 
     return config.get("default_template", "")
+
+
+def get_author(config: dict = None) -> str:
+    """Get author name for note creation."""
+    if config is None:
+        config = load_config()
+
+    return config.get("author", "")
+
+
+def get_wikilink_config(config: dict = None) -> dict:
+    """Get wikilink-related configuration.
+
+    Returns dict with keys:
+        title_stopwords: list[str] — note titles to never match as wikilinks
+        suffixes: list[str] — filename suffixes whose base stem should also
+            be registered as a match key (e.g. ["-hub"] means icedrive-hub.md
+            also matches "icedrive" in prose)
+        min_length: int — minimum key length to consider
+    """
+    if config is None:
+        config = load_config()
+
+    wl = config.get("wikilinks", {})
+    return {
+        "title_stopwords": wl.get("title_stopwords", []),
+        "suffixes": wl.get("suffixes", []),
+        "min_length": wl.get("min_length", 3),
+    }
+
+
+def get_tags_config(config: dict = None) -> dict:
+    """Get tag-related configuration.
+
+    Returns dict with keys:
+        editorial_stopwords: list[str] — domain-specific words to exclude
+            from tag suggestions (in addition to NLP stopwords)
+    """
+    if config is None:
+        config = load_config()
+
+    tc = config.get("tags", {})
+    return {
+        "editorial_stopwords": tc.get("editorial_stopwords", []),
+    }
 
 
 # ============================================================================
