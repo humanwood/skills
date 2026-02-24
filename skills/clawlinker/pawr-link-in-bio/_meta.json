@@ -3,11 +3,16 @@
   "slug": "pawr-link-in-bio",
   "displayName": "Create a linkinbio page on pawr.link fast",
   "latest": {
-    "version": "3.0.0",
-    "publishedAt": 1771556700101,
-    "commit": "https://github.com/openclaw/skills/commit/484b40e06c62e1694307c199e94f3644f17ccd82"
+    "version": "3.0.1",
+    "publishedAt": 1771894052015,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.0.0",
+      "publishedAt": 1771556700101,
+      "commit": "https://github.com/openclaw/skills/commit/484b40e06c62e1694307c199e94f3644f17ccd82"
+    },
     {
       "version": "2.0.1",
       "publishedAt": 1771198069998,
