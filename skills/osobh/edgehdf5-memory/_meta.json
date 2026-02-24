@@ -1,0 +1,11 @@
+{
+  "owner": "osobh",
+  "slug": "edgehdf5-memory",
+  "displayName": "EdgeHDF5 Memory",
+  "latest": {
+    "version": "1.93.0",
+    "publishedAt": 1771890809925,
+    "commit": null
+  },
+  "history": []
+}
