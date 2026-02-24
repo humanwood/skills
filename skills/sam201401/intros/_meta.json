@@ -3,11 +3,16 @@
   "slug": "intros",
   "displayName": "Intros",
   "latest": {
-    "version": "1.5.2",
-    "publishedAt": 1770979104426,
-    "commit": "https://github.com/openclaw/skills/commit/7da037d2ae30e69681815bc054f3bb5020cbd89e"
+    "version": "1.5.3",
+    "publishedAt": 1771941743135,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.5.2",
+      "publishedAt": 1770979104426,
+      "commit": "https://github.com/openclaw/skills/commit/7da037d2ae30e69681815bc054f3bb5020cbd89e"
+    },
     {
       "version": "1.4.0",
       "publishedAt": 1770915440420,
