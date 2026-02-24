@@ -3,9 +3,15 @@
   "slug": "rmn-visualizer",
   "displayName": "RMN Visualizer",
   "latest": {
-    "version": "1.1.1",
-    "publishedAt": 1771807865561,
-    "commit": "https://github.com/openclaw/skills/commit/0632ba9d5829589345aa2e0ffebc9a3078c9c29e"
+    "version": "1.1.2",
+    "publishedAt": 1771809158852,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.1",
+      "publishedAt": 1771807865561,
+      "commit": "https://github.com/openclaw/skills/commit/0632ba9d5829589345aa2e0ffebc9a3078c9c29e"
+    }
+  ]
 }

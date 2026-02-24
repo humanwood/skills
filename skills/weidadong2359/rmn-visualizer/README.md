@@ -5,7 +5,7 @@
 ## 安装
 
 ```bash
-clawhub install weidadong2359/rmn-visualizer
+clawhub install rmn-visualizer
 ```
 
 ## 快速开始
