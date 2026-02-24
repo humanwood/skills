@@ -1,12 +1,25 @@
 ---
 name: socialclaw-cli
-description: Operate Meta API workflows safely through the installed social CLI. Use when the user asks to authenticate, query, post, manage Instagram or WhatsApp, run Marketing API actions, execute ops workflows, or launch agent/gateway flows from terminal commands. Use this skill to translate natural-language requests into explicit social commands with risk-aware confirmations and troubleshooting.
+description: Run SocialClaw as an agentic control plane for Meta operations through the installed social CLI. Use when the user asks for multi-step execution, approvals, ops automation, or command generation across auth, query, post, Instagram, WhatsApp, Marketing API, agent mode, and gateway/studio workflows. Translate natural-language intents into explicit, risk-gated social commands with confirmation-aware execution.
+metadata:
+  openclaw:
+    homepage: "https://github.com/vishalgojha/social-CLI"
+    requires:
+      bins:
+        - social
+    install:
+      - id: social-cli-node
+        kind: node
+        package: "@vishalgojha/social-cli"
+        bins:
+          - social
+        label: Install Social CLI (npm)
 ---
 
 # SocialClaw CLI
 
-Use this skill to convert user intent into safe `social` commands for Meta API operations.
-Assume `social` is preinstalled, verify availability first, then route to the domain workflow.
+Use this skill to operate SocialClaw as an agentic control plane and produce safe `social` command flows.
+Assume `social` is preinstalled, verify availability first, then route to the right domain workflow.
 
 ## Core Workflow
 
@@ -20,11 +33,14 @@ Assume `social` is preinstalled, verify availability first, then route to the do
 
 ### Validate Environment
 
-- On PowerShell: run `scripts/check_social_cli.ps1`.
-- On POSIX shells: run `sh scripts/check_social_cli.sh`.
+- Run `social --version`.
+- Run `social doctor`.
 - If missing or outdated:
+  - Verify package source before installing:
+    - `https://www.npmjs.com/package/@vishalgojha/social-cli`
+    - `https://github.com/vishalgojha/social-CLI`
   - Install or upgrade with `npm install -g @vishalgojha/social-cli`.
-  - Re-run the check script.
+  - Re-run `social --version` and `social doctor`.
 
 ## Domain Routing
 

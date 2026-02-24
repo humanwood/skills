@@ -3,11 +3,16 @@
   "slug": "socialclaw-cli",
   "displayName": "SocialClaw CLI",
   "latest": {
-    "version": "0.1.1",
-    "publishedAt": 1771772141895,
-    "commit": "https://github.com/openclaw/skills/commit/a2a2160bab24b3e6bdbaf5d3136b391c8a097692"
+    "version": "0.1.4",
+    "publishedAt": 1771775868661,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.1",
+      "publishedAt": 1771772141895,
+      "commit": "https://github.com/openclaw/skills/commit/a2a2160bab24b3e6bdbaf5d3136b391c8a097692"
+    },
     {
       "version": "0.1.0",
       "publishedAt": 1771770274277,
