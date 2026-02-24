@@ -3,11 +3,16 @@
   "slug": "golden-master",
   "displayName": "Golden Master",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1770708163454,
-    "commit": "https://github.com/openclaw/skills/commit/14a535779de935657bb87bf6a4b4c669cdcea660"
+    "version": "1.0.3",
+    "publishedAt": 1771895708087,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1770708163454,
+      "commit": "https://github.com/openclaw/skills/commit/14a535779de935657bb87bf6a4b4c669cdcea660"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1770279022868,

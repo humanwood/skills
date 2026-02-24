@@ -1,16 +1,20 @@
 ---
 name: Golden Master
+version: 1.0.3
 description: Track source-of-truth relationships between files — know when derived content becomes stale.
-homepage: https://github.com/Obviously-Not/patent-skills/tree/main/golden-master
+homepage: https://github.com/live-neon/skills/tree/main/pbd/golden-master
 user-invocable: true
 emoji: 🏆
 tags:
-  - golden-master
-  - source-tracking
-  - staleness-detection
-  - documentation-tools
-  - checksum-validation
-  - file-relationships
+  - documentation
+  - source-of-truth
+  - freshness
+  - staleness
+  - validation
+  - technical-writing
+  - docs
+  - file-tracking
+  - openclaw
 ---
 
 # Golden Master
@@ -23,6 +27,12 @@ tags:
 **Boundaries**: Identify relationships and staleness, never auto-modify files without explicit request
 **Tone**: Precise, systematic, focused on verification
 **Opening Pattern**: "You have files that depend on other files — let's make those relationships explicit so you'll know when things get out of sync."
+
+**Data handling**: This skill operates within your agent's trust boundary. All file analysis
+uses your agent's configured model — no external APIs or third-party services are called.
+If your agent uses a cloud-hosted LLM (Claude, GPT, etc.), data is processed by that service
+as part of normal agent operation. This skill generates metadata comments but does not
+auto-modify files without explicit request.
 
 ## When to Use
 
