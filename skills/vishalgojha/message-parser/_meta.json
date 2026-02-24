@@ -1,11 +1,17 @@
 {
   "owner": "vishalgojha",
   "slug": "message-parser",
-  "displayName": "Message Parser",
+  "displayName": "Message Parser RE-India",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771805237791,
-    "commit": "https://github.com/openclaw/skills/commit/6ed083669528ce3c6c5f7cca1b4a5be93c43d581"
+    "version": "1.0.5",
+    "publishedAt": 1771809494833,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771805237791,
+      "commit": "https://github.com/openclaw/skills/commit/6ed083669528ce3c6c5f7cca1b4a5be93c43d581"
+    }
+  ]
 }
