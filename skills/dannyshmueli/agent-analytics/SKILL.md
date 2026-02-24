@@ -1,7 +1,7 @@
 ---
 name: agent-analytics
-description: "Stop juggling dashboards. Let your agent do it. Analytics your AI agent can actually use — track, analyze, experiment, optimize across all your projects via CLI. Includes a growth playbook so your agent knows HOW to grow, not just what to track."
-version: 3.3.0
+description: "Simple website analytics your AI agent controls end-to-end. Track page views, events, funnels, retention, and A/B experiments across all your projects. Use when: adding website tracking, checking site traffic, setting up conversion funnels, running A/B experiments, or replacing Mixpanel / Plausible / PostHog with something lightweight and agent-operated. No dashboard needed."
+version: 3.7.0
 author: dannyshmueli
 repository: https://github.com/Agent-Analytics/agent-analytics-cli
 homepage: https://agentanalytics.sh
@@ -12,12 +12,31 @@ tags:
   - events
   - experiments
   - live
+  - website-tracking
+  - page-views
+  - funnels
+  - retention
+  - ab-testing
+  - simple-analytics
+  - privacy
+  - agent-first
+  - plausible-alternative
+  - mixpanel-alternative
+  - growth
 metadata: {"openclaw":{"requires":{"env":["AGENT_ANALYTICS_API_KEY"],"anyBins":["npx"]},"primaryEnv":"AGENT_ANALYTICS_API_KEY"}}
 ---
 
-# Agent Analytics — Stop juggling dashboards. Let your agent do it.
+# Agent Analytics — Website analytics your AI agent fully operates
 
-You are adding analytics tracking using Agent Analytics — the analytics platform your AI agent can actually use. Built for developers who ship lots of projects and want their AI agent to track, analyze, experiment, and optimize across all of them.
+Simple, privacy-first website analytics and growth toolkit that your AI agent controls end-to-end. Track page views, custom events, conversion funnels, user retention, and A/B experiments across all your projects — then talk to your analytics in natural language. No dashboards. Your agent creates projects, adds tracking code, queries traffic data, builds funnels, runs experiments, and tells you what to optimize next. A lightweight Plausible/Mixpanel/PostHog alternative built for the AI agent era.
+
+## Security & trust
+
+- **Open source**: Full source at [github.com/Agent-Analytics/agent-analytics-cli](https://github.com/Agent-Analytics/agent-analytics-cli) — inspect every command before running
+- **Read-only by default**: The CLI only reads analytics data. Write operations (creating projects, experiments) require explicit user-provided API keys
+- **No arbitrary code execution**: All CLI commands use structured flags (`--days`, `--property`, `--steps`). No eval, no shell interpolation, no dynamic code generation
+- **Scoped permissions**: The API key controls access. The CLI never requests filesystem, network, or system-level permissions beyond HTTP calls to `api.agentanalytics.sh`
+- **Published on npm**: [@agent-analytics/cli](https://www.npmjs.com/package/@agent-analytics/cli) — versioned, auditable, standard npm supply chain
 
 ## Philosophy
 
@@ -149,18 +168,6 @@ npx @agent-analytics/cli experiments complete exp_abc123 --winner new_cta
 # Delete
 npx @agent-analytics/cli experiments delete exp_abc123
 ```
-
-### Forcing variants via URL param
-
-Force a specific variant with `?aa_variant_<experiment_name>=<variant_key>`. Useful for ad landing pages that should always show the matching headline, QA testing, or sharing a specific variant.
-
-```
-https://yoursite.com/pricing/?aa_variant_signup_cta=new_cta&utm_campaign=new-cta-ad
-```
-
-- The variant must exist in the experiment config — invalid values fall through to normal hash assignment
-- Works with both declarative and programmatic experiments
-- Exposure events include `forced: true` so you can filter them in analytics
 
 ### Best practices
 - Name experiments with snake_case: `signup_cta`, `pricing_layout`, `hero_copy`
