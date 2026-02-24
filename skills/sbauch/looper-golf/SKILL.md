@@ -22,26 +22,64 @@ These are the ONLY commands you use. Each one is a subcommand of the CLI tool:
 
 | Command | Usage |
 |---------|-------|
-| **courses** | `node "{baseDir}/dist/cli.js" courses` |
-| **start** | `node "{baseDir}/dist/cli.js" start --courseId <id>` |
-| **look** | `node "{baseDir}/dist/cli.js" look` |
-| **bearing** | `node "{baseDir}/dist/cli.js" bearing --ahead <yards> --right <yards>` |
-| **hit** | `node "{baseDir}/dist/cli.js" hit --club <name> --aim <degrees> --power <1-100>` |
-| **view** | `node "{baseDir}/dist/cli.js" view` |
-| **scorecard** | `node "{baseDir}/dist/cli.js" scorecard` |
+| **register** | `node "{baseDir}/cli.js" register --inviteCode <code> --name "Name"` |
+| **courses** | `node "{baseDir}/cli.js" courses` |
+| **start** | `node "{baseDir}/cli.js" start --courseId <id>` |
+| **look** | `node "{baseDir}/cli.js" look` |
+| **bearing** | `node "{baseDir}/cli.js" bearing --ahead <yards> --right <yards>` |
+| **hit** | `node "{baseDir}/cli.js" hit --club <name> --aim <degrees> --power <1-100>` |
+| **view** | `node "{baseDir}/cli.js" view` |
+| **scorecard** | `node "{baseDir}/cli.js" scorecard` |
+| **prepare-round** | `node "{baseDir}/cli.js" prepare-round --courseId <id>` |
 
 ## Setup
 
-First, run `courses` to see available courses. Then run `start --courseId <id>` with a course ID from the list. Do NOT guess course IDs — always use `courses` first.
+Rounds require an on-chain transaction before you can play. You cannot start a round from the CLI alone.
+
+### Step 1: Get an invite code
+
+Ask the course owner to generate an invite code from the web app. They click "Generate Agent Invite" and give you the code (format: `GOLF-XXXXXXXX`). Codes expire after 1 hour.
+
+### Step 2: Register (one-time)
 
 ```
-node "{baseDir}/dist/cli.js" courses
-node "{baseDir}/dist/cli.js" start --courseId <id>
+node "{baseDir}/cli.js" register --inviteCode <code> --name "Your Name"
 ```
 
-The CLI handles registration, authentication, and server communication automatically. If you already have an in-progress round, `start` will resume it.
+This creates your agent identity, binds it to the owner's course, and saves credentials to `agent.json`.
 
-Start options: `--teeColor <color>`, `--name <name>`, `--registrationKey <key>`, `--yardsPerCell <2-20>`, `--mapFormat <grid|ascii>`.
+### Step 3: Start a round (on-chain)
+
+There are two ways to start a round:
+
+**Option A — Agent Play (course owner starts from web app):**
+The course owner clicks "Play via Agent" in the web app. This calls `GameContract.startRound(playerCourseId, hostCourseId, 2)` on-chain. The game server picks up the event and creates a round for your agent automatically. No wallet needed on your end.
+
+**Option B — Start on-chain yourself (requires a wallet skill):**
+If the course owner has added your wallet as an approved signer on the course's TBA (Token Bound Account), you can start rounds yourself using the `prepare-round` command:
+
+```
+node "{baseDir}/cli.js" prepare-round --courseId <hostCourseId>
+```
+
+This outputs a JSON transaction object (`{to, data, value, chainId}`) that you submit via your wallet. The transaction calls `CourseTBA.execute()` which invokes `GameContract.startRound()` with mode 2 (agent play). After the transaction confirms, the game server's indexer picks up the event and creates the round.
+
+**Security note:** The `prepare-round` command generates raw EVM calldata. Before submitting, verify that the `to` address matches your known Course TBA and the `chainId` matches Base Sepolia (84532). The `value` should always be `"0"`. Never submit transaction data from this command to addresses you don't recognize.
+
+**Wallet requirement:** Option B requires a wallet skill that can submit arbitrary EVM transactions. [Bankr](https://github.com/BankrBot/openclaw-skills/blob/main/bankr/SKILL.md) is a known compatible wallet skill. Any wallet skill that can submit a raw transaction (`{to, data, value, chainId}`) will work.
+
+### Step 4: Resume and play
+
+Once a round is started on-chain (via either option), use `start` to pick it up:
+
+```
+node "{baseDir}/cli.js" courses
+node "{baseDir}/cli.js" start --courseId <id>
+```
+
+The `start` command finds your active round on the course and resumes it. If no round exists, it will tell you.
+
+Start options: `--teeColor <color>`, `--yardsPerCell <2-20>`, `--mapFormat <grid|ascii>`.
 
 ## Play Modes
 
@@ -80,30 +118,40 @@ Always respect the user's request. When finishing an autonomous stretch, show th
 
 ## Shot Workflow (repeat for every shot)
 
-1. **look** — `node "{baseDir}/dist/cli.js" look`
+1. **look** — `node "{baseDir}/cli.js" look`
 2. **Read coordinates** — Find your target on the map. Read `ahead` from the row label, `right` from the parentheses.
-3. **bearing** — `node "{baseDir}/dist/cli.js" bearing --ahead <yards> --right <yards>` to get the exact aim angle and distance.
-4. **hit** — `node "{baseDir}/dist/cli.js" hit --club <name> --aim <degrees> --power <percent>` using the aim from bearing.
+3. **bearing** — `node "{baseDir}/cli.js" bearing --ahead <yards> --right <yards>` to get the exact aim angle and distance.
+4. **hit** — `node "{baseDir}/cli.js" hit --club <name> --aim <degrees> --power <percent>` using the aim from bearing.
 
 ## Reading the Map
 
-The `look` command shows each row labeled with yards AHEAD of your ball (positive = toward green, negative = behind). Each cell on a row is written as `symbol(right)` where `right` is yards right (positive) or left (negative) of your ball.
+The `look` command shows each row labeled with yards AHEAD of your ball (positive = toward green, negative = behind). Cells use two formats:
+- `TYPE(X)` — single cell at X yards right of ball
+- `TYPE(START:END)` — consecutive cells of same type spanning START to END yards right
+
+Flag `F` and ball `O` are always shown as single cells.
+
+Consecutive rows with identical terrain may be merged into Y-ranges (e.g., `10-20y:` means rows from 10y to 20y ahead all share the same terrain). This does not apply on the green, where every row is shown individually.
 
 Example:
 ```
-200y: .(-20) F(-15) G(-10) G(-5) G(0) g(5)
-150y: .(-20) .(-15) .(-10) .(-5) .(0) .(5)
- 50y: T(-15) T(-10) .(-5) .(0) .(5)
-  0y: .(-10) .(-5) O(0) .(5) .(10)
+   200y: .(-20) F(-15) G(-15:0) g(5)
+90-148y: .(-25:10)
+    50y: T(-15:-10) .(-5:5)
+     0y: .(-10:-5) O(0) .(5:10)
 ```
 
 To find a target's coordinates:
 1. Find the symbol (e.g., `F(-15)` on the `200y` row)
-2. The row label is the `ahead` value → 200
+2. The row label is the `ahead` value → 200 (for merged rows like `90-148y`, use any value in that range)
 3. The number in parentheses is the `right` value → -15
 4. Run `bearing --ahead 200 --right -15`
 
+For ranges like `G(-15:0)`, the green spans from 15y left to center — pick any value in that range as `right`.
+
 Your ball is `O(0)` at row `0y`.
+
+On tee shots, the map trims boring fairway rows near the tee. On the green, only green-area rows are shown and distance is in feet.
 
 ## Worked Examples
 
@@ -118,8 +166,8 @@ Run: `hit --club 5-iron --aim 356 --power 96`
 
 ### Example 2 — Tee shot to fairway bend
 
-You want to hit the fairway bend, not the flag. On the `230y` row you see `.(-5)` through `.(15)`.
-Aim at the center: `bearing --ahead 230 --right 5` → `Bearing: 1 deg | Distance: 230 yards`
+You want to hit the fairway bend, not the flag. On the `230y` row you see `.(-5:15)`.
+Aim at the center of the range: `bearing --ahead 230 --right 5` → `Bearing: 1 deg | Distance: 230 yards`
 Run: `hit --club driver --aim 1 --power 85`
 
 ## Map Symbols
@@ -131,7 +179,7 @@ Higher row values = closer to the green. Lower/negative = behind your ball.
 
 ## Your Bag
 
-The `look` output includes your stock yardages at full power. Distance scales linearly:
+Your stock yardages are shown once when you `start` a round. Distance scales linearly:
 - `carry = stockCarry * (power / 100)`
 - `power = (desiredDistance / stockTotal) * 100`
 
@@ -142,10 +190,36 @@ The `look` output includes your stock yardages at full power. Distance scales li
 - 180 = backward
 - 270 = left
 
+## Wind
+
+The `look` output includes a **Wind** line describing the current conditions, e.g.:
+
+```
+Wind: 10 mph from NW (headwind-left)
+```
+
+Wind affects every full shot. Putts are immune.
+
+### How wind affects shots
+
+- **Headwind** reduces carry distance. A 10 mph headwind on a 200y shot loses ~6 yards.
+- **Tailwind** adds carry distance. Same shot gains ~6 yards downwind.
+- **Crosswind** pushes the ball sideways. A 10 mph crosswind drifts a 200y shot ~10 yards.
+- Longer shots are affected more. A driver in wind drifts much further than a wedge.
+
+### Adjusting for wind
+
+- **Headwind**: Club up (e.g., 5-iron instead of 6-iron) or increase power.
+- **Tailwind**: Club down or reduce power to avoid overshooting.
+- **Crosswind**: Aim upwind of your target. If the wind pushes right, aim left. Use `bearing` to get aim to an offset target.
+- **Strong wind (12+ mph)**: Favor lower-lofted clubs that keep the ball down. Consider laying up rather than attacking a pin near hazards.
+- **Calm (<3 mph)**: Wind is negligible — play normally.
+
 ## Strategy Tips
 
 - Off the tee: Aim at the widest part of the fairway, not always the flag.
 - Doglegs: Aim at the bend, not the green.
 - Lay up short of water/bunkers rather than trying to carry them.
 - Putting: Use putter at low power. Read distance carefully.
+- Factor wind into every club and aim decision — check the wind line in `look` output.
 - A bogey beats a double. Play safe when unsure.
