@@ -1,13 +1,18 @@
 {
   "owner": "leegitw",
   "slug": "patent-validator",
-  "displayName": "Patent Validator - Research Strategies for Concept Analysis",
+  "displayName": "Patent Validator",
   "latest": {
-    "version": "1.2.0",
-    "publishedAt": 1771630385053,
-    "commit": "https://github.com/openclaw/skills/commit/4aa460bc53bc2d861121684e8150750072725b3b"
+    "version": "1.4.0",
+    "publishedAt": 1771829583720,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.2.0",
+      "publishedAt": 1771630385053,
+      "commit": "https://github.com/openclaw/skills/commit/4aa460bc53bc2d861121684e8150750072725b3b"
+    },
     {
       "version": "1.1.1",
       "publishedAt": 1770708214435,
