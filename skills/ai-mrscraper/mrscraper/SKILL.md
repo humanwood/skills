@@ -2,6 +2,17 @@
 name: mrscraper
 description: Run AI-powered, unblockable web scraping, data extraction with natural language via the MrScraper API
 tags: [scraping, data-extraction, web-crawling, stealth-browser, web-automation]
+
+homepage: https://mrscraper.com/
+vendor: MrScraper
+support_email: support@mrscraper.com
+
+required_env_vars: [MRSCRAPER_API_TOKEN]
+primary_credential: MRSCRAPER_API_TOKEN
+
+metadata: {"openclaw":{"requires":{"env":["MRSCRAPER_API_TOKEN"]},"primaryEnv":"MRSCRAPER_API_TOKEN"}}
+
+network: {"allowed_hosts":["api.mrscraper.com","api.app.mrscraper.com","sync.scraper.mrscraper.com"]}
 ---
 
 # MrScraper
