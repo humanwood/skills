@@ -68,10 +68,10 @@ Already have an API key? Skip to Phase 1.
 - User wants to automate video generation
 - User mentions "baz", "bazaar CLI", or "video generation from terminal"
 
-## When to Use `baz prompt` vs Recipe
+## When to Use `baz prompt` vs Spar
 
-- **Direct `baz prompt`** — Simple scenes, edits, no audio
-- **`baz prompt --plan`** — Voiceovers, AI video, avatars, URL-to-video
+- **Direct `baz prompt`** — Scene creation, edits, full agent orchestration
+- **`baz prompt --spar`** — Planning-only conversation (no timeline mutations)
 
 ---
 
@@ -243,7 +243,7 @@ baz export start --wait --json
 | `baz context add "..." --label "brand"` | Set brand guidelines |
 | `baz context list --json` | View all context entries |
 | `baz prompt "..." --stream-json` | Generate or edit scenes |
-| `baz prompt "..." --plan` | Create recipe (voiceovers/AI video) |
+| `baz prompt "..." --spar` | Planning-only conversation (no edits) |
 | `baz review --json` | Get full project state for review |
 | `baz verify --criteria "..." --json` | Verify specific criteria pass |
 | `baz scenes list --json` | List all scenes |
