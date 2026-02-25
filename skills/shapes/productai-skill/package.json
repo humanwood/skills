@@ -1,6 +1,6 @@
 {
   "name": "productai",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Generate professional AI product photos using ProductAI.photo service. Supports background replacement, product placement, scene generation, and upscaling for e-commerce and marketing.",
   "author": "Shape Team",
   "license": "MIT",

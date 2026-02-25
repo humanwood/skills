@@ -3,9 +3,15 @@
   "slug": "productai-skill",
   "displayName": "Generate product photos for ecommerce",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771854826119,
-    "commit": "https://github.com/openclaw/skills/commit/02ea9cf652abbe1aa18f1ed589a8c67f1996988d"
+    "version": "1.0.1",
+    "publishedAt": 1771938211529,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771854826119,
+      "commit": "https://github.com/openclaw/skills/commit/02ea9cf652abbe1aa18f1ed589a8c67f1996988d"
+    }
+  ]
 }
