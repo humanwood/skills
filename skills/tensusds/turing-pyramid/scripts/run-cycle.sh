@@ -4,6 +4,11 @@
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="$SKILL_DIR/assets/needs-config.json"
+
+# Calculate max_tension dynamically from config
+# max_tension = max_importance × max_deprivation(3)
+MAX_IMPORTANCE=$(jq '[.needs[].importance] | max' "$CONFIG_FILE")
+MAX_TENSION=$((MAX_IMPORTANCE * 3))
 STATE_FILE="$SKILL_DIR/assets/needs-state.json"
 SCRIPTS_DIR="$SKILL_DIR/scripts"
 WORKSPACE="${WORKSPACE:-$HOME/.openclaw/workspace}"
@@ -27,6 +32,13 @@ else
     MAX_ACTIONS=$(jq -r '.settings.max_actions_per_cycle // 3' "$CONFIG_FILE")
 fi
 
+# No-scans mode for testing
+SKIP_SCANS=false
+if [[ "$1" == "--no-scans" || "$2" == "--no-scans" ]]; then
+    SKIP_SCANS=true
+    echo "⚠️  TEST MODE — skipping event scans"
+fi
+
 # Calculate tension for all needs
 declare -A TENSIONS
 declare -A SATISFACTIONS
@@ -38,41 +50,61 @@ calculate_tensions() {
     for need in $needs; do
         local importance=$(jq -r ".needs.\"$need\".importance" "$CONFIG_FILE")
         local decay_rate=$(jq -r ".needs.\"$need\".decay_rate_hours" "$CONFIG_FILE")
-        local last_sat=$(jq -r ".needs.\"$need\".last_satisfied" "$STATE_FILE")
         
-        # Calculate time-based satisfaction
-        local time_satisfaction=3
-        if [[ "$last_sat" != "null" && -n "$last_sat" ]]; then
-            local last_sat_epoch=$(date -d "$last_sat" +%s 2>/dev/null || echo $NOW)
-            local hours_since=$(( (NOW - last_sat_epoch) / 3600 ))
-            local decay_steps=$(( hours_since / decay_rate ))
-            time_satisfaction=$(( 3 - decay_steps ))
-            [[ $time_satisfaction -lt 0 ]] && time_satisfaction=0
-        else
-            time_satisfaction=0  # Never satisfied = critical
+        # Read current satisfaction from state (float, default 2.0)
+        local current_sat=$(jq -r ".needs.\"$need\".satisfaction // 2.0" "$STATE_FILE")
+        
+        # Read last decay check time (when we last applied decay)
+        local last_decay=$(jq -r ".needs.\"$need\".last_decay_check // \"1970-01-01T00:00:00Z\"" "$STATE_FILE")
+        local last_decay_epoch=$(date -d "$last_decay" +%s 2>/dev/null || echo 0)
+        
+        # Calculate hours since last decay check
+        local hours_since_decay=$(echo "scale=4; ($NOW - $last_decay_epoch) / 3600" | bc -l)
+        
+        # Calculate decay delta: lose 1 satisfaction per decay_rate hours
+        local decay_delta=$(echo "scale=4; $hours_since_decay / $decay_rate" | bc -l)
+        
+        # Apply decay to current satisfaction
+        local decayed_sat=$(echo "scale=2; $current_sat - $decay_delta" | bc -l)
+        
+        # Clamp to 0-3 range
+        if (( $(echo "$decayed_sat < 0" | bc -l) )); then
+            decayed_sat="0.00"
+        fi
+        if (( $(echo "$decayed_sat > 3" | bc -l) )); then
+            decayed_sat="3.00"
         fi
         
         # Run event scan if exists (can only worsen)
         local scan_script="$SCRIPTS_DIR/scan_${need}.sh"
         local event_satisfaction=""
-        if [[ -x "$scan_script" ]]; then
+        if [[ "$SKIP_SCANS" != "true" && -x "$scan_script" ]]; then
             event_satisfaction=$("$scan_script" 2>/dev/null)
         fi
         
-        # Merge: take worst
-        local satisfaction=$time_satisfaction
+        # Event scan can override (take worst)
+        local satisfaction=$decayed_sat
         if [[ -n "$event_satisfaction" && "$event_satisfaction" =~ ^[0-3]$ ]]; then
-            if [[ $event_satisfaction -lt $satisfaction ]]; then
+            if (( $(echo "$event_satisfaction < $satisfaction" | bc -l) )); then
                 satisfaction=$event_satisfaction
             fi
         fi
         
-        local deprivation=$(( 3 - satisfaction ))
+        # Round satisfaction for integer deprivation/tension calc
+        local sat_int=$(printf "%.0f" "$satisfaction")
+        local deprivation=$(( 3 - sat_int ))
+        [[ $deprivation -lt 0 ]] && deprivation=0
         local tension=$(( importance * deprivation ))
         
         TENSIONS[$need]=$tension
-        SATISFACTIONS[$need]=$satisfaction
+        SATISFACTIONS[$need]=$satisfaction  # Keep float for display
         DEPRIVATIONS[$need]=$deprivation
+        
+        # Update state with decayed satisfaction and decay check time
+        jq --arg need "$need" --argjson sat "$satisfaction" --arg now "$NOW_ISO" '
+            .needs[$need].satisfaction = $sat |
+            .needs[$need].last_decay_check = $now
+        ' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
     done
 }
 
@@ -91,6 +123,10 @@ roll_action() {
     local sat=$1
     local tension=$2
     
+    # Round float satisfaction to nearest integer for lookup
+    # (supports cross-need impact floats like 1.45 → 1)
+    sat=$(printf "%.0f" "$sat")
+    
     # Base chance by satisfaction level
     local base_chance
     case $sat in
@@ -102,11 +138,10 @@ roll_action() {
     esac
     
     # Tension bonus: scales 0-50% based on tension
-    # Global max_tension = max_importance(10) × max_deprivation(3) = 30
+    # MAX_TENSION = max_importance × max_deprivation(3), calculated from config
     # This preserves importance weighting: higher importance = bigger bonus at same sat
-    local max_tension=30
     local max_bonus=50
-    local bonus=$(( (tension * max_bonus) / max_tension ))
+    local bonus=$(( (tension * max_bonus) / MAX_TENSION ))
     
     # Final chance (capped at 100)
     local final_chance=$((base_chance + bonus))
@@ -116,47 +151,59 @@ roll_action() {
     [[ $roll -lt $final_chance ]]
 }
 
-# Roll for impact level based on satisfaction
-# Uses impact_matrix from config (default or per-need)
-roll_impact() {
+# Roll for impact range based on satisfaction
+# Returns: low, mid, or high (mapped to float impact ranges)
+roll_impact_range() {
     local need=$1
     local sat=$2
     local roll=$((RANDOM % 100))
     
-    # Get impact matrix (per-need or default)
+    # Round float satisfaction to nearest integer for matrix lookup
+    sat=$(printf "%.0f" "$sat")
+    
+    # Get impact matrix probabilities
     local matrix_key="sat_$sat"
-    local p1 p2 p3
+    local p_low p_mid p_high
     
-    # Try per-need matrix first, fall back to default
-    p1=$(jq -r ".needs.\"$need\".impact_matrix.\"$matrix_key\".\"1\" // .impact_matrix_default.\"$matrix_key\".\"1\" // 70" "$CONFIG_FILE")
-    p2=$(jq -r ".needs.\"$need\".impact_matrix.\"$matrix_key\".\"2\" // .impact_matrix_default.\"$matrix_key\".\"2\" // 25" "$CONFIG_FILE")
-    p3=$(jq -r ".needs.\"$need\".impact_matrix.\"$matrix_key\".\"3\" // .impact_matrix_default.\"$matrix_key\".\"3\" // 5" "$CONFIG_FILE")
+    p_low=$(jq -r ".impact_matrix_default.\"$matrix_key\".low // 70" "$CONFIG_FILE")
+    p_mid=$(jq -r ".impact_matrix_default.\"$matrix_key\".mid // 25" "$CONFIG_FILE")
+    p_high=$(jq -r ".impact_matrix_default.\"$matrix_key\".high // 5" "$CONFIG_FILE")
     
-    # Roll: 0-p1 = impact1, p1-(p1+p2) = impact2, rest = impact3
-    if [[ $roll -lt $p1 ]]; then
-        echo 1
-    elif [[ $roll -lt $((p1 + p2)) ]]; then
-        echo 2
+    # Roll: 0-p_low = low, p_low-(p_low+p_mid) = mid, rest = high
+    if [[ $roll -lt $p_low ]]; then
+        echo "low"
+    elif [[ $roll -lt $((p_low + p_mid)) ]]; then
+        echo "mid"
     else
-        echo 3
+        echo "high"
     fi
 }
 
-# Get actions filtered by impact level (simple list)
-get_actions_by_impact() {
+# Get actions filtered by impact range (low/mid/high)
+get_actions_by_range() {
     local need=$1
-    local impact=$2
+    local range=$2
     
-    jq -r ".needs.\"$need\".actions[] | select(.impact == $impact) | .name" "$CONFIG_FILE"
+    case $range in
+        low)  jq -r ".needs.\"$need\".actions[] | select(.impact < 1.0) | .name" "$CONFIG_FILE" ;;
+        mid)  jq -r ".needs.\"$need\".actions[] | select(.impact >= 1.0 and .impact < 2.0) | .name" "$CONFIG_FILE" ;;
+        high) jq -r ".needs.\"$need\".actions[] | select(.impact >= 2.0) | .name" "$CONFIG_FILE" ;;
+    esac
 }
 
-# Weighted random selection of action by impact
+# Weighted random selection of action by impact range
 select_weighted_action() {
     local need=$1
-    local impact=$2
+    local range=$2
     
-    # Get actions with weights for this impact
-    local actions_json=$(jq -c "[.needs.\"$need\".actions[] | select(.impact == $impact)]" "$CONFIG_FILE")
+    # Get actions with weights for this impact range
+    local actions_json
+    case $range in
+        low)  actions_json=$(jq -c "[.needs.\"$need\".actions[] | select(.impact < 1.0)]" "$CONFIG_FILE") ;;
+        mid)  actions_json=$(jq -c "[.needs.\"$need\".actions[] | select(.impact >= 1.0 and .impact < 2.0)]" "$CONFIG_FILE") ;;
+        high) actions_json=$(jq -c "[.needs.\"$need\".actions[] | select(.impact >= 2.0)]" "$CONFIG_FILE") ;;
+    esac
+    
     local count=$(echo "$actions_json" | jq 'length')
     
     if [[ $count -eq 0 ]]; then
@@ -221,6 +268,11 @@ log_action() {
 echo "🔺 Turing Pyramid — Cycle at $(date)"
 echo "======================================"
 
+# Apply cross-need deprivation effects first
+if [[ -x "$SCRIPTS_DIR/apply-deprivation.sh" ]]; then
+    "$SCRIPTS_DIR/apply-deprivation.sh"
+fi
+
 calculate_tensions
 
 # Check if all satisfied
@@ -263,26 +315,32 @@ for need in $top_needs; do
         tension=${TENSIONS[$need]}
         
         if roll_action $sat $tension; then
-            # ACTION - roll for impact level, then weighted action selection
+            # ACTION - roll for impact range, then weighted action selection
             ((action_count++))
-            impact=$(roll_impact "$need" "$sat")
+            impact_range=$(roll_impact_range "$need" "$sat")
             
-            # Select specific action using weights
-            selected_action=$(select_weighted_action "$need" "$impact")
+            # Select specific action using weights within range
+            selected_action=$(select_weighted_action "$need" "$impact_range")
+            
+            # Get actual impact value of selected action
+            actual_impact=""
+            if [[ -n "$selected_action" ]]; then
+                actual_impact=$(jq -r ".needs.\"$need\".actions[] | select(.name == \"$selected_action\") | .impact" "$CONFIG_FILE")
+            fi
             
             echo ""
             echo "▶ ACTION: $need (tension=$tension, sat=$sat)"
-            echo "  Impact $impact rolled → selected:"
+            echo "  Range $impact_range rolled → selected:"
             
             if [[ -n "$selected_action" ]]; then
-                echo "    ★ $selected_action"
+                echo "    ★ $selected_action (impact: $actual_impact)"
             else
                 # Fallback: show all actions if no weighted selection
-                echo "  (no impact-$impact actions, showing all):"
+                echo "  (no $impact_range actions, showing all):"
                 jq -r ".needs.\"$need\".actions[] | \"    • \" + .name + \" (impact \" + (.impact|tostring) + \")\"" "$CONFIG_FILE"
             fi
             
-            echo "  Then: mark-satisfied.sh $need $impact"
+            echo "  Then: mark-satisfied.sh $need $actual_impact"
             
             # Log to memory with selected action
             log_action "$need" "$sat" "$tension"

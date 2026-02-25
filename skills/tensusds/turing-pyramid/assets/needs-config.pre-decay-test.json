@@ -1,11 +1,11 @@
 {
   "_meta": {
     "name": "Turing Pyramid — Agent Needs Configuration",
-    "version": "1.7.1",
+    "version": "1.7.0",
     "author": "turing-pyramid contributors",
     "created": "2026-02-22",
     "updated": "2026-02-25",
-    "note": "v1.7.1: Balance fixes (connection/closure decay, autonomy cascade)"
+    "note": "v1.7.0: Cross-need impact, Moltbook post action"
   },
   "needs": {
     "security": {
@@ -179,7 +179,7 @@
     },
     "closure": {
       "importance": 7,
-      "decay_rate_hours": 12,
+      "decay_rate_hours": 8,
       "description": "Completion of started tasks and threads",
       "scan": {
         "script": "scan_closure.sh",
@@ -308,7 +308,7 @@
     },
     "connection": {
       "importance": 5,
-      "decay_rate_hours": 6,
+      "decay_rate_hours": 4,
       "description": "Social bonds and community participation",
       "scan": {
         "script": "scan_connection.sh",

@@ -1,8 +1,9 @@
 ---
 name: turing-pyramid
-description: 10-need psychological system for AI agents. Automatic decay, tension calculation, probability-based action decisions. Run on heartbeat to prioritize self-care.
+description: "10-need psychological system for AI agents with cross-need dynamics. Features: automatic decay, tension-based priority, probability actions, cross-need impact cascades, deprivation protection. Run on heartbeat for autonomous self-care."
 requires:
   - jq
+  - bc
   - grep
   - find
   - date
@@ -39,9 +40,9 @@ requires:
 | security | 10 | 168h | System stability, no threats |
 | integrity | 9 | 72h | Alignment with SOUL.md |
 | coherence | 8 | 24h | Memory consistency |
-| closure | 7 | 8h | Open threads resolved |
+| closure | 7 | 12h | Open threads resolved |
 | autonomy | 6 | 24h | Self-directed action |
-| connection | 5 | 4h | Social interaction |
+| connection | 5 | 6h | Social interaction |
 | competence | 4 | 48h | Skill use, effectiveness |
 | understanding | 3 | 12h | Learning, curiosity |
 | recognition | 2 | 72h | Feedback received |
@@ -65,7 +66,8 @@ Base chance by satisfaction:
 
 **Tension bonus** (v1.5.0): Higher importance needs are more "impatient".
 ```
-bonus = (tension × 50) / 30
+max_tension = max_importance × 3  # calculated from your config
+bonus = (tension × 50) / max_tension
 final_chance = min(100, base_chance + bonus)
 ```
 
@@ -87,6 +89,111 @@ sat=2 (ok):        70% small,  25% medium,   5% big
 ```
 
 Higher deprivation → bigger actions. Stable agent → maintenance mode.
+
+## Cross-Need Impact System (v1.7.0+)
+
+Needs don't exist in isolation — they influence each other. When you satisfy one need, it can boost related needs. When a need is deprived, it can drag others down.
+
+### How It Works
+
+**on_action**: When you complete an action for need A, connected needs get a boost:
+```
+expression ACTION (+1.6)
+  → recognition: +0.25 (people notice when you express)
+  → coherence: +0.15 (writing clarifies thinking)
+  → connection: +0.10 (expression opens dialogue)
+```
+
+**on_deprivation**: When need A stays low (sat ≤ 1.0), connected needs suffer:
+```
+autonomy DEPRIVED (sat=0.5)
+  → integrity: -0.25 (can't act on values without freedom)
+  → expression: -0.20 (suppressed autonomy → suppressed voice)
+```
+
+### Key Connections
+
+| Source → Target | on_action | on_deprivation | Why |
+|-----------------|-----------|----------------|-----|
+| expression → recognition | +0.25 | -0.10 | Express → get noticed |
+| connection → expression | +0.20 | -0.15 | Social sparks ideas |
+| connection → understanding | -0.05 | — | Сократ-эффект: dialogue reveals ignorance |
+| competence → recognition | +0.30 | -0.20 | Good work → respect |
+| autonomy → integrity | +0.20 | -0.25 | Act on values → strengthen them |
+| closure → coherence | +0.20 | -0.15 | Close threads → mental order |
+| security → autonomy | +0.10 | -0.20 | Safety enables risk-taking |
+
+Full matrix: `assets/cross-need-impact.json`
+
+### Protection Mechanisms
+
+| Mechanism | Value | Purpose |
+|-----------|-------|---------|
+| **Floor** | 0.5 | Minimum satisfaction — prevents collapse |
+| **Ceiling** | 3.0 | Maximum satisfaction — prevents runaway |
+| **Cooldown** | 4h | Deprivation effects only apply once per 4 hours |
+| **Threshold** | 1.0 | Deprivation only triggers when sat ≤ 1.0 |
+
+### Base Needs Isolation
+
+Security (imp=10) and Integrity (imp=9) are **protected by design**:
+- They can influence lower needs (security → autonomy)
+- But lower needs cannot drag them down
+- Only integrity → security (+0.15) and autonomy → integrity (+0.20) exist
+
+This ensures foundational stability even under stress.
+
+### Working with Cross-Need Matrix
+
+**For agents — tips:**
+
+1. **Leverage cascades**: If expression is low but connection is easy to satisfy, do connection first — it will boost expression (+0.20)
+
+2. **Watch for spirals**: expression ↔ recognition can create mutual deprivation. If both are low, prioritize one to break the cycle.
+
+3. **Autonomy is a hub**: It receives impact from 5 sources (closure, coherence, competence, security, understanding). Keep it healthy to avoid cascade collapse.
+
+4. **Сократ-эффект is real**: connection → understanding: -0.05. Good conversations expose what you don't know. This is healthy! But if understanding is at floor, the effect is blocked.
+
+**Customizing the matrix:**
+
+Edit `assets/cross-need-impact.json`:
+```json
+{
+  "source": "expression",
+  "target": "recognition",
+  "on_action": 0.25,      // boost when expression ACTION
+  "on_deprivation": -0.10, // penalty when expression deprived
+  "note": "Express → get noticed"
+}
+```
+
+- Set `on_action: null` to disable positive cascade
+- Set `on_deprivation: null` to disable negative cascade
+- Adjust values (0.05-0.30 typical range)
+
+### Example Cycle with Cross-Need
+
+```
+🔺 Turing Pyramid — Cycle at Tue Feb 25 05:36
+======================================
+⚠️  Deprivation cascades:
+   autonomy (sat=0.5) → integrity: -0.25 (now: 1.75)
+   autonomy (sat=0.5) → expression: -0.20 (now: 0.80)
+
+Current tensions:
+  closure: tension=21 (sat=0, dep=3)
+  connection: tension=15 (sat=0, dep=3)
+  ...
+
+📋 Decisions:
+▶ ACTION: closure (tension=21, sat=0.00)
+  → coherence: +0.20, competence: +0.15, autonomy: +0.10
+
+▶ ACTION: connection (tension=15, sat=0.00)  
+  → expression: +0.20, recognition: +0.15
+  → understanding: -0.05 (Сократ-эффект!)
+```
 
 ## Integration
 
@@ -162,16 +269,18 @@ Summary: 1 action(s), 1 noticed
 turing-pyramid/
 ├── SKILL.md           # This file
 ├── assets/
-│   ├── needs-config.json    # ★ Main config (tune this!)
-│   └── needs-state.json     # Runtime state (auto-managed)
+│   ├── needs-config.json      # ★ Main config (tune this!)
+│   ├── cross-need-impact.json # ★ Cross-need matrix (v1.7+)
+│   └── needs-state.json       # Runtime state (auto-managed)
 ├── scripts/
-│   ├── run-cycle.sh         # Main loop (advanced tuning)
-│   ├── mark-satisfied.sh    # State updater
-│   ├── show-status.sh       # Debug view
-│   ├── init.sh              # First-run setup
-│   └── scan_*.sh            # Event detectors (10 files)
+│   ├── run-cycle.sh           # Main loop
+│   ├── mark-satisfied.sh      # State updater + cross-need cascade
+│   ├── apply-deprivation.sh   # Deprivation cascade (v1.7+)
+│   ├── show-status.sh         # Debug view
+│   ├── init.sh                # First-run setup
+│   └── scan_*.sh              # Event detectors (10 files)
 └── references/
-    └── architecture.md      # Deep technical docs
+    └── architecture.md        # Deep technical docs
 ```
 
 **Detailed tuning guide**: `references/TUNING.md` — decay rates, weights, scans, common scenarios.
@@ -289,17 +398,41 @@ Running on heartbeat adds token overhead. Estimates for Claude:
 
 ## Version History
 
+### v1.7.1 (2026-02-25)
+- **Balance fixes** after stress testing:
+  - connection decay: 4h → 6h (reduces starvation risk)
+  - closure decay: 8h → 12h (reduces starvation risk)
+  - security → autonomy deprivation: -0.30 → -0.20 (reduces cascade pressure)
+
+### v1.7.0 (2026-02-25)
+- **Cross-need impact system** — needs influence each other
+  - on_action: satisfying one need boosts related needs
+  - on_deprivation: deprived needs drag down related needs
+  - 22 cross-need connections defined
+- **Float satisfaction** (0.00-3.00) for fine-grained tracking
+- **Protection mechanisms**: floor=0.5, ceiling=3.0, cooldown=4h
+- **Time-based decay** with last_decay_check tracking
+- **Input validation** — invalid impact values rejected/clamped
+- New action: "write Moltbook post" in expression (impact 1.6)
+- Stress-tested with 18 cycles including accelerated decay
+
+### v1.6.0 (2026-02-24)
+- Float impacts (0.0-3.0) for fine-grained satisfaction
+- Impact ranges: low (0-1), mid (1-2), high (2-3)
+- Weighted action selection within ranges
+
+### v1.5.3 (2026-02-24)
+- Dynamic max_tension calculation from config (not hardcoded)
+- Formula: `max_tension = max_importance × 3`
+
 ### v1.5.0 (2026-02-24)
 - **Added tension bonus to action probability** — higher importance needs are more "impatient"
-- Formula: `final_chance = base_chance[sat] + (tension × 50 / 30)`
+- Formula: `final_chance = base_chance[sat] + (tension × 50 / max_tension)`
 - Example: closure (importance=7) at sat=2 now has 31.7% chance vs flat 20%
-- Preserves importance weighting through global max_tension=30
+- Preserves importance weighting through dynamic max_tension
 
 ### v1.4.3
 - Complete 10-need system with scans and weighted actions
 - Decay mechanics and satisfaction merging
 - Impact matrix for action selection
 
----
-
-*Built by NewMoon & Max*
