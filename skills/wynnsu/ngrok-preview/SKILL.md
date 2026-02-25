@@ -1,49 +1,32 @@
 ---
 name: ngrok-preview
-description: High-utility ngrok preview skill for AI agents to share local artifacts (HTML, images, web apps) via temporary public URLs. Use when OpenClaw runs locally but users need mobile access (Telegram/mobile browser) where localhost links are unreachable.
+description: Generate short-lived, mobile-friendly ngrok preview links for local artifacts and share them in Telegram. Use when OpenClaw produces images/charts/generated files that the user needs to view remotely on phone, and a temporary per-task link is preferred over manual file transfer.
 ---
 
-# 🌐 Ngrok Preview Skill
+# ngrok-preview
 
-A high-utility skill for AI agents to share local artifacts (HTML, images, web apps) with users via temporary, secure public URLs.
+Provide a temporary preview window for task outputs. Keep it fast, scoped, and easy: generate link -> send link -> close link.
 
-This skill is designed to bridge the gap between a local development environment and a mobile-first user experience (Telegram or mobile browsers), where `localhost` links are inaccessible.
+## One-time setup
 
-## 🚀 Why use this?
-
-- **Mobile-friendly workflows**: Preview agent-generated web content on your phone while the agent runs locally.
-- **OpenClaw integration**: Works smoothly with the OpenClaw local gateway. Instead of local file paths or long text dumps, the agent can return a clickable ngrok link.
-- **Zero-config sharing flow**: Handles short-lived preview session creation and cleanup through one script.
-
-## 🛠 Installation
-
-Install via the skills.sh ecosystem:
-
-```bash
-npx skills add https://github.com/wynnsu/skills-ngrok-preview --skill ngrok-preview
-```
-
-## ⚙️ Prerequisites
-
-- `ngrok` CLI installed locally.
-- ngrok authenticated with your account token:
+1. Install ngrok if missing.
+2. Configure auth token once:
 
 ```bash
 ngrok config add-authtoken "$NGROK_AUTHTOKEN"
 ngrok config check
 ```
 
-## 📖 How it works
+If token is not preconfigured, pass `--auth-token` when running the script.
 
-When the agent generates a local artifact (visualization, mockup, report, generated page), this skill can:
+## Per-task workflow
 
-1. Start a local HTTP server scoped to the artifact directory.
-2. Tunnel that local server through ngrok.
-3. Return a temporary public URL back to the user through OpenClaw.
+1. Collect only task artifacts (images/charts/files) for this request.
+2. Create a session-scoped temporary preview link.
+3. Send the link with explicit expiry in Telegram.
+4. Stop and delete the preview session after user confirms or task ends.
 
-## Default agent workflow
-
-Create a preview session:
+Use this command from the skill directory:
 
 ```bash
 python3 scripts/ngrok_preview.py up \
@@ -54,54 +37,67 @@ python3 scripts/ngrok_preview.py up \
   --source "<artifact-path-2>"
 ```
 
-The script returns JSON with:
-
+The command returns JSON including:
 - `public_url`
 - `expires_at`
 - `session_id`
 - `stop_command`
 
-Stop and clean up when done:
+### Session ID convention (context binding)
+
+Use IDs that map to the current conversation/task:
+- `tg-<date>-<topic>`
+- `task-<short-request-id>`
+
+This keeps each link tied to one task context.
+
+## Telegram send pattern
+
+After `up` succeeds, send a concise message:
+
+```text
+🔗 Temporary preview link (valid for <X> minutes)
+<public_url>
+
+Scope: artifacts from this task only
+This link will be cleaned up after expiry
+```
+
+If not currently in Telegram, still return the same link format in the active channel.
+
+## Safety boundaries
+
+- Publish only task-specific outputs, never broad directories (do not expose workspace root).
+- Keep TTL short (default 120 minutes; use shorter when possible).
+- Treat link as temporary access, not persistent hosting.
+- Stop session when no longer needed:
 
 ```bash
 python3 scripts/ngrok_preview.py down --session-id "<task-id>" --delete-session-dir
 ```
 
-List sessions:
-
-```bash
-python3 scripts/ngrok_preview.py status
-```
-
-Clean expired sessions:
+- Periodically clear expired sessions:
 
 ```bash
 python3 scripts/ngrok_preview.py cleanup
 ```
 
-## Skill structure
+## Command quick reference
 
-- `SKILL.md`: Skill metadata + operational guidance.
-- `scripts/ngrok_preview.py`: Core Python logic for tunnel/session management.
-- `references/troubleshooting.md`: Common fixes for ngrok auth, tunnel timeout, and stale sessions.
+```bash
+# List sessions
+python3 scripts/ngrok_preview.py status
 
-## 🤝 Compatibility
+# Create preview (auto-generate session id)
+python3 scripts/ngrok_preview.py up \
+  --title "image results" \
+  --source ./outputs/result-1.png \
+  --source ./outputs/result-2.png
 
-Optimized for:
-
-- **Gateway**: OpenClaw
-- **Ecosystem**: skills.sh
-- **Platforms**: Telegram and web-based agent UIs
-
-## Safety boundaries
-
-- Publish only task-specific outputs (never broad directories like workspace root).
-- Keep TTL short and explicit.
-- Treat every link as temporary access, not persistent hosting.
-- Always stop/delete sessions after task completion.
+# Stop latest session
+python3 scripts/ngrok_preview.py down
+```
 
 ## Troubleshooting
 
-If preview creation fails, follow:
-
-- `references/troubleshooting.md`
+If link creation fails, check `references/troubleshooting.md` and follow the minimum recovery sequence.
