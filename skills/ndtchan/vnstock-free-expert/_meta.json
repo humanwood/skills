@@ -3,9 +3,15 @@
   "slug": "vnstock-free-expert",
   "displayName": "Vnstock Free Expert",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1771841702213,
-    "commit": "https://github.com/openclaw/skills/commit/4f636502c5c5e45921f0a48f4d6425444b33443e"
+    "version": "1.0.2",
+    "publishedAt": 1771982403105,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1771841702213,
+      "commit": "https://github.com/openclaw/skills/commit/4f636502c5c5e45921f0a48f4d6425444b33443e"
+    }
+  ]
 }

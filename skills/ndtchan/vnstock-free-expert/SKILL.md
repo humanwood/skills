@@ -56,6 +56,16 @@ Always output:
 6. Generate analyst-style memo with `scripts/generate_report.py`.
 7. Apply confidence rubric, disclose missing fields, and summarize risks.
 
+## Downstream handoff bundle (required when doing single-ticker deep dive)
+When the user request is about valuing or building a memo for a **specific ticker** (or a small list), output a compact JSON bundle that downstream skills can reuse:
+- `ticker`, `as_of_date`, `currency`
+- `financials` (income/balance/cashflow + key ratios if available)
+- `price_history` (returns 1m/3m/6m/12m)
+- `peer_set` (if you built one)
+- `metadata.source` and `data_quality_notes`
+
+This bundle is designed to feed `equity-valuation-framework` and `portfolio-risk-manager`.
+
 ## Script map
 
 ### A) Discovery and universal invocation (for broad feature coverage)
