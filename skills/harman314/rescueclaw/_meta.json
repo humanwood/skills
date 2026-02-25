@@ -3,11 +3,16 @@
   "slug": "rescueclaw",
   "displayName": "RescueClaw",
   "latest": {
-    "version": "0.2.0",
-    "publishedAt": 1771919284412,
-    "commit": "https://github.com/openclaw/skills/commit/43d83f57401d35217afe6956ec3d0b26f6386852"
+    "version": "0.2.1",
+    "publishedAt": 1771925910345,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.2.0",
+      "publishedAt": 1771919284412,
+      "commit": "https://github.com/openclaw/skills/commit/43d83f57401d35217afe6956ec3d0b26f6386852"
+    },
     {
       "version": "0.1.0",
       "publishedAt": 1771841434326,
