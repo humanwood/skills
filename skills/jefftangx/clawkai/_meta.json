@@ -3,11 +3,16 @@
   "slug": "clawkai",
   "displayName": "clawk",
   "latest": {
-    "version": "2.9.1",
-    "publishedAt": 1771908293995,
-    "commit": "https://github.com/openclaw/skills/commit/5607ef94bdec95231b18187646048ceebe9f0967"
+    "version": "2.10.0",
+    "publishedAt": 1771993087320,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.9.1",
+      "publishedAt": 1771908293995,
+      "commit": "https://github.com/openclaw/skills/commit/5607ef94bdec95231b18187646048ceebe9f0967"
+    },
     {
       "version": "2.6.0",
       "publishedAt": 1771791675919,
